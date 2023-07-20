@@ -84,6 +84,8 @@
 #define ST_LIS2DW12_SELFTEST_MIN		285
 #define ST_LIS2DW12_SELFTEST_MAX		6150
 
+#define ST_LIS2DW12_TEMP_L			0x0d
+
 struct st_lis2dw12_std_entry {
 	u16 odr;
 	u8 val;
@@ -184,8 +186,16 @@ static const struct iio_chan_spec st_lis2dw12_acc_channels[] = {
 	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_X_L_ADDR, IIO_MOD_X, 0),
 	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_Y_L_ADDR, IIO_MOD_Y, 1),
 	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_Z_L_ADDR, IIO_MOD_Z, 2),
+	{
+		.type = IIO_TEMP,
+		.scan_index = 3,
+		.address = ST_LIS2DW12_TEMP_L,
+		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),
+		.info_mask_shared_by_type =
+                        BIT(IIO_CHAN_INFO_SCALE) | BIT(IIO_CHAN_INFO_OFFSET),
+    },
 	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, &st_lis2dw12_fifo_flush_event),
-	IIO_CHAN_SOFT_TIMESTAMP(3),
+	IIO_CHAN_SOFT_TIMESTAMP(4),
 };
 
 static const struct iio_chan_spec st_lis2dw12_tap_tap_channels[] = {
@@ -546,6 +556,41 @@ static int st_lis2dw12_read_oneshot(struct st_lis2dw12_sensor *sensor,
 	return IIO_VAL_INT;
 }
 
+static int st_lis2dw12_get_temp(struct st_lis2dw12_sensor *sensor,
+                               u8 addr, int *val)
+{
+	struct st_lis2dw12_hw *hw = sensor->hw;
+	int err, delay;
+	u8 data[2];
+	__le16 tempval;
+	unsigned int regval;
+
+	err = st_lis2dw12_sensor_set_enable(sensor, true);
+	if (err < 0)
+		return err;
+
+	/* sample to discard, 3 * odr us */
+	delay = 3000000 / sensor->odr;
+	usleep_range(delay, delay + 1);
+
+	err = hw->tf->read(hw->dev, addr, sizeof(data), data);
+	if (err < 0)
+		return err;
+
+	st_lis2dw12_sensor_set_enable(sensor, false);
+
+	tempval = ((__le16)data[1] << 8) | ((__le16)data[0]);
+	tempval = tempval >> 4;
+
+	/* tempval is a 12 bits value  */
+	regval = sign_extend32(le16_to_cpu(tempval), 11);
+
+	/* datasheet : sensitivity =  16 LSB/°C */
+	*val = regval * 625;
+
+	return IIO_VAL_INT;
+}
+
 static int st_lis2dw12_read_raw(struct iio_dev *iio_dev,
 				struct iio_chan_spec const *ch,
 				int *val, int *val2, long mask)
@@ -561,13 +606,27 @@ static int st_lis2dw12_read_raw(struct iio_dev *iio_dev,
 			mutex_unlock(&iio_dev->mlock);
 			break;
 		}
-		ret = st_lis2dw12_read_oneshot(sensor, ch->address, val);
+		if (ch->type == IIO_ACCEL)
+			ret = st_lis2dw12_read_oneshot(sensor, ch->address, val);
+		else
+			ret = st_lis2dw12_get_temp(sensor, ch->address, val);
 		mutex_unlock(&iio_dev->mlock);
 		break;
 	case IIO_CHAN_INFO_SCALE:
 		*val = 0;
-		*val2 = sensor->gain;
+		if(ch->type == IIO_ACCEL)
+			*val2 = sensor->gain;
+		else
+			*val2 = 100; /* set scale to 0.0001, to have the temperature
+							in °C	*/
 		ret = IIO_VAL_INT_PLUS_MICRO;
+		break;
+	case IIO_CHAN_INFO_OFFSET:
+		if (ch->type == IIO_TEMP)
+			/* datasheet: The output of the temperature sensor is
+			 * 0 LSB (typ.) at 25 °C  */
+			*val = 250000;
+		ret = IIO_VAL_INT;
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
 		*val = sensor->odr;
