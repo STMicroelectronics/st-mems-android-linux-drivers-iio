@@ -44,6 +44,12 @@ Optional properties for all bus drivers:
                   are part of the same module (particularly important for
                   supporting multiple sensors of the same type).
 
+- st,xl_lpf_div: Bandwidth XL ODR divider, if set the value must be within
+                 the range [2, 800].
+
+- st,g_lpf_ftype: This property is the Gyro FTYPE value in the CTRL6_C register,
+                  if set the value must be within the range [0, 7].
+
 - wakeup-source:  https://www.kernel.org/doc/Documentation/devicetree/bindings/power/wakeup-source.txt
 
 Example for an spi asm330lhh device node:

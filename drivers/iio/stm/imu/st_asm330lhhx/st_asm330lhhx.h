@@ -69,6 +69,9 @@
 #define ST_ASM330LHHX_WHOAMI_VAL		0x6b
 
 #define ST_ASM330LHHX_CTRL1_XL_ADDR		0x10
+#define ST_ASM330LHHX_REG_LPF2_XL_EN_MASK	BIT(1)
+#define ST_ASM330LHHX_REG_FS_XL_MASK		GENMASK(3, 2)
+
 #define ST_ASM330LHHX_CTRL2_G_ADDR		0x11
 #define ST_ASM330LHHX_REG_FS_G_MASK		GENMASK(3, 0)
 
@@ -80,6 +83,7 @@
 #define ST_ASM330LHHX_REG_BOOT_MASK		BIT(7)
 
 #define ST_ASM330LHHX_REG_CTRL4_C_ADDR		0x13
+#define ST_ASM330LHHX_REG_LPF1_SEL_G_MASK	BIT(1)
 #define ST_ASM330LHHX_REG_DRDY_MASK		BIT(3)
 
 #define ST_ASM330LHHX_REG_CTRL5_C_ADDR		0x14
@@ -98,9 +102,13 @@
 
 #define ST_ASM330LHHX_REG_CTRL6_C_ADDR		0x15
 #define ST_ASM330LHHX_REG_XL_HM_MODE_MASK	BIT(4)
+#define ST_ASM330LHHX_REG_FTYPE_MASK		GENMASK(2, 0)
 
 #define ST_ASM330LHHX_REG_CTRL7_G_ADDR		0x16
 #define ST_ASM330LHHX_REG_G_HM_MODE_MASK	BIT(7)
+
+#define ST_ASM330LHHX_REG_CTRL8_XL_ADDR		0x17
+#define ST_ASM330LHHX_REG_HPCF_XL_MASK		GENMASK(7, 5)
 
 #define ST_ASM330LHHX_REG_CTRL9_XL_ADDR		0x18
 #define ST_ASM330LHHX_REG_DEVICE_CONF_MASK	BIT(1)
@@ -317,6 +325,8 @@ enum st_asm330lhhx_suspend_resume_register {
 	ST_ASM330LHHX_REG_CTRL3_C_REG,
 	ST_ASM330LHHX_REG_CTRL4_C_REG,
 	ST_ASM330LHHX_REG_CTRL5_C_REG,
+	ST_ASM330LHHX_REG_CTRL6_C_REG,
+	ST_ASM330LHHX_REG_CTRL8_XL_REG,
 	ST_ASM330LHHX_REG_CTRL10_C_REG,
 	ST_ASM330LHHX_REG_TAP_CFG0_REG,
 	ST_ASM330LHHX_REG_INT1_CTRL_REG,
@@ -610,6 +620,7 @@ struct st_asm330lhhx_settings {
  * @offset: Sensor data offset.
  * @decimator: Sensor decimator
  * @dec_counter: Sensor decimator counter
+ * @discard_samples: Sensor discard sample counter, used when LPF enabled.
  * @odr: Output data rate of the sensor [Hz].
  * @uodr: Output data rate of the sensor [uHz].
  * @discharged_samples: Report number of samples discharded by drdy mask
@@ -638,8 +649,9 @@ struct st_asm330lhhx_sensor {
 		struct {
 			u32 gain;
 			u32 offset;
-			u8 decimator;
-			u8 dec_counter;
+			u32 decimator;
+			u32 dec_counter;
+			u32 discard_samples;
 			int odr;
 			int uodr;
 
@@ -715,6 +727,9 @@ struct st_asm330lhhx_sensor {
  * @settings: ST IMU sensor settings.
  * @mlc_config: Pointer to MLC/FSM configuration structure.
  * @preload_mlc: Indicate to preload firmware for MLC/FSM.
+ * @enable_drdy_mask: Indicate if drdy mask is enabled.
+ * @xl_odr_div: Configured accel odr bandwidth.
+ * @g_ftype:  Configured gyro odr ftype.
  */
 struct st_asm330lhhx_hw {
 	struct device *dev;
@@ -765,6 +780,9 @@ struct st_asm330lhhx_hw {
 
 	struct st_asm330lhhx_mlc_config_t *mlc_config;
 	bool preload_mlc;
+	bool enable_drdy_mask;
+	int xl_odr_div;
+	int g_ftype;
 };
 
 /**
@@ -785,6 +803,49 @@ struct st_asm330lhhx_ff_th {
 struct st_asm330lhhx_6D_th {
 	u8 deg;
 	u8 val;
+};
+
+/**
+ * struct st_asm330lhhx_xl_lpf_bw_t - Accel Low Pass Filter bandwidth
+ *
+ * @lpf2_xl_en: Enable LPF2 filter (0 = disable, 1 = enable).
+ * @val: Selected BW register value.
+ * @div: BW divider.
+ */
+struct st_asm330lhhx_xl_lpf_bw_t {
+	u8 lpf2_xl_en;
+	u8 val;
+	u16 div;
+};
+
+/**
+ * struct st_asm330lhhx_xl_lpf_bw_config_t - Accel Low Pass Filter bandwidth
+ *                                           configuration
+ * @reg: Register address involved in Accel LPF configuration.
+ * @mask: Register mask involved in Accel LPF configuration (HPCF_XL).
+ * @size: st_asm330lhhx_xl_lpf_bw_t array size.
+ * @st_asm330lhhx_xl_lpf_bw_t: Accel Low Pass Filter bandwidth data struct.
+ */
+struct st_asm330lhhx_xl_lpf_bw_config_t {
+	u8 reg;
+	u8 mask;
+	u8 size;
+	struct st_asm330lhhx_xl_lpf_bw_t st_asm330lhhx_xl_lpf_bw[9];
+};
+
+/**
+ * struct st_asm330lhhx_g_lpf_bw_config_t - Gyro Low Pass Filter bandwidth
+ *                                          configuration
+ * @reg: Register address involved in Gyro LPF configuration.
+ * @mask: Register mask involved in Gyro LPF configuration.
+ * @size: ftype array size.
+ * @ftype: Gyro Low Pass Filter bandwidth selection.
+ */
+struct st_asm330lhhx_g_lpf_bw_config_t {
+	u8 reg;
+	u8 mask;
+	u8 size;
+	u8 ftype[8];
 };
 
 extern const struct dev_pm_ops st_asm330lhhx_pm_ops;

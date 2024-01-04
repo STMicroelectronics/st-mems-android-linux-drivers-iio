@@ -44,6 +44,56 @@ static struct st_asm330lhhx_selftest_table {
 	},
 };
 
+static const int st_asm330lhhx_odr_index[] = {
+	12, 26, 52, 104, 208, 416, 833
+};
+
+static const int st_asm330lhhx_odr_divider_index[] = {
+	2, 4, 10, 20, 45, 100, 200, 400, 800
+};
+
+/*
+ * LPF filter configuration
+ *
+ * the total amount of sample to discard is set to the value of
+ * samples_to_discard plus the settling_samples related to the LPF
+ * configuration and the sensor odr set.
+ */
+static const struct st_asm330lhhx_lpf_discard_table_t {
+	u32 samples_to_discard[ST_ASM330LHHX_ODR_LIST_SIZE];
+	u32 settling_samples[9][ST_ASM330LHHX_ODR_LIST_SIZE];
+} st_asm330lhhx_lpf_discard_table[ST_ASM330LHHX_ODR_LIST_SIZE] = {
+	[ST_ASM330LHHX_ID_GYRO] = {
+		/* samples_to_discard when no filter enabled */
+		.samples_to_discard =    { 2, 3, 3, 3, 3, 3, 3 },
+
+		/* settling_samples vs ODRs and FTYPE table for gyro */
+		.settling_samples[0] = {  0,  0,  0,  0,  0,  2,  3 }, /* FTYPE 0 */
+		.settling_samples[1] = {  0,  0,  0,  0,  1,  2,  4 }, /* FTYPE 1 */
+		.settling_samples[2] = {  0,  0,  0,  1,  1,  3,  5 }, /* FTYPE 2 */
+		.settling_samples[3] = {  0,  0,  0,  0,  0,  1,  2 }, /* FTYPE 3 */
+		.settling_samples[4] = {  0,  0,  1,  1,  2,  4,  9 }, /* FTYPE 4 */
+		.settling_samples[5] = {  0,  1,  1,  2,  4,  9, 18 }, /* FTYPE 5 */
+		.settling_samples[6] = {  0,  1,  2,  3,  6, 12, 24 }, /* FTYPE 6 */
+		.settling_samples[7] = {  1,  2,  3,  6, 12, 24, 48 }, /* FTYPE 6 */
+	},
+	[ST_ASM330LHHX_ID_ACC] = {
+		/* samples_to_discard when no filter enabled */
+		.samples_to_discard =     { 3, 3, 3, 3, 3, 3, 3, 3 },
+
+		/* settling_samples vs ODRs and accel Bandwidth table */
+		.settling_samples[0] = {   0,   0,   0,   0,   0,   0,   0 }, /* ODR/2 */
+		.settling_samples[1] = {   0,   0,   0,   0,   0,   0,   0 }, /* ODR/4 */
+		.settling_samples[2] = {  10,  10,  10,  10,  10,  10,  10 }, /* ODR/10 */
+		.settling_samples[3] = {  19,  19,  19,  19,  19,  19,  19 }, /* ODR/20 */
+		.settling_samples[4] = {  38,  38,  38,  38,  38,  38,  38 }, /* ODR/45 */
+		.settling_samples[5] = {  75,  75,  75,  75,  75,  75,  75 }, /* ODR/100 */
+		.settling_samples[6] = { 150, 150, 150, 150, 150, 150, 150 }, /* ODR/200 */
+		.settling_samples[7] = { 296, 296, 296, 296, 296, 296, 296 }, /* ODR/400 */
+		.settling_samples[8] = { 595, 595, 595, 595, 595, 595, 595 }, /* ODR/800 */
+	},
+};
+
 static const struct st_asm330lhhx_power_mode_table {
 	char *string_mode;
 	enum st_asm330lhhx_pm_t val;
@@ -63,7 +113,8 @@ static struct st_asm330lhhx_suspend_resume_entry
 	[ST_ASM330LHHX_CTRL1_XL_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
 		.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
-		.mask = GENMASK(3, 2),
+		.mask = ST_ASM330LHHX_REG_FS_XL_MASK |
+			ST_ASM330LHHX_REG_LPF2_XL_EN_MASK,
 	},
 	[ST_ASM330LHHX_CTRL2_G_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
@@ -80,12 +131,23 @@ static struct st_asm330lhhx_suspend_resume_entry
 	[ST_ASM330LHHX_REG_CTRL4_C_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
 		.addr = ST_ASM330LHHX_REG_CTRL4_C_ADDR,
-		.mask = ST_ASM330LHHX_REG_DRDY_MASK,
+		.mask = ST_ASM330LHHX_REG_DRDY_MASK |
+			ST_ASM330LHHX_REG_LPF1_SEL_G_MASK,
 	},
 	[ST_ASM330LHHX_REG_CTRL5_C_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
 		.addr = ST_ASM330LHHX_REG_CTRL5_C_ADDR,
 		.mask = ST_ASM330LHHX_REG_ROUNDING_MASK,
+	},
+	[ST_ASM330LHHX_REG_CTRL6_C_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_ASM330LHHX_REG_CTRL6_C_ADDR,
+		.mask = ST_ASM330LHHX_REG_FTYPE_MASK,
+	},
+	[ST_ASM330LHHX_REG_CTRL8_XL_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_ASM330LHHX_REG_CTRL8_XL_ADDR,
+		.mask = ST_ASM330LHHX_REG_HPCF_XL_MASK,
 	},
 	[ST_ASM330LHHX_REG_CTRL10_C_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
@@ -271,7 +333,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[0] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
+				.mask = ST_ASM330LHHX_REG_FS_XL_MASK,
 			},
 			.gain = ST_ASM330LHHX_ACC_FS_2G_GAIN,
 			.val = 0x0,
@@ -279,7 +341,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[1] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
+				.mask = ST_ASM330LHHX_REG_FS_XL_MASK,
 			},
 			.gain = ST_ASM330LHHX_ACC_FS_4G_GAIN,
 			.val = 0x2,
@@ -287,7 +349,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[2] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
+				.mask = ST_ASM330LHHX_REG_FS_XL_MASK,
 			},
 			.gain = ST_ASM330LHHX_ACC_FS_8G_GAIN,
 			.val = 0x3,
@@ -295,7 +357,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[3] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
+				.mask = ST_ASM330LHHX_REG_FS_XL_MASK,
 			},
 			.gain = ST_ASM330LHHX_ACC_FS_16G_GAIN,
 			.val = 0x1,
@@ -417,6 +479,64 @@ static const struct st_asm330lhhx_6D_th st_asm330lhhx_6D_threshold[] = {
 };
 #endif /* CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES */
 
+static const struct st_asm330lhhx_xl_lpf_bw_config_t st_asm330lhhx_xl_bw = {
+	.reg = ST_ASM330LHHX_REG_CTRL8_XL_ADDR,
+	.mask = ST_ASM330LHHX_REG_HPCF_XL_MASK,
+	.size = 9,
+	.st_asm330lhhx_xl_lpf_bw[0] = {
+		.lpf2_xl_en = 0,
+		.div = 2,
+		.val = 0,
+	},
+	.st_asm330lhhx_xl_lpf_bw[1] = {
+		.lpf2_xl_en = 1,
+		.div = 4,
+		.val = 0,
+	},
+	.st_asm330lhhx_xl_lpf_bw[2] = {
+		.lpf2_xl_en = 1,
+		.div = 10,
+		.val = 1,
+	},
+	.st_asm330lhhx_xl_lpf_bw[3] = {
+		.lpf2_xl_en = 1,
+		.div = 20,
+		.val = 2,
+	},
+	.st_asm330lhhx_xl_lpf_bw[4] = {
+		.lpf2_xl_en = 1,
+		.div = 45,
+		.val = 3,
+	},
+	.st_asm330lhhx_xl_lpf_bw[5] = {
+		.lpf2_xl_en = 1,
+		.div = 100,
+		.val = 4,
+	},
+	.st_asm330lhhx_xl_lpf_bw[6] = {
+		.lpf2_xl_en = 1,
+		.div = 200,
+		.val = 5,
+	},
+	.st_asm330lhhx_xl_lpf_bw[7] = {
+		.lpf2_xl_en = 1,
+		.div = 400,
+		.val = 6,
+	},
+	.st_asm330lhhx_xl_lpf_bw[8] = {
+		.lpf2_xl_en = 1,
+		.div = 800,
+		.val = 7,
+	},
+};
+
+static const struct st_asm330lhhx_g_lpf_bw_config_t st_asm330lhhx_g_bw = {
+	.reg = ST_ASM330LHHX_REG_CTRL6_C_ADDR,
+	.mask = ST_ASM330LHHX_REG_FTYPE_MASK,
+	.size = 8,
+	.ftype = { 0, 1, 2, 3, 4, 5, 6, 7 },
+};
+
 static const inline struct iio_mount_matrix *
 st_asm330lhhx_get_mount_matrix(const struct iio_dev *iio_dev,
 			      const struct iio_chan_spec *chan)
@@ -489,6 +609,34 @@ __maybe_unused const struct iio_chan_spec st_asm330lhhx_temp_channels[] = {
 	IIO_CHAN_HW_TIMESTAMP(1),
 	IIO_CHAN_SOFT_TIMESTAMP(2),
 };
+
+static inline int st_asm330lhhx_get_odr_index(int odr)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(st_asm330lhhx_odr_index); i++)
+		if (st_asm330lhhx_odr_index[i] >= odr)
+			break;
+
+	if (i == ARRAY_SIZE(st_asm330lhhx_odr_index))
+		return -EINVAL;
+
+	return i;
+}
+
+static inline int st_asm330lhhx_get_odr_divider_index(int odr_div)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(st_asm330lhhx_odr_divider_index); i++)
+		if (st_asm330lhhx_odr_divider_index[i] >= odr_div)
+			break;
+
+	if (i == ARRAY_SIZE(st_asm330lhhx_odr_divider_index))
+		return -EINVAL;
+
+	return i;
+}
 
 int __maybe_unused st_asm330lhhx_read_with_mask(struct st_asm330lhhx_hw *hw, u8 addr, u8 mask,
 				u8 *val)
@@ -1220,6 +1368,50 @@ unlock_page:
 	return ret;
 }
 
+static int st_asm330lhhx_update_decimator(struct st_asm330lhhx_sensor *sensor,
+					  int odr)
+{
+	struct st_asm330lhhx_hw *hw = sensor->hw;
+	int odr_index, odr_div_index, ret = 0;
+
+	if (hw->enable_drdy_mask) {
+		sensor->decimator = 0;
+
+		return 0;
+	}
+
+	odr_index = st_asm330lhhx_get_odr_index(odr);
+	if (odr_index < 0)
+		return odr_index;
+
+	mutex_lock(&hw->fifo_lock);
+
+	switch (sensor->id) {
+	case ST_ASM330LHHX_ID_ACC:
+		odr_div_index = st_asm330lhhx_get_odr_divider_index(hw->xl_odr_div);
+		if (odr_div_index < 0) {
+			ret = odr_div_index;
+
+			goto unlock;
+		}
+
+		sensor->discard_samples = st_asm330lhhx_lpf_discard_table[sensor->id].samples_to_discard[odr_index] +
+				st_asm330lhhx_lpf_discard_table[sensor->id].settling_samples[odr_div_index][odr_index];
+		break;
+	case ST_ASM330LHHX_ID_GYRO:
+		sensor->discard_samples = st_asm330lhhx_lpf_discard_table[sensor->id].samples_to_discard[odr_index] +
+				st_asm330lhhx_lpf_discard_table[sensor->id].settling_samples[hw->g_ftype][odr_index];
+		break;
+	default:
+		break;
+	}
+
+unlock:
+	mutex_unlock(&hw->fifo_lock);
+
+	return ret;
+}
+
 static int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
 				 int req_odr, int req_uodr)
 {
@@ -1290,6 +1482,11 @@ static int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
 
 	err = st_asm330lhhx_get_odr_val(id, req_odr, req_uodr, NULL,
 				       NULL, &val);
+	if (err < 0)
+		return err;
+
+	err = st_asm330lhhx_update_decimator(iio_priv(hw->iio_devs[id]),
+					     req_odr);
 	if (err < 0)
 		return err;
 
@@ -2051,6 +2248,101 @@ static const unsigned long st_asm330lhhx_temp_available_scan_masks[] = {
 	GENMASK(1, 0), 0x0
 };
 
+static int st_asm330lhhx_init_xl_filters(struct st_asm330lhhx_hw *hw)
+{
+	int div;
+	int err;
+	int i;
+
+	err = device_property_read_u32(hw->dev, "st,xl_lpf_div", &div);
+	if (err < 0) {
+		/* if st,xl_lpf_div not available disable XL LPF2 */
+		err = regmap_update_bits(hw->regmap,
+					 ST_ASM330LHHX_CTRL1_XL_ADDR,
+					 ST_ASM330LHHX_REG_LPF2_XL_EN_MASK,
+					 FIELD_PREP(ST_ASM330LHHX_REG_LPF2_XL_EN_MASK, 0));
+		return err < 0 ? err : 0;
+	}
+
+	for (i = 0; i < st_asm330lhhx_xl_bw.size; i++) {
+		if (st_asm330lhhx_xl_bw.st_asm330lhhx_xl_lpf_bw[i].div >= div)
+			break;
+	}
+
+	if (i == st_asm330lhhx_xl_bw.size)
+		return -EINVAL;
+
+	/* set XL LPF2 BW */
+	err = regmap_update_bits(hw->regmap,
+				 st_asm330lhhx_xl_bw.reg,
+				 st_asm330lhhx_xl_bw.mask,
+				 ST_ASM330LHHX_SHIFT_VAL(st_asm330lhhx_xl_bw.st_asm330lhhx_xl_lpf_bw[i].val,
+							 st_asm330lhhx_xl_bw.mask));
+	if (err < 0)
+		return err;
+
+	/* enable/disable LPF2 filter selection */
+	err = regmap_update_bits(hw->regmap,
+				 ST_ASM330LHHX_CTRL1_XL_ADDR,
+				 ST_ASM330LHHX_REG_LPF2_XL_EN_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_REG_LPF2_XL_EN_MASK,
+					    st_asm330lhhx_xl_bw.st_asm330lhhx_xl_lpf_bw[i].lpf2_xl_en));
+
+	if (err < 0)
+		return err;
+
+	hw->enable_drdy_mask = false;
+	hw->xl_odr_div = div;
+
+	return 0;
+}
+
+static int st_asm330lhhx_init_g_filters(struct st_asm330lhhx_hw *hw)
+{
+	int ftype;
+	int err;
+	int i;
+
+	err = device_property_read_u32(hw->dev, "st,g_lpf_ftype", &ftype);
+	if (err < 0) {
+		/* disable LPF1 filter if st,g_lpf_ftype not available */
+		return regmap_update_bits(hw->regmap,
+					  ST_ASM330LHHX_REG_CTRL4_C_ADDR,
+					  ST_ASM330LHHX_REG_LPF1_SEL_G_MASK,
+					  FIELD_PREP(ST_ASM330LHHX_REG_LPF1_SEL_G_MASK, 0));
+	}
+
+	for (i = 0; i < st_asm330lhhx_g_bw.size; i++) {
+		if (st_asm330lhhx_g_bw.ftype[i] >= ftype)
+			break;
+	}
+
+	if (i == st_asm330lhhx_g_bw.size)
+		return -EINVAL;
+
+	/* set G LPF1 FTYPE */
+	err = regmap_update_bits(hw->regmap,
+				 st_asm330lhhx_g_bw.reg,
+				 st_asm330lhhx_g_bw.mask,
+				 ST_ASM330LHHX_SHIFT_VAL(st_asm330lhhx_g_bw.ftype[i],
+							 st_asm330lhhx_g_bw.mask));
+	if (err < 0)
+		return err;
+
+	/* enable LPF1 filter selection if st,g_lpf_ftype available */
+	err = regmap_update_bits(hw->regmap,
+				 ST_ASM330LHHX_REG_CTRL4_C_ADDR,
+				 ST_ASM330LHHX_REG_LPF1_SEL_G_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_REG_LPF1_SEL_G_MASK, 1));
+	if (err < 0)
+		return err;
+
+	hw->enable_drdy_mask = false;
+	hw->g_ftype = ftype;
+
+	return 0;
+}
+
 static int st_asm330lhhx_reset_device(struct st_asm330lhhx_hw *hw)
 {
 	int err;
@@ -2123,11 +2415,21 @@ static int st_asm330lhhx_init_device(struct st_asm330lhhx_hw *hw)
 	if (err < 0)
 		return err;
 
+	/* initialize sensors filter bandwidth configuration */
+	hw->enable_drdy_mask = true;
+	err = st_asm330lhhx_init_xl_filters(hw);
+	if (err < 0)
+		return err;
+
+	err = st_asm330lhhx_init_g_filters(hw);
+	if (err < 0)
+		return err;
+
 	/* Enable DRDY MASK for filters settling time */
 	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_CTRL4_C_ADDR,
 				 ST_ASM330LHHX_REG_DRDY_MASK,
 				 FIELD_PREP(ST_ASM330LHHX_REG_DRDY_MASK,
-					    1));
+					    hw->enable_drdy_mask ? 1 : 0));
 
 	if (err < 0)
 		return err;
@@ -2182,6 +2484,7 @@ static struct iio_dev *st_asm330lhhx_alloc_iiodev(struct st_asm330lhhx_hw *hw,
 	sensor->watermark = 1;
 	sensor->decimator = 0;
 	sensor->dec_counter = 0;
+	sensor->discard_samples = 0;
 	sensor->last_fifo_timestamp = 0;
 
 #ifdef ST_ASM330LHHX_DEBUG_DISCHARGE

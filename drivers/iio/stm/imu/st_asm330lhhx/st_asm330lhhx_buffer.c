@@ -333,6 +333,12 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 						    st_asm330lhhx_get_time_ns(hw->iio_devs[0]),
 						    hw->tsample);
 
+				/* LPF sample discard */
+				if (sensor->discard_samples) {
+					sensor->discard_samples--;
+					continue;
+				}
+
 				/* support decimation for ODR < 12.5 Hz */
 				if (sensor->dec_counter > 0) {
 					sensor->dec_counter--;
