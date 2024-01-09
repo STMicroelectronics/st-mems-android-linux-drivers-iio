@@ -68,7 +68,7 @@ static struct st_asm330lhhx_suspend_resume_entry
 	[ST_ASM330LHHX_CTRL2_G_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
 		.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-		.mask = GENMASK(3, 2),
+		.mask = ST_ASM330LHHX_REG_FS_G_MASK,
 	},
 	[ST_ASM330LHHX_REG_CTRL3_C_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
@@ -306,7 +306,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[0] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
+				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
 			},
 			.gain = ST_ASM330LHHX_GYRO_FS_125_GAIN,
 			.val = 0x02,
@@ -314,7 +314,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[1] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
+				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
 			},
 			.gain = ST_ASM330LHHX_GYRO_FS_250_GAIN,
 			.val = 0x0,
@@ -322,7 +322,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[2] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
+				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
 			},
 			.gain = ST_ASM330LHHX_GYRO_FS_500_GAIN,
 			.val = 0x4,
@@ -330,7 +330,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[3] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
+				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
 			},
 			.gain = ST_ASM330LHHX_GYRO_FS_1000_GAIN,
 			.val = 0x8,
@@ -338,7 +338,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[4] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
+				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
 			},
 			.gain = ST_ASM330LHHX_GYRO_FS_2000_GAIN,
 			.val = 0x0C,
@@ -346,7 +346,7 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 		.fs_avl[5] = {
 			.reg = {
 				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
+				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
 			},
 			.gain = ST_ASM330LHHX_GYRO_FS_4000_GAIN,
 			.val = 0x1,
