@@ -3,7 +3,7 @@
 Required properties for all bus drivers:
 - compatible: must be one of:
 	"st,ilps22qs"
-	"st,ilps28qws"
+	"st,ilps28qsw"
 
 Required properties for the i2c bindings:
 - reg: i2c slave address
