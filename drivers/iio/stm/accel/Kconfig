@@ -249,4 +249,6 @@ config IIO_ST_LIS2DU12_I3C
         depends on IIO_ST_LIS2DU12
         depends on I3C
 
+source "drivers/iio/stm/accel/st_iis2iclx/Kconfig"
+
 endmenu

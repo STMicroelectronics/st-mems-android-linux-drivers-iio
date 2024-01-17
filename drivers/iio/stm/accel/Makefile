@@ -55,3 +55,4 @@ obj-$(CONFIG_IIO_ST_LIS2DU12_I2C) += st_lis2du12_i2c.o
 obj-$(CONFIG_IIO_ST_LIS2DU12_SPI) += st_lis2du12_spi.o
 obj-$(CONFIG_IIO_ST_LIS2DU12_I3C) += st_lis2du12_i3c.o
 
+obj-y += st_iis2iclx/
