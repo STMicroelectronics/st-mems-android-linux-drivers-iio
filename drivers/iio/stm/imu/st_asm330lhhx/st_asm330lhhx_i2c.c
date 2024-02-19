@@ -12,6 +12,7 @@
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <linux/of.h>
+#include <linux/version.h>
 
 #include "st_asm330lhhx.h"
 
@@ -38,6 +39,20 @@ static int st_asm330lhhx_i2c_probe(struct i2c_client *client,
 	return st_asm330lhhx_probe(&client->dev, client->irq,
 			       hw_id, regmap);
 }
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+static void st_asm330lhhx_i2c_remove(struct i2c_client *client)
+{
+	st_asm330lhhx_remove(&client->dev);
+}
+#else /* LINUX_VERSION_CODE */
+static int st_asm330lhhx_i2c_remove(struct i2c_client *client)
+{
+	st_asm330lhhx_remove(&client->dev);
+
+	return 0;
+}
+#endif /* LINUX_VERSION_CODE */
 
 static const struct of_device_id st_asm330lhhx_i2c_of_match[] = {
 	{
@@ -76,6 +91,7 @@ static struct i2c_driver st_asm330lhhx_driver = {
 		.of_match_table = st_asm330lhhx_i2c_of_match,
 	},
 	.probe = st_asm330lhhx_i2c_probe,
+	.remove = st_asm330lhhx_i2c_remove,
 	.id_table = st_asm330lhhx_i2c_id_table,
 };
 module_i2c_driver(st_asm330lhhx_driver);

@@ -2739,6 +2739,12 @@ int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 }
 EXPORT_SYMBOL(st_asm330lhhx_probe);
 
+void st_asm330lhhx_remove(struct device *dev)
+{
+	st_asm330lhhx_mlc_remove(dev);
+}
+EXPORT_SYMBOL(st_asm330lhhx_remove);
+
 static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 {
 	struct st_asm330lhhx_hw *hw = dev_get_drvdata(dev);
