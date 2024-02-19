@@ -298,8 +298,9 @@ static irqreturn_t st_lis2du12_handler_irq(int irq, void *private)
 
 static irqreturn_t st_lis2du12_handler_thread(int irq, void *private)
 {
-	int status, all_int_source, wk_source, sixd_source;
 	struct st_lis2du12_hw *hw = private;
+	int status, all_int_source;
+	bool reset_int = false;
 	s64 code;
 	int err;
 
@@ -314,124 +315,148 @@ static irqreturn_t st_lis2du12_handler_thread(int irq, void *private)
 		mutex_unlock(&hw->fifo_lock);
 	}
 
-	err = regmap_read(hw->regmap, ST_LIS2DU12_ALL_INT_SRC_ADDR,
-			  &all_int_source);
-	if (err < 0)
+	if (!st_lis2du12_interrupts_enabled(hw))
 		return IRQ_HANDLED;
 
-	if (((all_int_source & ST_LIS2DU12_SINGLE_TAP_ALL_MASK) &&
-	     (hw->enable_mask & BIT(ST_LIS2DU12_ID_TAP))) ||
-	    ((all_int_source & ST_LIS2DU12_DOUBLE_TAP_ALL_MASK) &&
-	     (hw->enable_mask & BIT(ST_LIS2DU12_ID_TAP_TAP)))) {
+	if (hw->enable_mask & (BIT(ST_LIS2DU12_ID_TAP) |
+			       BIT(ST_LIS2DU12_ID_TAP_TAP))) {
 		struct iio_dev *iio_dev;
 		enum iio_chan_type type;
-		int source;
+		int tap_src;
 
 		err = regmap_read(hw->regmap, ST_LIS2DU12_TAP_SRC_ADDR,
-				  &source);
+				  &tap_src);
 		if (err < 0)
 			return IRQ_HANDLED;
 
-		if (source & ST_LIS2DU12_DOUBLE_TAP_IA_MASK) {
+		if ((hw->enable_mask & BIT(ST_LIS2DU12_ID_TAP_TAP)) &&
+		    (tap_src & ST_LIS2DU12_DOUBLE_TAP_IA_MASK)) {
 			iio_dev = hw->iio_devs[ST_LIS2DU12_ID_TAP_TAP];
 			type = STM_IIO_TAP_TAP;
 			code = IIO_UNMOD_EVENT_CODE(type, -1,
 						    IIO_EV_TYPE_THRESH,
 						    IIO_EV_DIR_RISING);
+			reset_int = true;
 			iio_push_event(iio_dev, code,
 				       st_lis2du12_get_timestamp(hw));
 		}
 
-		if (source & ST_LIS2DU12_SINGLE_TAP_IA_MASK) {
+		if ((hw->enable_mask & BIT(ST_LIS2DU12_ID_TAP)) &&
+		    (tap_src & ST_LIS2DU12_SINGLE_TAP_IA_MASK)) {
 			iio_dev = hw->iio_devs[ST_LIS2DU12_ID_TAP];
 			type = STM_IIO_TAP;
 			code = IIO_UNMOD_EVENT_CODE(type, -1,
 						    IIO_EV_TYPE_THRESH,
 						    IIO_EV_DIR_RISING);
+			reset_int = true;
 			iio_push_event(iio_dev, code,
 				       st_lis2du12_get_timestamp(hw));
 		}
 	}
 
-	if ((all_int_source & ST_LIS2DU12_WU_IA_ALL_MASK) &&
-	    (hw->enable_mask & BIT(ST_LIS2DU12_ID_WU))) {
+	if (hw->enable_mask & BIT(ST_LIS2DU12_ID_WU)) {
 		struct iio_dev *iio_dev;
 		enum iio_chan_type type;
-		u8 wu_src;
+		int wu_src;
 
-		err = regmap_read(hw->regmap, ST_LIS2DU12_WAKE_UP_SRC_ADDR,
-				  &wk_source);
+		err = regmap_read(hw->regmap,
+				  ST_LIS2DU12_WAKE_UP_SRC_ADDR,
+				  &wu_src);
 		if (err < 0)
 			return IRQ_HANDLED;
 
-		wu_src = wk_source & ST_LIS2DU12_WU_MASK;
-		iio_dev = hw->iio_devs[ST_LIS2DU12_ID_WU];
-		/* use STM_IIO_GESTURE event type for custom events */
-		type = STM_IIO_GESTURE;
-		code = IIO_UNMOD_EVENT_CODE(type, wu_src,
-					    IIO_EV_TYPE_THRESH,
-					    IIO_EV_DIR_RISING);
-		iio_push_event(iio_dev, code,
-			       st_lis2du12_get_timestamp(hw));
+		if (wu_src & ST_LIS2DU12_WU_IA_MASK) {
+			wu_src &= ST_LIS2DU12_WU_MASK;
+			iio_dev = hw->iio_devs[ST_LIS2DU12_ID_WU];
+			/* use STM_IIO_GESTURE event type for custom events */
+			type = STM_IIO_GESTURE;
+			code = IIO_UNMOD_EVENT_CODE(type,
+					 (wu_src & ST_LIS2DU12_WU_MASK),
+					 IIO_EV_TYPE_THRESH,
+					 IIO_EV_DIR_RISING);
+			reset_int = true;
+			iio_push_event(iio_dev, code,
+				       st_lis2du12_get_timestamp(hw));
+		}
 	}
 
-	if ((all_int_source & ST_LIS2DU12_FF_IA_ALL_MASK) &&
-	    (hw->enable_mask & BIT(ST_LIS2DU12_ID_FF))) {
+	if (hw->enable_mask & BIT(ST_LIS2DU12_ID_FF)) {
 		struct iio_dev *iio_dev;
 		enum iio_chan_type type;
+		int wu_src;
 
-		iio_dev = hw->iio_devs[ST_LIS2DU12_ID_FF];
-		/* use STM_IIO_GESTURE event type for custom events */
-		type = STM_IIO_GESTURE;
-		code = IIO_UNMOD_EVENT_CODE(type, 1,
-					    IIO_EV_TYPE_THRESH,
-					    IIO_EV_DIR_RISING);
-		iio_push_event(iio_dev, code,
-			       st_lis2du12_get_timestamp(hw));
+		err = regmap_read(hw->regmap,
+				  ST_LIS2DU12_WAKE_UP_SRC_ADDR,
+				  &wu_src);
+		if (err < 0)
+			return IRQ_HANDLED;
+
+		if (wu_src & ST_LIS2DU12_FF_IA_MASK) {
+			iio_dev = hw->iio_devs[ST_LIS2DU12_ID_FF];
+			/* use STM_IIO_GESTURE event type for custom events */
+			type = STM_IIO_GESTURE;
+			code = IIO_UNMOD_EVENT_CODE(type, 1,
+						    IIO_EV_TYPE_THRESH,
+						    IIO_EV_DIR_RISING);
+			reset_int = true;
+			iio_push_event(iio_dev, code,
+				       st_lis2du12_get_timestamp(hw));
+		}
 	}
 
-	if ((all_int_source & ST_LIS2DU12_D6D_IA_ALL_MASK) &&
-	    (hw->enable_mask & BIT(ST_LIS2DU12_ID_6D))) {
+	if (hw->enable_mask & BIT(ST_LIS2DU12_ID_6D)) {
 		struct iio_dev *iio_dev;
 		enum iio_chan_type type;
-		u8 sixd_src;
+		int sixd_src;
 
 		err = regmap_read(hw->regmap, ST_LIS2DU12_SIXD_SRC_ADDR,
-				  &sixd_source);
+				  &sixd_src);
 		if (err < 0)
 			return IRQ_HANDLED;
 
-		sixd_src = sixd_source & ST_LIS2DU12_OVERTHRESHOLD_MASK;
-		iio_dev = hw->iio_devs[ST_LIS2DU12_ID_6D];
-		/* use IIO_GESTURE event type for custom events */
-		type = STM_IIO_GESTURE;
-		code = IIO_UNMOD_EVENT_CODE(type, sixd_src,
-					    IIO_EV_TYPE_THRESH,
-					    IIO_EV_DIR_RISING);
-		iio_push_event(iio_dev, code,
-			       st_lis2du12_get_timestamp(hw));
+		if (sixd_src & ST_LIS2DU12_D6D_IA_MASK) {
+			iio_dev = hw->iio_devs[ST_LIS2DU12_ID_6D];
+			/* use IIO_GESTURE event type for custom events */
+			type = STM_IIO_GESTURE;
+			code = IIO_UNMOD_EVENT_CODE(type,
+					sixd_src & ST_LIS2DU12_OVERTHRESHOLD_MASK,
+					IIO_EV_TYPE_THRESH,
+					IIO_EV_DIR_RISING);
+			reset_int = true;
+			iio_push_event(iio_dev, code,
+				       st_lis2du12_get_timestamp(hw));
+		}
 	}
 
-	if ((all_int_source & ST_LIS2DU12_SLEEP_CHANGE_IA_ALL_MASK) &&
-	    (hw->enable_mask & BIT(ST_LIS2DU12_ID_ACT))) {
+	if (hw->enable_mask & BIT(ST_LIS2DU12_ID_ACT)) {
 		struct iio_dev *iio_dev;
 		enum iio_chan_type type;
-		u8 sleep_state;
+		int wu_src;
 
-		err = regmap_read(hw->regmap, ST_LIS2DU12_WAKE_UP_SRC_ADDR,
-				  &wk_source);
+		err = regmap_read(hw->regmap,
+				  ST_LIS2DU12_WAKE_UP_SRC_ADDR,
+				  &wu_src);
 		if (err < 0)
 			return IRQ_HANDLED;
 
-		sleep_state = wk_source & ST_LIS2DU12_SLEEP_STATE_MASK;
-		iio_dev = hw->iio_devs[ST_LIS2DU12_ID_ACT];
-		/* use IIO_GESTURE event type for custom events */
-		type = STM_IIO_GESTURE;
-		code = IIO_UNMOD_EVENT_CODE(type, sleep_state,
-					    IIO_EV_TYPE_THRESH,
-					    IIO_EV_DIR_RISING);
-		iio_push_event(iio_dev, code,
-			       st_lis2du12_get_timestamp(hw));
+		if (wu_src & ST_LIS2DU12_SLEEP_STATE_MASK) {
+			iio_dev = hw->iio_devs[ST_LIS2DU12_ID_ACT];
+			/* use IIO_GESTURE event type for custom events */
+			type = STM_IIO_GESTURE;
+			code = IIO_UNMOD_EVENT_CODE(type,
+				  wu_src & ST_LIS2DU12_SLEEP_STATE_MASK,
+				  IIO_EV_TYPE_THRESH,
+				  IIO_EV_DIR_RISING);
+			reset_int = true;
+			iio_push_event(iio_dev, code,
+				st_lis2du12_get_timestamp(hw));
+		}
+	}
+
+	if (reset_int) {
+		err = regmap_read(hw->regmap,
+				  ST_LIS2DU12_ALL_INT_SRC_ADDR,
+				  &all_int_source);
 	}
 
 	return IRQ_HANDLED;
