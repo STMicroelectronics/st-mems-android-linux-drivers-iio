@@ -32,16 +32,24 @@ static inline s64 st_mag40_ewma(s64 old, s64 new, int weight)
 	return old + incr;
 }
 
+static void st_mag40_update_timestamp(struct st_mag40_data *cdata)
+{
+	struct iio_dev *iio_dev = dev_get_drvdata(cdata->dev);
+	u8 weight = (cdata->odr >= 50) ? 96 : 0;
+	s64 ts;
+
+	ts = st_mag40_get_timestamp(iio_dev);
+	cdata->delta_ts = st_mag40_ewma(cdata->delta_ts,
+					ts - cdata->ts_irq,
+					weight);
+	cdata->ts_irq = ts;
+}
+
 static irqreturn_t st_mag40_trigger_irq_handler(int irq, void *private)
 {
 	struct st_mag40_data *cdata = private;
-	struct iio_dev *iio_dev = dev_get_drvdata(cdata->dev);
-	s64 ts;
-	u8 weight = (cdata->odr >= 50) ? 96 : 0;
 
-	ts = st_mag40_get_timestamp(iio_dev);
-	cdata->delta_ts = st_mag40_ewma(cdata->delta_ts, ts - cdata->ts_irq, weight);
-	cdata->ts_irq = ts;
+	st_mag40_update_timestamp(cdata);
 
 	return IRQ_WAKE_THREAD;
 }
@@ -73,6 +81,8 @@ static irqreturn_t st_mag40_buffer_thread_handler(int irq, void *p)
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
 	int err;
 
+	st_mag40_update_timestamp(cdata);
+
 	err = cdata->tf->read(cdata, ST_MAG40_OUTX_L_ADDR,
 			      ST_MAG40_OUT_LEN, buffer);
 	if (err < 0)
@@ -88,7 +98,11 @@ static irqreturn_t st_mag40_buffer_thread_handler(int irq, void *p)
 	cdata->ts += cdata->delta_ts;
 
 out:
-	iio_trigger_notify_done(cdata->iio_trig);
+	/* check if using irq trigger or external trigger */
+	if (cdata->irq > 0)
+		iio_trigger_notify_done(cdata->iio_trig);
+	else
+		iio_trigger_notify_done(iio_dev->trig);
 
 	return IRQ_HANDLED;
 }
@@ -128,14 +142,11 @@ int st_mag40_trig_set_state(struct iio_trigger *trig, bool state)
 
 int st_mag40_allocate_ring(struct iio_dev *iio_dev)
 {
-	return  iio_triggered_buffer_setup(iio_dev, NULL,
-					   st_mag40_buffer_thread_handler,
-					   &st_mag40_buffer_setup_ops);
-}
+	struct st_mag40_data *cdata = iio_priv(iio_dev);
 
-void st_mag40_deallocate_ring(struct iio_dev *iio_dev)
-{
-	iio_triggered_buffer_cleanup(iio_dev);
+	return  devm_iio_triggered_buffer_setup(cdata->dev, iio_dev, NULL,
+						st_mag40_buffer_thread_handler,
+						&st_mag40_buffer_setup_ops);
 }
 
 static const struct iio_trigger_ops st_mag40_trigger_ops = {
@@ -164,17 +175,12 @@ int st_mag40_allocate_trigger(struct iio_dev *iio_dev)
 	cdata->iio_trig->ops = &st_mag40_trigger_ops;
 	cdata->iio_trig->dev.parent = cdata->dev;
 
-	err = iio_trigger_register(cdata->iio_trig);
+	err = devm_iio_trigger_register(cdata->dev, cdata->iio_trig);
 	if (err < 0) {
 		dev_err(cdata->dev, "failed to register iio trigger.\n");
 		return err;
 	}
-	iio_dev->trig = cdata->iio_trig;
+	iio_dev->trig = iio_trigger_get(cdata->iio_trig);
 
 	return 0;
-}
-
-void st_mag40_deallocate_trigger(struct st_mag40_data *cdata)
-{
-	iio_trigger_unregister(cdata->iio_trig);
 }

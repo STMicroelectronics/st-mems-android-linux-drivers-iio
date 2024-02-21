@@ -565,42 +565,25 @@ int st_mag40_common_probe(struct iio_dev *iio_dev)
 	if (err < 0)
 		return err;
 
-	if (cdata->irq > 0) {
-		err = st_mag40_allocate_ring(iio_dev);
-		if (err < 0)
-			return err;
+	err = st_mag40_allocate_ring(iio_dev);
+	if (err < 0)
+		return err;
 
+	if (cdata->irq > 0) {
 		err = st_mag40_allocate_trigger(iio_dev);
 		if (err < 0)
-			goto deallocate_ring;
+			return err;
 	}
 
 	err = devm_iio_device_register(cdata->dev, iio_dev);
 	if (err)
-		goto iio_trigger_deallocate;
+		return err;
+
+	dev_info(cdata->dev, "probe ok 4\n");
 
 	return 0;
-
-iio_trigger_deallocate:
-	st_mag40_deallocate_trigger(cdata);
-
-deallocate_ring:
-	st_mag40_deallocate_ring(iio_dev);
-
-	return err;
 }
 EXPORT_SYMBOL(st_mag40_common_probe);
-
-void st_mag40_common_remove(struct iio_dev *iio_dev)
-{
-	struct st_mag40_data *cdata = iio_priv(iio_dev);
-
-	if (cdata->irq > 0) {
-		st_mag40_deallocate_trigger(cdata);
-		st_mag40_deallocate_ring(iio_dev);
-	}
-}
-EXPORT_SYMBOL(st_mag40_common_remove);
 
 #ifdef CONFIG_PM
 int st_mag40_common_suspend(struct st_mag40_data *cdata)

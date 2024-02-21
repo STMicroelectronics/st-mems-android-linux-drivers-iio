@@ -92,24 +92,6 @@ static int st_mag40_spi_probe(struct spi_device *spi)
 	return st_mag40_common_probe(iio_dev);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_mag40_spi_remove(struct spi_device *spi)
-{
-	struct iio_dev *iio_dev = spi_get_drvdata(spi);
-
-	st_mag40_common_remove(iio_dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_mag40_spi_remove(struct spi_device *spi)
-{
-	struct iio_dev *iio_dev = spi_get_drvdata(spi);
-
-	st_mag40_common_remove(iio_dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
-
 #ifdef CONFIG_PM
 static int __maybe_unused st_mag40_spi_suspend(struct device *dev)
 {
@@ -184,7 +166,6 @@ static struct spi_driver st_mag40_spi_driver = {
 #endif /* CONFIG_OF */
 		   },
 	.probe = st_mag40_spi_probe,
-	.remove = st_mag40_spi_remove,
 	.id_table = st_mag40_ids,
 };
 module_spi_driver(st_mag40_spi_driver);

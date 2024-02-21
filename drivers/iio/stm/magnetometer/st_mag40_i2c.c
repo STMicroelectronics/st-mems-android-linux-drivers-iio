@@ -88,24 +88,6 @@ static int st_mag40_i2c_probe(struct i2c_client *client,
 	return st_mag40_common_probe(iio_dev);
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void st_mag40_i2c_remove(struct i2c_client *client)
-{
-	struct iio_dev *iio_dev = i2c_get_clientdata(client);
-
-	st_mag40_common_remove(iio_dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_mag40_i2c_remove(struct i2c_client *client)
-{
-	struct iio_dev *iio_dev = i2c_get_clientdata(client);
-
-	st_mag40_common_remove(iio_dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
-
 #ifdef CONFIG_PM
 static int __maybe_unused st_mag40_i2c_suspend(struct device *dev)
 {
@@ -179,7 +161,6 @@ static struct i2c_driver st_mag40_i2c_driver = {
 #endif /* CONFIG_OF */
 		   },
 	.probe = st_mag40_i2c_probe,
-	.remove = st_mag40_i2c_remove,
 	.id_table = st_mag40_ids,
 };
 module_i2c_driver(st_mag40_i2c_driver);
