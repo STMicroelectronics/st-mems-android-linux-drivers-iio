@@ -846,9 +846,9 @@ static int st_asm330lhhx_set_selftest(
 static ssize_t st_asm330lhhx_sysfs_get_selftest_available(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%s, %s\n",
-		       st_asm330lhhx_selftest_table[1].string_mode,
-		       st_asm330lhhx_selftest_table[2].string_mode);
+	return sysfs_emit(buf, "%s, %s\n",
+			  st_asm330lhhx_selftest_table[1].string_mode,
+			  st_asm330lhhx_selftest_table[2].string_mode);
 }
 
 static ssize_t st_asm330lhhx_sysfs_get_selftest_status(struct device *dev,
@@ -871,7 +871,7 @@ static ssize_t st_asm330lhhx_sysfs_get_selftest_status(struct device *dev,
 	else if (result > 0)
 		message = "pass";
 
-	return sprintf(buf, "%s\n", message);
+	return sysfs_emit(buf, "%s\n", message);
 }
 
 #ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
@@ -1746,8 +1746,8 @@ st_asm330lhhx_get_power_mode(struct device *dev,
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 
-	return sprintf(buf, "%s\n",
-		       st_asm330lhhx_power_mode[sensor->pm].string_mode);
+	return sysfs_emit(buf, "%s\n",
+		      st_asm330lhhx_power_mode[sensor->pm].string_mode);
 }
 
 static ssize_t
@@ -2124,7 +2124,7 @@ ssize_t __maybe_unused st_asm330lhhx_get_discharded_samples(struct device *dev,
 	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = sprintf(buf, "%d\n", sensor->discharged_samples);
+	ret = sysfs_emit(buf, "%d\n", sensor->discharged_samples);
 
 	/* reset counter */
 	sensor->discharged_samples = 0;

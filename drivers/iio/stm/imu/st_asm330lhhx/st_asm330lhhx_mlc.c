@@ -610,9 +610,9 @@ static ssize_t st_asm330lhhx_mlc_info(struct device *dev,
 	struct st_asm330lhhx_sensor *sensor = iio_priv(dev_to_iio_dev(dev));
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 
-	return scnprintf(buf, PAGE_SIZE, "mlc %02x fsm %02x\n",
-			 hw->mlc_config->mlc_configured,
-			 hw->mlc_config->fsm_configured);
+	return sysfs_emit(buf, "mlc %02x fsm %02x\n",
+			  hw->mlc_config->mlc_configured,
+			  hw->mlc_config->fsm_configured);
 }
 
 static ssize_t
@@ -620,8 +620,8 @@ st_asm330lhhx_mlc_get_version(struct device *dev,
 			      struct device_attribute *attr,
 			      char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "mlc loader Version %s\n",
-			 ST_ASM330LHHX_MLC_LOADER_VERSION);
+	return sysfs_emit(buf, "mlc loader Version %s\n",
+			  ST_ASM330LHHX_MLC_LOADER_VERSION);
 }
 
 static ssize_t

@@ -363,7 +363,7 @@ ssize_t st_asm330lhhx_get_max_watermark(struct device *dev,
 {
 	struct st_asm330lhhx_sensor *sensor = iio_priv(dev_to_iio_dev(dev));
 
-	return sprintf(buf, "%d\n", sensor->max_watermark);
+	return sysfs_emit(buf, "%d\n", sensor->max_watermark);
 }
 
 ssize_t st_asm330lhhx_get_watermark(struct device *dev,
@@ -372,7 +372,7 @@ ssize_t st_asm330lhhx_get_watermark(struct device *dev,
 {
 	struct st_asm330lhhx_sensor *sensor = iio_priv(dev_to_iio_dev(dev));
 
-	return sprintf(buf, "%d\n", sensor->watermark);
+	return sysfs_emit(buf, "%d\n", sensor->watermark);
 }
 
 ssize_t st_asm330lhhx_set_watermark(struct device *dev,
