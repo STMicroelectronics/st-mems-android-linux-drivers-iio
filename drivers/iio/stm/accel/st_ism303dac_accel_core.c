@@ -53,6 +53,22 @@ enum {
 	}, \
 }
 
+#define ISM303DAC_TEMP_CHAN(addr) \
+{ \
+	.type = IIO_TEMP, \
+	.address = addr, \
+	.channel2 = IIO_NO_MOD, \
+	.info_mask_separate = BIT(IIO_CHAN_INFO_RAW), \
+	.scan_index = -1, \
+	.scan_type = { \
+		.sign = 's', \
+		.realbits = 8, \
+		.storagebits = 8, \
+		.shift = 0, \
+		.endianness = IIO_LE, \
+	}, \
+}
+
 struct ism303dac_odr_reg {
 	u32 hz;
 	u8 value;
@@ -223,6 +239,15 @@ static const struct ism303dac_sensors_table {
 			IIO_CHAN_SOFT_TIMESTAMP(1)
 		},
 		.iio_channel_size = ISM303DAC_EVENT_CHANNEL_SPEC_SIZE,
+	},
+	[ISM303DAC_TEMP] = {
+		.name = "temp",
+		.description = "ST ISM303DAC Temperature Sensor",
+		.min_odr_hz = ISM303DAC_TEMP_ODR,
+		.iio_channel = {
+			ISM303DAC_TEMP_CHAN(ISM303DAC_OUT_T_A_ADDR),
+		},
+		.iio_channel_size = 1,
 	},
 };
 
@@ -716,6 +741,17 @@ static ssize_t ism303dac_get_scale_avail(struct device *dev,
 	return len;
 }
 
+/* temperature sensor requires a non zero accel ODR set */
+static int ism303dac_enable_temp(struct ism303dac_sensor_data *sdata,
+				 bool enable)
+{
+	u8 pm = sdata->cdata->power_mode;
+	u8 value = enable ? ism303dac_odr_table.odr_avl[pm][2].value : 0;
+
+	return ism303dac_write_register(sdata->cdata, ism303dac_odr_table.addr,
+					ism303dac_odr_table.mask, value, true);
+}
+
 static int ism303dac_read_raw(struct iio_dev *indio_dev,
 			struct iio_chan_spec const *ch, int *val,
 			int *val2, long mask)
@@ -726,38 +762,79 @@ static int ism303dac_read_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&indio_dev->mlock);
-		if (ism303dac_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
+		if (ch->type == IIO_ACCEL) {
+			mutex_lock(&indio_dev->mlock);
+			if (ism303dac_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
+				mutex_unlock(&indio_dev->mlock);
+				return -EBUSY;
+			}
+
+			err = ism303dac_set_enable(sdata, true);
+			if (err < 0) {
+				mutex_unlock(&indio_dev->mlock);
+				return -EBUSY;
+			}
+
+			msleep(40);
+
+			err = ism303dac_read_register(sdata->cdata, ch->address, 2,
+						      outdata, true);
+			if (err < 0) {
+				mutex_unlock(&indio_dev->mlock);
+				return err;
+			}
+
+			*val = (s16)get_unaligned_le16(outdata);
+			*val = *val >> ch->scan_type.shift;
+
+			err = ism303dac_set_enable(sdata, false);
 			mutex_unlock(&indio_dev->mlock);
-			return -EBUSY;
+
+			if (err < 0)
+				return err;
+
+			return IIO_VAL_INT;
+		} else if (ch->type == IIO_TEMP) {
+			struct ism303dac_data *cdata = sdata->cdata;
+			struct iio_dev *acc_indio_dev = cdata->iio_sensors_dev[ISM303DAC_ACCEL];
+			struct ism303dac_sensor_data *acc_data = iio_priv(acc_indio_dev);
+			bool acc_poweroff = false;
+
+			/* temperature sensor requires accel enabled */
+			if (!acc_data->enabled) {
+				err = iio_device_claim_direct_mode(acc_indio_dev);
+				if (err)
+					break;
+
+				err = ism303dac_enable_temp(acc_data, true);
+				if (err < 0) {
+					iio_device_release_direct_mode(acc_indio_dev);
+
+					return -EBUSY;
+				}
+
+				acc_poweroff = true;
+
+				/*
+				 * temperature odr is fixed to 12.5 Hz so we
+				 * must wait 1/12.5 = 80000 us for a new data
+				 */
+				usleep_range(80000, 81000);
+			}
+
+			err = ism303dac_read_register(sdata->cdata, ch->address,
+						      1, outdata, true);
+			if (acc_poweroff) {
+				err = ism303dac_enable_temp(acc_data, false);
+				iio_device_release_direct_mode(acc_indio_dev);
+			}
+
+			*val = (u8)outdata[0];
+
+			return err < 0 ? err : IIO_VAL_INT;
 		}
 
-		err = ism303dac_set_enable(sdata, true);
-		if (err < 0) {
-			mutex_unlock(&indio_dev->mlock);
-			return -EBUSY;
-		}
-
-		msleep(40);
-
-		err = ism303dac_read_register(sdata->cdata, ch->address, 2,
-					      outdata, true);
-		if (err < 0) {
-			mutex_unlock(&indio_dev->mlock);
-			return err;
-		}
-
-		*val = (s16)get_unaligned_le16(outdata);
-		*val = *val >> ch->scan_type.shift;
-
-		err = ism303dac_set_enable(sdata, false);
-		mutex_unlock(&indio_dev->mlock);
-
-		if (err < 0)
-			return err;
-
-		return IIO_VAL_INT;
-
+		return -EINVAL;
 	case IIO_CHAN_INFO_SCALE:
 		*val = 0;
 		*val2 = sdata->gain;
@@ -1019,6 +1096,10 @@ static struct attribute *ism303dac_step_double_tap_attributes[] = {
 	NULL,
 };
 
+static struct attribute *ism303dac_temp_attributes[] = {
+	NULL,
+};
+
 static const struct attribute_group ism303dac_accel_attribute_group = {
 	.attrs = ism303dac_accel_attributes,
 };
@@ -1029,6 +1110,10 @@ static const struct attribute_group ism303dac_tap_attribute_group = {
 
 static const struct attribute_group ism303dac_double_tap_attribute_group = {
 	.attrs = ism303dac_step_double_tap_attributes,
+};
+
+static const struct attribute_group ism303dac_temp_attribute_group = {
+	.attrs = ism303dac_temp_attributes,
 };
 
 static const struct iio_info ism303dac_info[ISM303DAC_SENSORS_NUMB] = {
@@ -1042,6 +1127,11 @@ static const struct iio_info ism303dac_info[ISM303DAC_SENSORS_NUMB] = {
 	},
 	[ISM303DAC_DOUBLE_TAP] = {
 		.attrs = &ism303dac_double_tap_attribute_group,
+	},
+	[ISM303DAC_TEMP] = {
+		.attrs = &ism303dac_temp_attribute_group,
+		.read_raw = &ism303dac_read_raw,
+		.write_raw = &ism303dac_write_raw,
 	},
 };
 

@@ -101,7 +101,7 @@ int ism303dac_allocate_triggers(struct ism303dac_data *cdata,
 {
 	int err, i, n;
 
-	for (i = 0; i < ISM303DAC_SENSORS_NUMB; i++) {
+	for (i = 0; i < ISM303DAC_BUFFER_SENSOR; i++) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)
 		cdata->iio_trig[i] = iio_trigger_alloc(cdata->dev,
 					"%s-trigger",
@@ -131,7 +131,7 @@ int ism303dac_allocate_triggers(struct ism303dac_data *cdata,
 	if (err)
 		goto deallocate_trigger;
 
-	for (n = 0; n < ISM303DAC_SENSORS_NUMB; n++) {
+	for (n = 0; n < ISM303DAC_BUFFER_SENSOR; n++) {
 		err = iio_trigger_register(cdata->iio_trig[n]);
 		if (err < 0) {
 			dev_err(cdata->dev, "failed to register iio trigger.\n");
@@ -161,6 +161,6 @@ void ism303dac_deallocate_triggers(struct ism303dac_data *cdata)
 
 	free_irq(cdata->irq, cdata);
 
-	for (i = 0; i < ISM303DAC_SENSORS_NUMB; i++)
+	for (i = 0; i < ISM303DAC_BUFFER_SENSOR; i++)
 		iio_trigger_unregister(cdata->iio_trig[i]);
 }
