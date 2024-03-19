@@ -11,6 +11,7 @@
 #include <linux/spi/spi.h>
 #include <linux/slab.h>
 #include <linux/of.h>
+#include <linux/version.h>
 
 #include "st_lis2dw12.h"
 
@@ -38,6 +39,17 @@ static int st_lis2dw12_spi_probe(struct spi_device *spi)
 	return st_lis2dw12_probe(&spi->dev, spi->irq, spi->modalias, regmap);
 }
 
+#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
+static void st_lis2dw12_spi_remove(struct spi_device *spi)
+{
+	st_lis2dw12_remove(&spi->dev);
+}
+#else /* LINUX_VERSION_CODE */
+static int st_lis2dw12_spi_remove(struct spi_device *spi)
+{
+	return st_lis2dw12_remove(&spi->dev);
+}
+#endif /* LINUX_VERSION_CODE */
 static const struct of_device_id st_lis2dw12_spi_of_match[] = {
 	{
 		.compatible = "st,lis2dw12",
@@ -70,6 +82,7 @@ static struct spi_driver st_lis2dw12_driver = {
 		.of_match_table = of_match_ptr(st_lis2dw12_spi_of_match),
 	},
 	.probe = st_lis2dw12_spi_probe,
+	.remove = st_lis2dw12_spi_remove,
 	.id_table = st_lis2dw12_spi_id_table,
 };
 module_spi_driver(st_lis2dw12_driver);

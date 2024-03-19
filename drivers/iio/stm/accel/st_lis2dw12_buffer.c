@@ -50,13 +50,17 @@ static int st_lis2dw12_update_fifo(struct iio_dev *iio_dev, bool enable)
 		hw->samples = 0;
 	}
 
-	mode = enable ? ST_LIS2DW12_FIFO_CONTINUOUS : ST_LIS2DW12_FIFO_BYPASS;
-	err = st_lis2dw12_write_with_mask_locked(hw,
-					     ST_LIS2DW12_FIFO_CTRL_ADDR,
-					     ST_LIS2DW12_FIFOMODE_MASK,
-					     mode);
-	if (err < 0)
-		return err;
+	/* enable FIFO only for acc */
+	if (sensor->id == ST_LIS2DW12_ID_ACC) {
+		mode = enable ? ST_LIS2DW12_FIFO_CONTINUOUS :
+				ST_LIS2DW12_FIFO_BYPASS;
+		err = st_lis2dw12_write_with_mask_locked(hw,
+						     ST_LIS2DW12_FIFO_CTRL_ADDR,
+						     ST_LIS2DW12_FIFOMODE_MASK,
+						     mode);
+		if (err < 0)
+			return err;
+	}
 
 	return st_lis2dw12_sensor_set_enable(sensor, enable);
 }
@@ -320,11 +324,11 @@ static irqreturn_t st_lis2dw12_handler_thread_emb(int irq,
 
 int st_lis2dw12_fifo_setup(struct st_lis2dw12_hw *hw)
 {
-	struct iio_dev *iio_dev = hw->iio_devs[ST_LIS2DW12_ID_ACC];
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
 	struct iio_buffer *buffer;
 #endif /* LINUX_VERSION_CODE */
-	int ret;
+
+	int ret, i;
 
 	ret = devm_request_threaded_irq(hw->dev, hw->irq,
 					st_lis2dw12_handler_irq,
@@ -350,26 +354,32 @@ int st_lis2dw12_fifo_setup(struct st_lis2dw12_hw *hw)
 		}
 	}
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-	ret = devm_iio_kfifo_buffer_setup(hw->dev, iio_dev,
-					  &st_lis2dw12_acc_buffer_setup_ops);
-	if (ret)
-		return ret;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-	ret = devm_iio_kfifo_buffer_setup(hw->dev, iio_dev,
-					  INDIO_BUFFER_SOFTWARE,
-					  &st_lis2dw12_acc_buffer_setup_ops);
-	if (ret)
-		return ret;
-#else /* LINUX_VERSION_CODE */
-	buffer = devm_iio_kfifo_allocate(hw->dev);
-	if (!buffer)
-		return -ENOMEM;
+	for (i = ST_LIS2DW12_ID_ACC; i <= ST_LIS2DW12_ID_TEMP; i++) {
+		if (!hw->iio_devs[i])
+			continue;
 
-	iio_device_attach_buffer(iio_dev, buffer);
-	iio_dev->setup_ops = &st_lis2dw12_acc_buffer_setup_ops;
-	iio_dev->modes |= INDIO_BUFFER_SOFTWARE;
+#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
+		ret = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
+					     &st_lis2dw12_acc_buffer_setup_ops);
+		if (ret)
+			return ret;
+#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
+		ret = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
+					     INDIO_BUFFER_SOFTWARE,
+					     &st_lis2dw12_acc_buffer_setup_ops);
+		if (ret)
+			return ret;
+#else /* LINUX_VERSION_CODE */
+		buffer = devm_iio_kfifo_allocate(hw->dev);
+		if (!buffer)
+			return -ENOMEM;
+
+		iio_device_attach_buffer(hw->iio_devs[i], buffer);
+		hw->iio_devs[i]->setup_ops = &st_lis2dw12_acc_buffer_setup_ops;
+		hw->iio_devs[i]->modes |= INDIO_BUFFER_SOFTWARE;
 #endif /* LINUX_VERSION_CODE */
+
+	}
 
 	return 0;
 }

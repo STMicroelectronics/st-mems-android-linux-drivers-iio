@@ -13,9 +13,11 @@
 #include <linux/bitfield.h>
 #include <linux/device.h>
 #include <linux/iio/events.h>
+#include <linux/hrtimer.h>
 #include <linux/iio/iio.h>
 #include <linux/of_device.h>
 #include <linux/regmap.h>
+#include <linux/workqueue.h>
 
 #include "../common/stm_iio_types.h"
 
@@ -26,6 +28,8 @@
 
 #define ST_LIS2DW12_MAX_WATERMARK		31
 #define ST_LIS2DW12_DATA_SIZE			6
+
+#define ST_LIS2DW12_TEMP_OUT_T_L_ADDR		0x0d
 
 #define ST_LIS2DW12_WHOAMI_ADDR			0x0f
 #define ST_LIS2DW12_WHOAMI_VAL			0x44
@@ -117,6 +121,8 @@
 #define ST_LIS2DW12_FS_8G_GAIN			IIO_G_TO_M_S_2(976)
 #define ST_LIS2DW12_FS_16G_GAIN			IIO_G_TO_M_S_2(1952)
 
+#define ST_LIS2DW12_FS_TEMP_GAIN		16
+
 #define ST_LIS2DW12_SELFTEST_MIN		285
 #define ST_LIS2DW12_SELFTEST_MAX		6150
 
@@ -136,6 +142,7 @@ enum st_lis2dw12_selftest_status {
 
 enum st_lis2dw12_sensor_id {
 	ST_LIS2DW12_ID_ACC,
+	ST_LIS2DW12_ID_TEMP,
 	ST_LIS2DW12_ID_TAP_TAP,
 	ST_LIS2DW12_ID_TAP,
 	ST_LIS2DW12_ID_WU,
@@ -175,6 +182,13 @@ struct st_lis2dw12_hw {
 	s64 delta_ts;
 	s64 ts_irq;
 	s64 ts;
+
+	struct hrtimer hr_timer;
+	struct work_struct iio_work;
+	ktime_t oldktime;
+
+	struct workqueue_struct *temp_workqueue;
+	s64 timestamp;
 };
 /* HW devices that can wakeup the target */
 #define ST_LIS2DW12_WAKE_UP_SENSORS (BIT(ST_LIS2DW12_ID_ACC)      | \
@@ -250,6 +264,8 @@ static inline bool st_lis2dw12_is_volatile_reg(struct device *dev,
 					       unsigned int reg)
 {
 	switch (reg) {
+	case ST_LIS2DW12_TEMP_OUT_T_L_ADDR:
+	case ST_LIS2DW12_TEMP_OUT_T_L_ADDR + 1:
 	case ST_LIS2DW12_WHOAMI_ADDR:
 	case ST_LIS2DW12_STATUS_ADDR:
 	case ST_LIS2DW12_OUT_X_L_ADDR:
@@ -287,6 +303,7 @@ extern const struct dev_pm_ops st_lis2dw12_pm_ops;
 
 int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
 		      struct regmap *regmap);
+int st_lis2dw12_remove(struct device *dev);
 int st_lis2dw12_fifo_setup(struct st_lis2dw12_hw *hw);
 int st_lis2dw12_update_fifo_watermark(struct st_lis2dw12_hw *hw, u8 watermark);
 ssize_t st_lis2dw12_flush_fifo(struct device *dev,
