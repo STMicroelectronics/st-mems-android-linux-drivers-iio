@@ -116,19 +116,62 @@ st_asm330lhhx_set_sensor_batching_odr(struct st_asm330lhhx_sensor *s,
 {
 	enum st_asm330lhhx_sensor_id id = s->id;
 	struct st_asm330lhhx_hw *hw = s->hw;
+	int req_odr = enable ? s->odr : 0;
 	u8 data = 0;
 	int err;
 
-	if (enable) {
-		err = st_asm330lhhx_get_batch_val(s, s->odr, s->uodr, &data);
-		if (err < 0)
-			return err;
+	switch (id) {
+	case ST_ASM330LHHX_ID_EXT0:
+	case ST_ASM330LHHX_ID_EXT1:
+	case ST_ASM330LHHX_ID_TEMP:
+	case ST_ASM330LHHX_ID_ACC: {
+		int odr;
+		int i;
+
+		if (id == ST_ASM330LHHX_ID_TEMP) {
+			if (enable) {
+				err = st_asm330lhhx_get_batch_val(s, req_odr,
+								  0, &data);
+				if (err < 0)
+					return err;
+			}
+
+			err = st_asm330lhhx_update_bits_locked(hw,
+				hw->odr_table_entry[id].batching_reg.addr,
+				hw->odr_table_entry[id].batching_reg.mask,
+				data);
+			if (err < 0)
+				return err;
+		}
+
+		id = ST_ASM330LHHX_ID_ACC;
+		for (i = ST_ASM330LHHX_ID_ACC; i < ST_ASM330LHHX_ID_MAX; i++) {
+			if (!hw->iio_devs[i] || i == s->id)
+				continue;
+
+			odr = st_asm330lhhx_check_odr_dependency(hw, req_odr,
+								 0, i);
+			if (odr != req_odr)
+				return 0;
+
+			req_odr = max_t(int, req_odr, odr);
+		}
+		break;
+	}
+	case ST_ASM330LHHX_ID_GYRO:
+		break;
+	default:
+		return 0;
 	}
 
+	err = st_asm330lhhx_get_batch_val(s, req_odr, 0, &data);
+	if (err < 0)
+		return err;
+
 	return st_asm330lhhx_update_bits_locked(hw,
-			      hw->odr_table_entry[id].batching_reg.addr,
-			      hw->odr_table_entry[id].batching_reg.mask,
-			      data);
+				hw->odr_table_entry[id].batching_reg.addr,
+				hw->odr_table_entry[id].batching_reg.mask,
+				data);
 }
 
 int st_asm330lhhx_update_watermark(struct st_asm330lhhx_sensor *sensor,
@@ -496,34 +539,6 @@ static int st_asm330lhhx_update_fifo(struct iio_dev *iio_dev,
 		err = st_asm330lhhx_set_sensor_batching_odr(sensor, enable);
 		if (err < 0)
 			goto out;
-	}
-
-	/*
-	 * This is an auxiliary sensor, it need to get batched
-	 * toghether at least with a primary sensor (Acc/Gyro).
-	 */
-	if (sensor->id == ST_ASM330LHHX_ID_TEMP) {
-		if (!(hw->enable_mask & (BIT_ULL(ST_ASM330LHHX_ID_ACC) |
-					 BIT_ULL(ST_ASM330LHHX_ID_GYRO)))) {
-			struct st_asm330lhhx_sensor *acc_sensor;
-			u8 data = 0;
-
-			acc_sensor = iio_priv(hw->iio_devs[ST_ASM330LHHX_ID_ACC]);
-			if (enable) {
-				err = st_asm330lhhx_get_batch_val(acc_sensor,
-						sensor->odr, sensor->uodr,
-						&data);
-				if (err < 0)
-					goto out;
-			}
-
-			err = st_asm330lhhx_update_bits_locked(hw,
-				hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].batching_reg.addr,
-				hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].batching_reg.mask,
-				data);
-			if (err < 0)
-				goto out;
-		}
 	}
 
 	err = st_asm330lhhx_update_watermark(sensor, sensor->watermark);

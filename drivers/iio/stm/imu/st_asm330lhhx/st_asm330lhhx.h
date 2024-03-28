@@ -1012,6 +1012,28 @@ bool st_asm330lhhx_mlc_running(struct st_asm330lhhx_hw *hw)
 			   ST_ASM330LHHX_ID_MLC_0);
 }
 
+static inline
+u16 st_asm330lhhx_check_odr_dependency(struct st_asm330lhhx_hw *hw,
+				       int odr, int uodr,
+				       enum st_asm330lhhx_sensor_id ref_id)
+{
+	struct st_asm330lhhx_sensor *ref = iio_priv(hw->iio_devs[ref_id]);
+	bool enable = ST_ASM330LHHX_ODR_EXPAND(odr, uodr) > 0;
+	u16 ret;
+
+	if (enable) {
+		/* uodr not used */
+		if (hw->enable_mask & BIT_ULL(ref_id))
+			ret = max_t(u16, ref->odr, odr);
+		else
+			ret = odr;
+	} else {
+		ret = (hw->enable_mask & BIT_ULL(ref_id)) ? ref->odr : 0;
+	}
+
+	return ret;
+}
+
 int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 		  struct regmap *regmap);
 void st_asm330lhhx_remove(struct device *dev);

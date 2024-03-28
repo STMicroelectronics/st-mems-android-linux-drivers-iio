@@ -231,7 +231,7 @@ static struct st_asm330lhhx_suspend_resume_entry
 
 static const struct st_asm330lhhx_odr_table_entry st_asm330lhhx_odr_table[] = {
 	[ST_ASM330LHHX_ID_ACC] = {
-		.size = 8,
+		.size = 9,
 		.reg = {
 			.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
 			.mask = GENMASK(7, 4),
@@ -244,17 +244,18 @@ static const struct st_asm330lhhx_odr_table_entry st_asm330lhhx_odr_table[] = {
 			.addr = ST_ASM330LHHX_REG_FIFO_CTRL3_ADDR,
 			.mask = GENMASK(3, 0),
 		},
-		.odr_avl[0] = {   1, 625000,  0x01,  0x0b },
-		.odr_avl[1] = {  12, 500000,  0x01,  0x01 },
-		.odr_avl[2] = {  26,      0,  0x02,  0x02 },
-		.odr_avl[3] = {  52,      0,  0x03,  0x03 },
-		.odr_avl[4] = { 104,      0,  0x04,  0x04 },
-		.odr_avl[5] = { 208,      0,  0x05,  0x05 },
-		.odr_avl[6] = { 416,      0,  0x06,  0x06 },
-		.odr_avl[7] = { 833,      0,  0x07,  0x07 },
+		.odr_avl[0] = {   0,      0,  0x00,  0x00 },
+		.odr_avl[1] = {   1, 625000,  0x01,  0x0b },
+		.odr_avl[2] = {  12, 500000,  0x01,  0x01 },
+		.odr_avl[3] = {  26,      0,  0x02,  0x02 },
+		.odr_avl[4] = {  52,      0,  0x03,  0x03 },
+		.odr_avl[5] = { 104,      0,  0x04,  0x04 },
+		.odr_avl[6] = { 208,      0,  0x05,  0x05 },
+		.odr_avl[7] = { 416,      0,  0x06,  0x06 },
+		.odr_avl[8] = { 833,      0,  0x07,  0x07 },
 	},
 	[ST_ASM330LHHX_ID_GYRO] = {
-		.size = 8,
+		.size = 9,
 		.reg = {
 			.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
 			.mask = GENMASK(7, 4),
@@ -267,23 +268,25 @@ static const struct st_asm330lhhx_odr_table_entry st_asm330lhhx_odr_table[] = {
 			.addr = ST_ASM330LHHX_REG_FIFO_CTRL3_ADDR,
 			.mask = GENMASK(7, 4),
 		},
-		.odr_avl[0] = {   6, 500000,  0x01,  0x0b },
-		.odr_avl[1] = {  12, 500000,  0x01,  0x01 },
-		.odr_avl[2] = {  26,      0,  0x02,  0x02 },
-		.odr_avl[3] = {  52,      0,  0x03,  0x03 },
-		.odr_avl[4] = { 104,      0,  0x04,  0x04 },
-		.odr_avl[5] = { 208,      0,  0x05,  0x05 },
-		.odr_avl[6] = { 416,      0,  0x06,  0x06 },
-		.odr_avl[7] = { 833,      0,  0x07,  0x07 },
+		.odr_avl[0] = {   0,      0,  0x00,  0x00 },
+		.odr_avl[1] = {   6, 500000,  0x01,  0x0b },
+		.odr_avl[2] = {  12, 500000,  0x01,  0x01 },
+		.odr_avl[3] = {  26,      0,  0x02,  0x02 },
+		.odr_avl[4] = {  52,      0,  0x03,  0x03 },
+		.odr_avl[5] = { 104,      0,  0x04,  0x04 },
+		.odr_avl[6] = { 208,      0,  0x05,  0x05 },
+		.odr_avl[7] = { 416,      0,  0x06,  0x06 },
+		.odr_avl[8] = { 833,      0,  0x07,  0x07 },
 	},
 	[ST_ASM330LHHX_ID_TEMP] = {
-		.size = 2,
+		.size = 3,
 		.batching_reg = {
 			.addr = ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
 			.mask = GENMASK(5, 4),
 		},
-		.odr_avl[0] = { 12, 500000,   0x02,  0x02 },
-		.odr_avl[1] = { 52,      0,   0x03,  0x03 },
+		.odr_avl[0] = {  0,      0,   0x00,  0x00 },
+		.odr_avl[1] = { 12, 500000,   0x02,  0x02 },
+		.odr_avl[2] = { 52,      0,   0x03,  0x03 },
 	},
 };
 
@@ -1234,27 +1237,6 @@ int st_asm330lhhx_get_batch_val(struct st_asm330lhhx_sensor *sensor,
 	return 0;
 }
 
-static u16 st_asm330lhhx_check_odr_dependency(struct st_asm330lhhx_hw *hw,
-					   int odr, int uodr,
-					   enum st_asm330lhhx_sensor_id ref_id)
-{
-	struct st_asm330lhhx_sensor *ref = iio_priv(hw->iio_devs[ref_id]);
-	bool enable = ST_ASM330LHHX_ODR_EXPAND(odr, uodr) > 0;
-	u16 ret;
-
-	if (enable) {
-		/* uodr not used */
-		if (hw->enable_mask & BIT_ULL(ref_id))
-			ret = max_t(u16, ref->odr, odr);
-		else
-			ret = odr;
-	} else {
-		ret = (hw->enable_mask & BIT_ULL(ref_id)) ? ref->odr : 0;
-	}
-
-	return ret;
-}
-
 static int st_asm330lhhx_update_odr_fsm(struct st_asm330lhhx_hw *hw,
 					enum st_asm330lhhx_sensor_id id,
 					enum st_asm330lhhx_sensor_id id_req,
@@ -1678,6 +1660,11 @@ st_asm330lhhx_sysfs_sampling_freq_avail(struct device *dev,
 	int i, len = 0;
 
 	for (i = 0; i < st_asm330lhhx_odr_table[id].size; i++) {
+		/* skip zero */
+		if (st_asm330lhhx_odr_table[id].odr_avl[i].hz == 0 &&
+		    st_asm330lhhx_odr_table[id].odr_avl[i].uhz == 0)
+			continue;
+
 		len += scnprintf(buf + len, PAGE_SIZE - len, "%d.%06d ",
 				 st_asm330lhhx_odr_table[id].odr_avl[i].hz,
 				 st_asm330lhhx_odr_table[id].odr_avl[i].uhz);
