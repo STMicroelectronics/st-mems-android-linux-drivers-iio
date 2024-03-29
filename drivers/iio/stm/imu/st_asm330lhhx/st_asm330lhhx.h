@@ -231,6 +231,7 @@
 
 #define ST_ASM330LHHX_DEFAULT_KTIME		(200000000)
 #define ST_ASM330LHHX_FAST_KTIME		(5000000)
+#define ST_ASM330LHHX_FAST_TO_DEFAULT		(10)
 
 #define ST_ASM330LHHX_DATA_CHANNEL(chan_type, addr, mod, ch2, scan_idx,	\
 				rb, sb, sg, ex_info)			\
@@ -755,7 +756,7 @@ struct st_asm330lhhx_hw {
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
-	int timesync_c;
+	int timesync_c[3];
 #endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	s64 ts_offset;
