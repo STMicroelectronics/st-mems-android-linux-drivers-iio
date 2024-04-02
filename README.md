@@ -92,3 +92,5 @@ export CROSS_COMPILE=arm-linux-gnu-
 scripts/kconfig/merge_config.sh -n .config stm_iio_configs/lsm6dsm_defconfig
 ```
 
+### License
+This software is distributed under the GNU General Public License v2.0
