@@ -309,7 +309,7 @@ static int st_ism330is_set_odr(struct st_ism330is_sensor *sensor, u32 mhz)
 {
 	enum st_ism330is_sensor_id id = sensor->id;
 	struct st_ism330is_hw *hw = sensor->hw;
-	int val, err, odr, modr;
+	int val, err, odr = mhz, modr;
 
 	switch (id) {
 	case ST_ISM330IS_ID_EXT0:
