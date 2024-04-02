@@ -272,7 +272,7 @@ static int st_h3lis331dl_write_raw(struct iio_dev *iio_dev,
 				   int val, int val2, long mask)
 {
 	struct st_h3lis331dl_sensor *sensor = iio_priv(iio_dev);
-	int err;
+	int err = -EINVAL;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
