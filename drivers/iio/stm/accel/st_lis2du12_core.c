@@ -606,7 +606,7 @@ static int st_lis2du12_write_raw(struct iio_dev *iio_dev,
 				 int val, int val2, long mask)
 {
 	struct st_lis2du12_sensor *sensor = iio_priv(iio_dev);
-	int err;
+	int err = 0;
 
 	mutex_lock(&iio_dev->mlock);
 
@@ -618,13 +618,14 @@ static int st_lis2du12_write_raw(struct iio_dev *iio_dev,
 		int ret;
 
 		ret = st_lis2du12_get_odr_idx(val, val2);
-		if (ret < 0)
+		if (ret < 0) {
+			err = ret;
 			break;
+		}
 
 		sensor->hw->std_level = st_lis2du12_std_table[ret].val;
 		sensor->odr = val;
 		sensor->uodr = val2;
-		err = 0;
 		break;
 	}
 	default:
