@@ -813,6 +813,7 @@ static int st_lsm6dsv16bx_write_raw(struct iio_dev *iio_dev,
 						break;
 
 					err = st_lsm6dsv16bx_update_batching(iio_dev, 1);
+					break;
 				default:
 					break;
 				}
@@ -981,7 +982,7 @@ st_lsm6dsv16bx_sysfs_get_selftest_status(struct device *dev,
 		message = "na";
 	else if (result < 0)
 		message = "fail";
-	else if (result > 0)
+	else
 		message = "pass";
 
 	return sprintf(buf, "%s\n", message);
@@ -1175,6 +1176,10 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 		goto out_claim;
 	}
 
+	gain = sensor->gain;
+	odr = sensor->odr;
+	uodr = sensor->uodr;
+
 	/* disable interrupt on FIFO watermak */
 	ret = st_lsm6dsv16bx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
 	if (ret < 0)
@@ -1186,9 +1191,6 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 	if (ret < 0)
 		goto restore_regs;
 
-	gain = sensor->gain;
-	odr = sensor->odr;
-	uodr = sensor->uodr;
 	if (id == ST_LSM6DSV16BX_ID_ACC) {
 		/* set BDU = 1, FS = 4 g, ODR = 60 Hz */
 		st_lsm6dsv16bx_set_full_scale(sensor,
