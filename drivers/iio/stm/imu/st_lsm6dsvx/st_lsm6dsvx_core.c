@@ -129,6 +129,43 @@ static const struct st_lsm6dsvx_settings st_lsm6dsvx_sensor_settings[] = {
 	},
 };
 
+struct st_lsm6dsvx_hz_2_nsamples {
+	u16 hz;
+	int delay;
+};
+
+static struct {
+	u8 size;
+	struct st_lsm6dsvx_hz_2_nsamples hz2nsamples[ST_LSM6DSVX_ODR_LIST_SIZE];
+} discard_samples[] = {
+	[ST_LSM6DSVX_ID_GYRO] = {
+		.size = 8,
+
+		/* delay calculated based on table 23 of AN5763 */
+		.hz2nsamples[0] = {   7, 70000 + 2 * 135000 },
+		.hz2nsamples[1] = {  15, 70000 + 2 *  67000 },
+		.hz2nsamples[2] = {  30, 70000 + 2 *  34000 },
+		.hz2nsamples[3] = {  60, 70000 + 3 *  17000 },
+		.hz2nsamples[4] = { 120, 70000 + 3 *   8500 },
+		.hz2nsamples[5] = { 240, 70000 + 4 *   4200 },
+		.hz2nsamples[6] = { 480, 70000 + 5 *   2100 },
+		.hz2nsamples[7] = { 960, 70000 + 6 *   1050 },
+	},
+	[ST_LSM6DSVX_ID_ACC] = {
+		.size = 8,
+
+		/* delay calculated based on table 18 of AN5763 */
+		.hz2nsamples[0] = {   7, 135000 },
+		.hz2nsamples[1] = {  15,  67000 },
+		.hz2nsamples[2] = {  30,  34000 },
+		.hz2nsamples[3] = {  60,  17000 },
+		.hz2nsamples[4] = { 120,   8500 },
+		.hz2nsamples[5] = { 240,   4200 },
+		.hz2nsamples[6] = { 480,   2100 },
+		.hz2nsamples[7] = { 960,   1050 },
+	},
+};
+
 static const struct st_lsm6dsvx_odr_table_entry
 st_lsm6dsvx_odr_table[] = {
 	[ST_LSM6DSVX_ID_ACC] = {
@@ -654,17 +691,52 @@ unlock:
 }
 
 static int
+st_lsm6dsvx_calculate_delay(struct st_lsm6dsvx_sensor *sensor,
+			    int *predelay, int *postdelay)
+{
+	enum st_lsm6dsvx_sensor_id id = sensor->id;
+	int i;
+
+	switch (sensor->id) {
+	case ST_LSM6DSVX_ID_GYRO:
+	case ST_LSM6DSVX_ID_ACC:
+		for (i = 0; i < discard_samples[id].size; i++) {
+			if (discard_samples[id].hz2nsamples[i].hz >= sensor->odr)
+				break;
+		}
+
+		if (i == discard_samples[id].size)
+			return -EINVAL;
+
+		*predelay = discard_samples[id].hz2nsamples[i].delay;
+
+		/* gyro requires at least 5 ms after power down, accel 1 us */
+		*postdelay = (sensor->id == ST_LSM6DSVX_ID_ACC) ? 1 : 5000;
+		break;
+	default:
+		*predelay = 1000000 / sensor->odr;
+		*postdelay = 1;
+		break;
+	}
+
+	return 0;
+}
+
+static int
 st_lsm6dsvx_read_oneshot(struct st_lsm6dsvx_sensor *sensor, u8 addr, int *val)
 {
-	int err, delay;
+	int err, predelay, postdelay;
 	__le16 data;
 
 	err = st_lsm6dsvx_sensor_set_enable(sensor, true);
 	if (err < 0)
 		return err;
 
-	delay = 1000000 / sensor->odr;
-	usleep_range(delay, 2 * delay);
+	err = st_lsm6dsvx_calculate_delay(sensor, &predelay, &postdelay);
+	if (err)
+		return err;
+
+	usleep_range(predelay, 2 * predelay);
 
 	err = st_lsm6dsvx_read_locked(sensor->hw, addr,
 				      (u8 *)&data, sizeof(data));
@@ -674,6 +746,8 @@ st_lsm6dsvx_read_oneshot(struct st_lsm6dsvx_sensor *sensor, u8 addr, int *val)
 	st_lsm6dsvx_sensor_set_enable(sensor, false);
 
 	*val = (s16)le16_to_cpu(data);
+
+	usleep_range(postdelay, 2 * postdelay);
 
 	return IIO_VAL_INT;
 }
