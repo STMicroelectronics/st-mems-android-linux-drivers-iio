@@ -493,6 +493,7 @@ st_lsm6dsvx_check_gyro_odr_dependency(struct st_lsm6dsvx_sensor *sensor,
 {
 	struct st_lsm6dsvx_hw *hw = sensor->hw;
 	enum st_lsm6dsvx_sensor_id id;
+	int count = 0;
 	int odr = 0;
 	int i;
 
@@ -504,6 +505,8 @@ st_lsm6dsvx_check_gyro_odr_dependency(struct st_lsm6dsvx_sensor *sensor,
 		if (id == sensor->id)
 			continue;
 
+		count++;
+
 		/* req_uodr not used */
 		odr = st_lsm6dsvx_check_odr_dependency(hw, req_odr,
 						       req_uodr, id);
@@ -511,8 +514,9 @@ st_lsm6dsvx_check_gyro_odr_dependency(struct st_lsm6dsvx_sensor *sensor,
 			return 0;
 	}
 
-	return odr;
+	return (count > 0) ? odr : req_odr;
 }
+
 static int st_lsm6dsvx_set_odr(struct st_lsm6dsvx_sensor *sensor,
 			       int req_odr, int req_uodr)
 {
@@ -881,8 +885,8 @@ static int st_lsm6dsvx_of_get_pin(struct st_lsm6dsvx_hw *hw, int *pin)
 	return of_property_read_u32(np, "st,int-pin", pin);
 }
 
-static int st_lsm6dsvx_get_int_reg(struct st_lsm6dsvx_hw *hw,
-				   u8 *drdy_reg, u8 *ef_irq_reg)
+int st_lsm6dsvx_get_int_reg(struct st_lsm6dsvx_hw *hw,
+			    u8 *drdy_reg, u8 *ef_irq_reg)
 {
 	int int_pin;
 
@@ -1210,15 +1214,17 @@ static ssize_t st_lsm6dsvx_sysfs_start_selftest(struct device *dev,
 		goto out_claim;
 	}
 
-	/* disable interrupt on FIFO watermak */
 	ret = st_lsm6dsvx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
 	if (ret < 0)
 		goto out_claim;
 
-	ret = st_lsm6dsvx_write_with_mask(hw, drdy_reg,
-					  ST_LSM6DSVX_INT_FIFO_TH_MASK, 0);
-	if (ret < 0)
-		goto restore_irq;
+	/* disable interrupt on FIFO watermak */
+	if (hw->has_hw_fifo) {
+		ret = st_lsm6dsvx_write_with_mask(hw, drdy_reg,
+						  ST_LSM6DSVX_INT_FIFO_TH_MASK, 0);
+		if (ret < 0)
+			goto restore_irq;
+	}
 
 	gain = sensor->gain;
 	odr = sensor->odr;
@@ -1243,7 +1249,8 @@ static ssize_t st_lsm6dsvx_sysfs_start_selftest(struct device *dev,
 
 restore_irq:
 	st_lsm6dsvx_write_with_mask(hw, drdy_reg,
-				    ST_LSM6DSVX_INT_FIFO_TH_MASK, 1);
+				    ST_LSM6DSVX_INT_FIFO_TH_MASK,
+				    hw->has_hw_fifo ? 1 : 0);
 
 out_claim:
 	iio_device_release_direct_mode(iio_dev);
@@ -1403,14 +1410,7 @@ static int st_lsm6dsvx_reset_device(struct st_lsm6dsvx_hw *hw)
 
 static int st_lsm6dsvx_init_device(struct st_lsm6dsvx_hw *hw)
 {
-	u8 drdy_reg, ef_irq_reg;
 	int err;
-
-	/* latch interrupts */
-	err = st_lsm6dsvx_write_with_mask(hw, ST_LSM6DSVX_REG_TAP_CFG0_ADDR,
-					  ST_LSM6DSVX_LIR_MASK, 1);
-	if (err < 0)
-		return err;
 
 	/* enable Block Data Update */
 	err = st_lsm6dsvx_write_with_mask(hw, ST_LSM6DSVX_REG_CTRL3_ADDR,
@@ -1418,26 +1418,9 @@ static int st_lsm6dsvx_init_device(struct st_lsm6dsvx_hw *hw)
 	if (err < 0)
 		return err;
 
-	/* init timestamp engine */
-	err = st_lsm6dsvx_write_with_mask(hw,
-					  ST_LSM6DSVX_REG_FUNCTIONS_ENABLE_ADDR,
-					  ST_LSM6DSVX_TIMESTAMP_EN_MASK, 1);
-	if (err < 0)
-		return err;
-
-	err = st_lsm6dsvx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
-	if (err < 0)
-		return err;
-
 	/* enable DRDY MASK for filters settling time */
-	err = st_lsm6dsvx_write_with_mask(hw, ST_LSM6DSVX_REG_CTRL4_ADDR,
+	return st_lsm6dsvx_write_with_mask(hw, ST_LSM6DSVX_REG_CTRL4_ADDR,
 					  ST_LSM6DSVX_DRDY_MASK, 1);
-	if (err < 0)
-		return err;
-
-	/* enable FIFO watermak interrupt */
-	return st_lsm6dsvx_write_with_mask(hw, drdy_reg,
-					   ST_LSM6DSVX_INT_FIFO_TH_MASK, 1);
 }
 
 static struct iio_dev *
@@ -1624,6 +1607,7 @@ int st_lsm6dsvx_probe(struct device *dev, int irq, int hw_id,
 	hw->dev = dev;
 	hw->irq = irq;
 	hw->regmap = regmap;
+	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	err = st_lsm6dsvx_power_enable(hw);
 	if (err != 0)
@@ -1670,8 +1654,8 @@ int st_lsm6dsvx_probe(struct device *dev, int irq, int hw_id,
 	for (i = 0; i < ARRAY_SIZE(st_lsm6dsvx_main_sensor_list); i++) {
 		enum st_lsm6dsvx_sensor_id id = st_lsm6dsvx_main_sensor_list[i];
 
-		/* don't probe if sflp not supported */
-		if (!hw->settings->st_sflp_probe &&
+		/* don't probe if sflp not supported or fifo not enabled */
+		if ((!hw->settings->st_sflp_probe || !hw->has_hw_fifo) &&
 		    (id == ST_LSM6DSVX_ID_6X_GAME))
 			continue;
 
@@ -1687,33 +1671,40 @@ int st_lsm6dsvx_probe(struct device *dev, int irq, int hw_id,
 			return err;
 	}
 
-	/* allocate step counter before buffer setup because use FIFO */
-	err = st_lsm6dsvx_probe_embfunc(hw);
-	if (err < 0)
-		return err;
-
-	err = st_lsm6dsvx_probe_event(hw);
-	if (err < 0)
-		return err;
-
-	if (hw->settings->st_qvar_probe &&
-	    (!dev_fwnode(dev) ||
-	     device_property_read_bool(dev, "enable-qvar"))) {
-		err = st_lsm6dsvx_qvar_probe(hw);
-		if (err)
+	if (hw->has_hw_fifo) {
+		/* allocate step counter before buffer setup because use FIFO */
+		err = st_lsm6dsvx_probe_embfunc(hw);
+		if (err < 0)
 			return err;
+
+		err = st_lsm6dsvx_probe_event(hw);
+		if (err < 0)
+			return err;
+
+		if (hw->settings->st_qvar_probe &&
+		(!dev_fwnode(dev) ||
+		device_property_read_bool(dev, "enable-qvar"))) {
+			err = st_lsm6dsvx_qvar_probe(hw);
+			if (err)
+				return err;
+		}
 	}
+
+	err = st_lsm6dsvx_allocate_sw_trigger(hw);
+	if (err < 0)
+		return err;
 
 	if (hw->irq > 0) {
-		err = st_lsm6dsvx_buffers_setup(hw);
+		err = st_lsm6dsvx_hw_trigger_setup(hw);
 		if (err < 0)
 			return err;
-	}
 
-	if (st_lsm6dsvx_run_mlc_task(hw)) {
-		err = st_lsm6dsvx_mlc_probe(hw);
-		if (err < 0)
-			return err;
+		/* MLC request interrupt line */
+		if (st_lsm6dsvx_run_mlc_task(hw)) {
+			err = st_lsm6dsvx_mlc_probe(hw);
+			if (err < 0)
+				return err;
+		}
 	}
 
 	for (i = 0; i < ST_LSM6DSVX_ID_MAX; i++) {

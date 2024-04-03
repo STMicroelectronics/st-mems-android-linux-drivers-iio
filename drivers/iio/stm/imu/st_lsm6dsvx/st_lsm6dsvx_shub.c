@@ -178,16 +178,24 @@ static const struct st_lsm6dsvx_ext_dev_settings st_lsm6dsvx_ext_dev_table[] = {
  * NOTE: Be sure to enable Acc or Gyro before this operation
  *
  * @param  hw: ST IMU MEMS hw instance.
+ * @param  sensor: ST IMU sensor instance.
  */
-static inline void st_lsm6dsvx_shub_wait_complete(struct st_lsm6dsvx_hw *hw)
+static inline void st_lsm6dsvx_shub_wait_complete(struct st_lsm6dsvx_hw *hw,
+					      struct st_lsm6dsvx_sensor *sensor)
 {
-	struct st_lsm6dsvx_sensor *sensor;
-	u16 odr;
+	struct st_lsm6dsvx_sensor *acc_sensor;
+	int delay;
+	u16 odr, accel_odr;
 
-	sensor = iio_priv(hw->iio_devs[ST_LSM6DSVX_ID_ACC]);
+	acc_sensor = iio_priv(hw->iio_devs[ST_LSM6DSVX_ID_ACC]);
+
 	/* check if acc is enabled */
-	odr = (hw->enable_mask & BIT(ST_LSM6DSVX_ID_ACC)) ? sensor->odr : 15;
-	msleep((2000U / odr) + 1);
+	accel_odr = hw->odr_table[ST_LSM6DSVX_ID_ACC].odr_avl[0].hz;
+	odr = (hw->enable_mask & BIT(ST_LSM6DSVX_ID_ACC)) ?
+	      acc_sensor->odr : max_t(int, sensor->odr, accel_odr);
+	delay = 2000000U / odr + 1;
+
+	usleep_range(delay, 2 * delay);
 }
 
 /**
@@ -304,8 +312,8 @@ out:
  * @param  len: Data read len.
  * @return  0 if OK, < 0 if ERROR
  */
-static int st_lsm6dsvx_shub_read(struct st_lsm6dsvx_sensor *sensor,
-				 u8 addr, u8 *data, int len)
+int st_lsm6dsvx_shub_read(struct st_lsm6dsvx_sensor *sensor,
+			  u8 addr, u8 *data, int len)
 {
 	struct st_lsm6dsvx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	struct st_lsm6dsvx_hw *hw = sensor->hw;
@@ -326,7 +334,7 @@ static int st_lsm6dsvx_shub_read(struct st_lsm6dsvx_sensor *sensor,
 	if (err < 0)
 		return err;
 
-	st_lsm6dsvx_shub_wait_complete(hw);
+	st_lsm6dsvx_shub_wait_complete(hw, sensor);
 
 	err = st_lsm6dsvx_shub_read_reg(hw, out_addr, data, len & 0x7);
 
@@ -384,7 +392,7 @@ static int st_lsm6dsvx_shub_write(struct st_lsm6dsvx_sensor *sensor,
 		if (err < 0)
 			return err;
 
-		st_lsm6dsvx_shub_wait_complete(hw);
+		st_lsm6dsvx_shub_wait_complete(hw, sensor);
 
 		st_lsm6dsvx_shub_master_enable(sensor, false);
 	}
@@ -925,7 +933,7 @@ int st_lsm6dsvx_shub_probe(struct st_lsm6dsvx_hw *hw)
 			if (err < 0)
 				return err;
 
-			st_lsm6dsvx_shub_wait_complete(hw);
+			st_lsm6dsvx_shub_wait_complete(hw, sensor);
 
 			err = st_lsm6dsvx_shub_read_reg(hw,
 				      ST_LSM6DSVX_REG_SENSOR_HUB_1_ADDR,

@@ -30,6 +30,7 @@
 #define ST_LSM6DSV_DEV_NAME			"lsm6dsv"
 
 #define ST_LSM6DSVX_SAMPLE_SIZE			6
+#define ST_LSM6DSVX_PT_SAMPLE_SIZE		2
 #define ST_LSM6DSVX_TS_SAMPLE_SIZE		4
 #define ST_LSM6DSVX_TAG_SIZE			1
 #define ST_LSM6DSVX_FIFO_SAMPLE_SIZE		(ST_LSM6DSVX_SAMPLE_SIZE + \
@@ -786,6 +787,7 @@ struct st_lsm6dsvx_sensor {
  * @vddio_supply: Voltage regulator for VDDIIO.
  * @mlc_config: MLC/FSM data register structure.
  * @preload_mlc: MLC/FSM preload flag.
+ * @has_hw_fifo: FIFO hw support flag.
  * @qvar_workqueue: QVAR workqueue (if enabled in Kconfig).
  * @iio_devs: Pointers to acc/gyro iio_dev instances.
  * @settings: ST IMU sensor settings.
@@ -833,6 +835,7 @@ struct st_lsm6dsvx_hw {
 	struct regulator *vddio_supply;
 	struct st_lsm6dsvx_mlc_config_t *mlc_config;
 	bool preload_mlc;
+	bool has_hw_fifo;
 	struct workqueue_struct *qvar_workqueue;
 	struct iio_dev *iio_devs[ST_LSM6DSVX_ID_MAX];
 
@@ -947,7 +950,7 @@ static inline int st_lsm6dsvx_set_page_access(struct st_lsm6dsvx_hw *hw,
 
 static inline bool st_lsm6dsvx_run_mlc_task(struct st_lsm6dsvx_hw *hw)
 {
-	return hw->settings->st_mlc_probe || hw->settings->st_fsm_probe;
+	return (hw->settings->st_mlc_probe || hw->settings->st_fsm_probe) && hw->has_hw_fifo;
 }
 
 static inline bool
@@ -968,7 +971,9 @@ int st_lsm6dsvx_sflp_set_enable(struct st_lsm6dsvx_sensor *sensor,
 				bool enable);
 int st_lsm6dsvx_shub_set_enable(struct st_lsm6dsvx_sensor *sensor,
 				bool enable);
-int st_lsm6dsvx_buffers_setup(struct st_lsm6dsvx_hw *hw);
+int st_lsm6dsvx_allocate_sw_trigger(struct st_lsm6dsvx_hw *hw);
+int st_lsm6dsvx_hw_trigger_setup(struct st_lsm6dsvx_hw *hw);
+
 ssize_t st_lsm6dsvx_flush_fifo(struct device *dev,
 			      struct device_attribute *attr,
 			      const char *buf, size_t size);
@@ -996,9 +1001,14 @@ int st_lsm6dsvx_fsm_get_orientation(struct st_lsm6dsvx_hw *hw,
 int st_lsm6dsvx_update_batching(struct iio_dev *iio_dev, bool enable);
 int st_lsm6dsvx_get_batch_val(struct st_lsm6dsvx_sensor *sensor,
 			      int odr, int uodr, u8 *val);
+int st_lsm6dsvx_get_int_reg(struct st_lsm6dsvx_hw *hw,
+			    u8 *drdy_reg, u8 *ef_irq_reg);
+
 int st_lsm6dsvx_remove(struct device *dev);
 
 int st_lsm6dsvx_shub_probe(struct st_lsm6dsvx_hw *hw);
+int st_lsm6dsvx_shub_read(struct st_lsm6dsvx_sensor *sensor,
+			  u8 addr, u8 *data, int len);
 
 int st_lsm6dsvx_qvar_probe(struct st_lsm6dsvx_hw *hw);
 int

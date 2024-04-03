@@ -12,6 +12,7 @@
 #include <linux/iio/events.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/kfifo_buf.h>
+#include <linux/iio/sw_trigger.h>
 #include <linux/iio/trigger.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
@@ -442,6 +443,12 @@ ssize_t st_lsm6dsvx_set_watermark(struct device *dev,
 	if (err)
 		return err;
 
+	if (!sensor->hw->has_hw_fifo) {
+		err = -EINVAL;
+
+		goto out;
+	}
+
 	err = kstrtoint(buf, 10, &val);
 	if (err < 0)
 		goto out;
@@ -471,6 +478,9 @@ ssize_t st_lsm6dsvx_flush_fifo(struct device *dev,
 	s64 ts;
 	s64 fifo_ts;
 
+	if (!hw->has_hw_fifo)
+		return -EINVAL;
+
 	mutex_lock(&hw->fifo_lock);
 	ts = iio_get_time_ns(iio_dev);
 	hw->delta_ts = ts - hw->ts;
@@ -493,6 +503,9 @@ int st_lsm6dsvx_suspend_fifo(struct st_lsm6dsvx_hw *hw)
 {
 	int err;
 
+	if (!hw->has_hw_fifo)
+		return -EINVAL;
+
 	mutex_lock(&hw->fifo_lock);
 
 	st_lsm6dsvx_read_fifo(hw);
@@ -509,6 +522,9 @@ int st_lsm6dsvx_update_batching(struct iio_dev *iio_dev, bool enable)
 	struct st_lsm6dsvx_hw *hw = sensor->hw;
 	int err;
 
+	if (!hw->has_hw_fifo)
+		return -EINVAL;
+
 	disable_irq(hw->irq);
 	err = st_lsm6dsvx_set_sensor_batching_odr(sensor, enable);
 	enable_irq(hw->irq);
@@ -516,9 +532,8 @@ int st_lsm6dsvx_update_batching(struct iio_dev *iio_dev, bool enable)
 	return err;
 }
 
-int st_lsm6dsvx_update_fifo(struct iio_dev *iio_dev, bool enable)
+int st_lsm6dsvx_update_fifo(struct st_lsm6dsvx_sensor *sensor, bool enable)
 {
-	struct st_lsm6dsvx_sensor *sensor = iio_priv(iio_dev);
 	struct st_lsm6dsvx_hw *hw = sensor->hw;
 	int err;
 
@@ -641,6 +656,27 @@ out:
 	return err;
 }
 
+static int st_lsm6dsvx_update_enable(struct st_lsm6dsvx_sensor *sensor,
+				     bool enable)
+{
+	if (sensor->id == ST_LSM6DSVX_ID_EXT0 ||
+	    sensor->id == ST_LSM6DSVX_ID_EXT1)
+		return st_lsm6dsvx_shub_set_enable(sensor, enable);
+
+	return st_lsm6dsvx_sensor_set_enable(sensor, enable);
+}
+
+static int st_lsm6dsvx_buffer_enable(struct iio_dev *iio_dev, bool enable)
+{
+	struct st_lsm6dsvx_sensor *sensor = iio_priv(iio_dev);
+
+	if (sensor->hw->has_hw_fifo)
+		return st_lsm6dsvx_update_fifo(sensor, enable);
+
+	return st_lsm6dsvx_update_enable(sensor, enable);
+}
+
+
 static irqreturn_t st_lsm6dsvx_handler_irq(int irq, void *private)
 {
 	struct st_lsm6dsvx_hw *hw = (struct st_lsm6dsvx_hw *)private;
@@ -672,36 +708,160 @@ static irqreturn_t st_lsm6dsvx_handler_thread(int irq, void *private)
 
 static int st_lsm6dsvx_fifo_preenable(struct iio_dev *iio_dev)
 {
-	return st_lsm6dsvx_update_fifo(iio_dev, true);
+	return st_lsm6dsvx_buffer_enable(iio_dev, true);
 }
 
 static int st_lsm6dsvx_fifo_postdisable(struct iio_dev *iio_dev)
 {
-	return st_lsm6dsvx_update_fifo(iio_dev, false);
+	return st_lsm6dsvx_buffer_enable(iio_dev, false);
 }
 
-static const struct iio_buffer_setup_ops st_lsm6dsvx_fifo_ops = {
+static const struct iio_buffer_setup_ops st_lsm6dsvx_buffer_setup_ops = {
 	.preenable = st_lsm6dsvx_fifo_preenable,
+#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
+	.postenable = iio_triggered_buffer_postenable,
+	.predisable = iio_triggered_buffer_predisable,
+#endif /* LINUX_VERSION_CODE */
 	.postdisable = st_lsm6dsvx_fifo_postdisable,
 };
 
-static int st_lsm6dsvx_fifo_init(struct st_lsm6dsvx_hw *hw)
+static irqreturn_t st_lsm6dsvx_buffer_pollfunc(int irq, void *private)
 {
-	return st_lsm6dsvx_write_with_mask(hw,
-					   ST_LSM6DSVX_REG_FIFO_CTRL4_ADDR,
-					   ST_LSM6DSVX_DEC_TS_BATCH_MASK, 1);
+	u8 iio_buf[ALIGN(ST_LSM6DSVX_SAMPLE_SIZE, sizeof(s64)) +
+		   sizeof(s64) + sizeof(s64)];
+	struct iio_poll_func *pf = private;
+	struct iio_dev *indio_dev = pf->indio_dev;
+	struct st_lsm6dsvx_sensor *sensor = iio_priv(indio_dev);
+	struct st_lsm6dsvx_hw *hw = sensor->hw;
+	int addr = indio_dev->channels[0].address;
+
+	/*
+	 * poll mode works only for those sensors that not requests fifo
+	 * and an hw interrupt line
+	 */
+	switch (indio_dev->channels[0].type) {
+	case IIO_ACCEL:
+	case IIO_ANGL_VEL:
+		st_lsm6dsvx_read_locked(hw, addr, &iio_buf,
+					ST_LSM6DSVX_SAMPLE_SIZE);
+		break;
+	case IIO_TEMP:
+		st_lsm6dsvx_read_locked(hw, addr, &iio_buf,
+					ST_LSM6DSVX_PT_SAMPLE_SIZE);
+		break;
+	case IIO_PRESSURE:
+		st_lsm6dsvx_shub_read(sensor, addr, (u8 *)&iio_buf,
+				      ST_LSM6DSVX_PT_SAMPLE_SIZE);
+		break;
+	case IIO_MAGN:
+		st_lsm6dsvx_shub_read(sensor, addr, (u8 *)&iio_buf,
+				      ST_LSM6DSVX_SAMPLE_SIZE);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	iio_push_to_buffers_with_timestamp(indio_dev, iio_buf,
+					   iio_get_time_ns(indio_dev));
+	iio_trigger_notify_done(indio_dev->trig);
+
+	return IRQ_HANDLED;
+}
+
+static int st_lsm6dsvx_trig_set_state(struct iio_trigger *trig, bool state)
+{
+	struct st_lsm6dsvx_hw *hw = iio_trigger_get_drvdata(trig);
+
+	dev_dbg(hw->dev, "trigger set %d\n", state);
+
+	return 0;
 }
 
 static const struct iio_trigger_ops st_lsm6dsvx_trigger_ops = {
-	NULL
+	.set_trigger_state = st_lsm6dsvx_trig_set_state,
 };
 
-int st_lsm6dsvx_buffers_setup(struct st_lsm6dsvx_hw *hw)
+static int st_lsm6dsvx_config_interrupt(struct st_lsm6dsvx_hw *hw, bool enable)
+{
+	u8 drdy_reg, ef_irq_reg;
+	int err;
+
+	err = st_lsm6dsvx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
+	if (err < 0)
+		return err;
+
+	/* latch interrupts */
+	err = regmap_update_bits(hw->regmap,
+				 ST_LSM6DSVX_REG_TAP_CFG0_ADDR,
+				 ST_LSM6DSVX_LIR_MASK,
+				 FIELD_PREP(ST_LSM6DSVX_LIR_MASK,
+					    enable ? 1 : 0));
+	if (err < 0)
+		return err;
+
+	/* enable FIFO watermak interrupt */
+	return regmap_update_bits(hw->regmap, drdy_reg,
+				  ST_LSM6DSVX_INT_FIFO_TH_MASK,
+				  FIELD_PREP(ST_LSM6DSVX_INT_FIFO_TH_MASK,
+					     enable ? 1 : 0));
+}
+
+static int st_lsm6dsvx_config_timestamp(struct st_lsm6dsvx_hw *hw)
+{
+	int err;
+
+	err = st_lsm6dsvx_hwtimesync_init(hw);
+	if (err)
+		return err;
+
+	/* init timestamp engine */
+	err = regmap_update_bits(hw->regmap,
+				 ST_LSM6DSVX_REG_FUNCTIONS_ENABLE_ADDR,
+				 ST_LSM6DSVX_TIMESTAMP_EN_MASK,
+				 ST_LSM6DSVX_SHIFT_VAL(1,
+					  ST_LSM6DSVX_TIMESTAMP_EN_MASK));
+	if (err < 0)
+		return err;
+
+	return regmap_update_bits(hw->regmap,
+				  ST_LSM6DSVX_REG_FIFO_CTRL4_ADDR,
+				  ST_LSM6DSVX_DEC_TS_BATCH_MASK,
+				  FIELD_PREP(ST_LSM6DSVX_DEC_TS_BATCH_MASK, 1));
+}
+
+int st_lsm6dsvx_allocate_sw_trigger(struct st_lsm6dsvx_hw *hw)
+{
+	int i;
+
+	for (i = 0;
+	     i < ARRAY_SIZE(st_lsm6dsvx_buffered_sensor_list);
+	     i++) {
+		enum st_lsm6dsvx_sensor_id id;
+		int err;
+
+		id = st_lsm6dsvx_buffered_sensor_list[i];
+		if (!hw->iio_devs[id])
+			continue;
+
+		err = devm_iio_triggered_buffer_setup(hw->dev,
+						hw->iio_devs[id], NULL,
+						st_lsm6dsvx_buffer_pollfunc,
+						&st_lsm6dsvx_buffer_setup_ops);
+		if (err)
+			return err;
+	}
+
+	return 0;
+}
+
+int st_lsm6dsvx_hw_trigger_setup(struct st_lsm6dsvx_hw *hw)
 {
 	struct device_node *np = hw->dev->of_node;
+
 #if KERNEL_VERSION(5, 13, 0) > LINUX_VERSION_CODE
 	struct iio_buffer *buffer;
 #endif /* LINUX_VERSION_CODE */
+
 	unsigned long irq_type;
 	bool irq_active_low;
 	int i, err;
@@ -752,40 +912,39 @@ int st_lsm6dsvx_buffers_setup(struct st_lsm6dsvx_hw *hw)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(st_lsm6dsvx_buffered_sensor_list); i++) {
+		struct st_lsm6dsvx_sensor *sensor;
 		enum st_lsm6dsvx_sensor_id id =
 					    st_lsm6dsvx_buffered_sensor_list[i];
 
 		if (!hw->iio_devs[id])
 			continue;
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[id],
-						  &st_lsm6dsvx_fifo_ops);
-		if (err)
-			return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[id],
-						  INDIO_BUFFER_SOFTWARE,
-						  &st_lsm6dsvx_fifo_ops);
-		if (err)
-			return err;
-#else /* LINUX_VERSION_CODE */
-		buffer = devm_iio_kfifo_allocate(hw->dev);
-		if (!buffer)
-			return -ENOMEM;
+		sensor = iio_priv(hw->iio_devs[id]);
+		sensor->trig = devm_iio_trigger_alloc(hw->dev, "st_%s-trigger",
+						      hw->iio_devs[id]->name);
+		if (!sensor->trig) {
+			dev_err(hw->dev, "failed to allocate iio trigger.\n");
 
-		/* check if already allocated (maybe qvar) */
-		if (!hw->iio_devs[id]->buffer) {
-			iio_device_attach_buffer(hw->iio_devs[id], buffer);
-			hw->iio_devs[id]->modes |= INDIO_BUFFER_SOFTWARE;
-			hw->iio_devs[id]->setup_ops = &st_lsm6dsvx_fifo_ops;
+			return -ENOMEM;
 		}
-#endif /* LINUX_VERSION_CODE */
+
+		iio_trigger_set_drvdata(sensor->trig, hw);
+		sensor->trig->ops = &st_lsm6dsvx_trigger_ops;
+		sensor->trig->dev.parent = hw->dev;
+
+		err = devm_iio_trigger_register(hw->dev, sensor->trig);
+		if (err < 0) {
+			dev_err(hw->dev, "failed to register iio trigger.\n");
+
+			return err;
+		}
+
+		hw->iio_devs[id]->trig = iio_trigger_get(sensor->trig);
 	}
 
-	err = st_lsm6dsvx_hwtimesync_init(hw);
+	err = st_lsm6dsvx_config_interrupt(hw, true);
 	if (err)
 		return err;
 
-	return st_lsm6dsvx_fifo_init(hw);
+	return st_lsm6dsvx_config_timestamp(hw);
 }
