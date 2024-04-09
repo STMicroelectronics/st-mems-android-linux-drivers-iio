@@ -1788,14 +1788,22 @@ int st_lsm6dsvx_probe(struct device *dev, int irq, int hw_id,
 	}
 
 	if (hw->has_hw_fifo) {
-		/* allocate step counter before buffer setup because use FIFO */
-		err = st_lsm6dsvx_probe_embfunc(hw);
-		if (err < 0)
-			return err;
+		if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_EN_EVENTS)) {
+			/*
+			 * allocate step counter before buffer setup
+			 * because use FIFO.
+			 * Please note that embfunc and events requires valid
+			 * interrupt configuration. If interrupts are not
+			 * configured disable CONFIG_IIO_ST_LSM6DSVX_EN_EVENTS
+			 */
+			err = st_lsm6dsvx_probe_embfunc(hw);
+			if (err < 0)
+				return err;
 
-		err = st_lsm6dsvx_probe_event(hw);
-		if (err < 0)
-			return err;
+			err = st_lsm6dsvx_probe_event(hw);
+			if (err < 0)
+				return err;
+		}
 
 		if (hw->settings->st_qvar_probe &&
 		    (!dev_fwnode(dev) ||
