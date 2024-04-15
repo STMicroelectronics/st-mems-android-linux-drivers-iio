@@ -22,6 +22,7 @@
 
 #define ST_LIS2DUX12_DEV_NAME			"lis2dux12"
 #define ST_LIS2DUXS12_DEV_NAME			"lis2duxs12"
+#define ST_IIS2DULPX_DEV_NAME			"iis2dulpx"
 
 /* default configuration values */
 #define ST_LIS2DUXS12_DEFAULT_WK_TH		154000
@@ -588,6 +589,7 @@ enum {
 enum st_lis2duxs12_hw_id {
 	ST_LIS2DUX12_ID,
 	ST_LIS2DUXS12_ID,
+	ST_IIS2DULPX_ID,
 	ST_LIS2DUXS12_MAX_ID,
 };
 

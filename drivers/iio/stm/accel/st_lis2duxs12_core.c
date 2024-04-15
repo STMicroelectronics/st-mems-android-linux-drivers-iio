@@ -170,6 +170,13 @@ static const struct st_lis2duxs12_settings st_lis2duxs12_sensor_settings[] = {
 		},
 		.st_qvar_support = true,
 	},
+	{
+		.id = {
+			.hw_id = ST_IIS2DULPX_ID,
+			.name = ST_IIS2DULPX_DEV_NAME,
+		},
+		.st_qvar_support = true,
+	},
 };
 
 static const struct iio_mount_matrix *

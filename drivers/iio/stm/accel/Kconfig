@@ -160,7 +160,7 @@ config IIO_ST_LIS2HH12_SPI
         depends on IIO_ST_LIS2HH12
 
 config IIO_ST_LIS2DUXS12
-        tristate "STMicroelectronics LIS2DUX12/LIS2DUXS12 sensors"
+        tristate "STMicroelectronics LIS2DUX12/LIS2DUXS12/IIS2DULPX sensors"
         depends on (I2C || SPI || I3C)
         select IIO_BUFFER
         select IIO_KFIFO_BUF

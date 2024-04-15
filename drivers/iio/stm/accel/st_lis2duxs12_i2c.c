@@ -60,6 +60,10 @@ static const struct of_device_id st_lis2duxs12_i2c_of_match[] = {
 		.compatible = "st," ST_LIS2DUXS12_DEV_NAME,
 		.data = (void *)ST_LIS2DUXS12_ID,
 	},
+	{
+		.compatible = "st," ST_IIS2DULPX_DEV_NAME,
+		.data = (void *)ST_IIS2DULPX_ID,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, st_lis2duxs12_i2c_of_match);
@@ -67,6 +71,7 @@ MODULE_DEVICE_TABLE(of, st_lis2duxs12_i2c_of_match);
 static const struct i2c_device_id st_lis2duxs12_i2c_id_table[] = {
 	{ ST_LIS2DUX12_DEV_NAME, ST_LIS2DUX12_ID },
 	{ ST_LIS2DUXS12_DEV_NAME, ST_LIS2DUXS12_ID },
+	{ ST_IIS2DULPX_DEV_NAME, ST_IIS2DULPX_ID },
 	{},
 };
 MODULE_DEVICE_TABLE(i2c, st_lis2duxs12_i2c_id_table);
