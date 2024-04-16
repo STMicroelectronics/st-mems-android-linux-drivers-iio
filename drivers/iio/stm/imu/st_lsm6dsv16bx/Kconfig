@@ -9,8 +9,8 @@ config IIO_ST_LSM6DSV16BX
 	select IIO_ST_LSM6DSV16BX_SPI if (SPI_MASTER)
 	select IIO_ST_LSM6DSV16BX_I3C if (I3C)
 	help
-	  Say yes here to build support for STMicroelectronics LSM6DSV16BX imu
-	  sensor.
+	  Say yes here to build support for STMicroelectronics LSM6DSV16BX/LSM6DSV16B/ISM330BX
+	  imu sensors.
 
 	  To compile this driver as a module, choose M here: the module
 	  will be called st_lsm6dsv16bx.
