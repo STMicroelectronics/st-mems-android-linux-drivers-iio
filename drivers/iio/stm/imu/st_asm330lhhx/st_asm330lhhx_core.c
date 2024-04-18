@@ -45,7 +45,7 @@ static struct st_asm330lhhx_selftest_table {
 };
 
 static const int st_asm330lhhx_odr_index[] = {
-	12, 26, 52, 104, 208, 416, 833
+	1, 12, 26, 52, 104, 208, 416, 833
 };
 
 static const int st_asm330lhhx_odr_divider_index[] = {
@@ -65,32 +65,32 @@ static const struct st_asm330lhhx_lpf_discard_table_t {
 } st_asm330lhhx_lpf_discard_table[ST_ASM330LHHX_ID_HW] = {
 	[ST_ASM330LHHX_ID_GYRO] = {
 		/* samples_to_discard when no filter enabled */
-		.samples_to_discard =    { 2, 3, 3, 3, 3, 3, 3 },
+		.samples_to_discard =    { 2, 2, 3, 3, 3, 3, 3, 3 },
 
 		/* settling_samples vs ODRs and FTYPE table for gyro */
-		.settling_samples[0] = {  0,  0,  0,  0,  0,  2,  3 }, /* FTYPE 0 */
-		.settling_samples[1] = {  0,  0,  0,  0,  1,  2,  4 }, /* FTYPE 1 */
-		.settling_samples[2] = {  0,  0,  0,  1,  1,  3,  5 }, /* FTYPE 2 */
-		.settling_samples[3] = {  0,  0,  0,  0,  0,  1,  2 }, /* FTYPE 3 */
-		.settling_samples[4] = {  0,  0,  1,  1,  2,  4,  9 }, /* FTYPE 4 */
-		.settling_samples[5] = {  0,  1,  1,  2,  4,  9, 18 }, /* FTYPE 5 */
-		.settling_samples[6] = {  0,  1,  2,  3,  6, 12, 24 }, /* FTYPE 6 */
-		.settling_samples[7] = {  1,  2,  3,  6, 12, 24, 48 }, /* FTYPE 6 */
+		.settling_samples[0] = {  0,  0,  0,  0,  0,  0,  2,  3 }, /* FTYPE 0 */
+		.settling_samples[1] = {  0,  0,  0,  0,  0,  1,  2,  4 }, /* FTYPE 1 */
+		.settling_samples[2] = {  0,  0,  0,  0,  1,  1,  3,  5 }, /* FTYPE 2 */
+		.settling_samples[3] = {  0,  0,  0,  0,  0,  0,  1,  2 }, /* FTYPE 3 */
+		.settling_samples[4] = {  0,  0,  0,  1,  1,  2,  4,  9 }, /* FTYPE 4 */
+		.settling_samples[5] = {  0,  0,  1,  1,  2,  4,  9, 18 }, /* FTYPE 5 */
+		.settling_samples[6] = {  0,  0,  1,  2,  3,  6, 12, 24 }, /* FTYPE 6 */
+		.settling_samples[7] = {  0,  1,  2,  3,  6, 12, 24, 48 }, /* FTYPE 7 */
 	},
 	[ST_ASM330LHHX_ID_ACC] = {
 		/* samples_to_discard when no filter enabled */
-		.samples_to_discard =     { 3, 3, 3, 3, 3, 3, 3, 3 },
+		.samples_to_discard =     { 3, 3, 3, 3, 3, 3, 3, 3, 3 },
 
 		/* settling_samples vs ODRs and accel Bandwidth table */
-		.settling_samples[0] = {   0,   0,   0,   0,   0,   0,   0 }, /* ODR/2 */
-		.settling_samples[1] = {   0,   0,   0,   0,   0,   0,   0 }, /* ODR/4 */
-		.settling_samples[2] = {  10,  10,  10,  10,  10,  10,  10 }, /* ODR/10 */
-		.settling_samples[3] = {  19,  19,  19,  19,  19,  19,  19 }, /* ODR/20 */
-		.settling_samples[4] = {  38,  38,  38,  38,  38,  38,  38 }, /* ODR/45 */
-		.settling_samples[5] = {  75,  75,  75,  75,  75,  75,  75 }, /* ODR/100 */
-		.settling_samples[6] = { 150, 150, 150, 150, 150, 150, 150 }, /* ODR/200 */
-		.settling_samples[7] = { 296, 296, 296, 296, 296, 296, 296 }, /* ODR/400 */
-		.settling_samples[8] = { 595, 595, 595, 595, 595, 595, 595 }, /* ODR/800 */
+		.settling_samples[0] = {   0,   0,   0,   0,   0,   0,   0,   0 }, /* ODR/2 */
+		.settling_samples[1] = {   0,   0,   0,   0,   0,   0,   0,   0 }, /* ODR/4 */
+		.settling_samples[2] = {  10,  10,  10,  10,  10,  10,  10,  10 }, /* ODR/10 */
+		.settling_samples[3] = {  19,  19,  19,  19,  19,  19,  19,  19 }, /* ODR/20 */
+		.settling_samples[4] = {  38,  38,  38,  38,  38,  38,  38,  38 }, /* ODR/45 */
+		.settling_samples[5] = {  75,  75,  75,  75,  75,  75,  75,  75 }, /* ODR/100 */
+		.settling_samples[6] = { 150, 150, 150, 150, 150, 150, 150, 150 }, /* ODR/200 */
+		.settling_samples[7] = { 296, 296, 296, 296, 296, 296, 296, 296 }, /* ODR/400 */
+		.settling_samples[8] = { 595, 595, 595, 595, 595, 595, 595, 595 }, /* ODR/800 */
 	},
 };
 
@@ -231,7 +231,7 @@ static struct st_asm330lhhx_suspend_resume_entry
 
 static const struct st_asm330lhhx_odr_table_entry st_asm330lhhx_odr_table[] = {
 	[ST_ASM330LHHX_ID_ACC] = {
-		.size = 7,
+		.size = 8,
 		.reg = {
 			.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
 			.mask = GENMASK(7, 4),
@@ -244,16 +244,17 @@ static const struct st_asm330lhhx_odr_table_entry st_asm330lhhx_odr_table[] = {
 			.addr = ST_ASM330LHHX_REG_FIFO_CTRL3_ADDR,
 			.mask = GENMASK(3, 0),
 		},
-		.odr_avl[0] = {  12, 500000,  0x01,  0x01 },
-		.odr_avl[1] = {  26,      0,  0x02,  0x02 },
-		.odr_avl[2] = {  52,      0,  0x03,  0x03 },
-		.odr_avl[3] = { 104,      0,  0x04,  0x04 },
-		.odr_avl[4] = { 208,      0,  0x05,  0x05 },
-		.odr_avl[5] = { 416,      0,  0x06,  0x06 },
-		.odr_avl[6] = { 833,      0,  0x07,  0x07 },
+		.odr_avl[0] = {   1, 625000,  0x01,  0x0b },
+		.odr_avl[1] = {  12, 500000,  0x01,  0x01 },
+		.odr_avl[2] = {  26,      0,  0x02,  0x02 },
+		.odr_avl[3] = {  52,      0,  0x03,  0x03 },
+		.odr_avl[4] = { 104,      0,  0x04,  0x04 },
+		.odr_avl[5] = { 208,      0,  0x05,  0x05 },
+		.odr_avl[6] = { 416,      0,  0x06,  0x06 },
+		.odr_avl[7] = { 833,      0,  0x07,  0x07 },
 	},
 	[ST_ASM330LHHX_ID_GYRO] = {
-		.size = 7,
+		.size = 8,
 		.reg = {
 			.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
 			.mask = GENMASK(7, 4),
@@ -266,13 +267,14 @@ static const struct st_asm330lhhx_odr_table_entry st_asm330lhhx_odr_table[] = {
 			.addr = ST_ASM330LHHX_REG_FIFO_CTRL3_ADDR,
 			.mask = GENMASK(7, 4),
 		},
-		.odr_avl[0] = {  12, 500000,  0x01,  0x01 },
-		.odr_avl[1] = {  26,      0,  0x02,  0x02 },
-		.odr_avl[2] = {  52,      0,  0x03,  0x03 },
-		.odr_avl[3] = { 104,      0,  0x04,  0x04 },
-		.odr_avl[4] = { 208,      0,  0x05,  0x05 },
-		.odr_avl[5] = { 416,      0,  0x06,  0x06 },
-		.odr_avl[6] = { 833,      0,  0x07,  0x07 },
+		.odr_avl[0] = {   6, 500000,  0x01,  0x0b },
+		.odr_avl[1] = {  12, 500000,  0x01,  0x01 },
+		.odr_avl[2] = {  26,      0,  0x02,  0x02 },
+		.odr_avl[3] = {  52,      0,  0x03,  0x03 },
+		.odr_avl[4] = { 104,      0,  0x04,  0x04 },
+		.odr_avl[5] = { 208,      0,  0x05,  0x05 },
+		.odr_avl[6] = { 416,      0,  0x06,  0x06 },
+		.odr_avl[7] = { 833,      0,  0x07,  0x07 },
 	},
 	[ST_ASM330LHHX_ID_TEMP] = {
 		.size = 2,
