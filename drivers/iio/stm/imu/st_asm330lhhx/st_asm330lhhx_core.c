@@ -62,7 +62,7 @@ static const int st_asm330lhhx_odr_divider_index[] = {
 static const struct st_asm330lhhx_lpf_discard_table_t {
 	u32 samples_to_discard[ST_ASM330LHHX_ODR_LIST_SIZE];
 	u32 settling_samples[9][ST_ASM330LHHX_ODR_LIST_SIZE];
-} st_asm330lhhx_lpf_discard_table[ST_ASM330LHHX_ODR_LIST_SIZE] = {
+} st_asm330lhhx_lpf_discard_table[ST_ASM330LHHX_ID_HW] = {
 	[ST_ASM330LHHX_ID_GYRO] = {
 		/* samples_to_discard when no filter enabled */
 		.samples_to_discard =    { 2, 3, 3, 3, 3, 3, 3 },
