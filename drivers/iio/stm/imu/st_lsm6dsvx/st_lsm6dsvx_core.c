@@ -271,7 +271,7 @@ static const struct iio_chan_spec st_lsm6dsvx_sflp_channels[] = {
 				      1, 16, 16, 'u'),
 	ST_LSM6DSVX_SFLP_DATA_CHANNEL(IIO_ROT, 1, IIO_MOD_Z,
 				      2, 16, 16, 'u'),
-	ST_LSM6DSVX_EVENT_CHANNEL(IIO_ANGL_VEL, flush),
+	ST_LSM6DSVX_EVENT_CHANNEL(IIO_ROT, flush),
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
