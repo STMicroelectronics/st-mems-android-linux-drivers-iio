@@ -127,6 +127,46 @@ static const struct st_lsm6dsvx_settings st_lsm6dsvx_sensor_settings[] = {
 			},
 		},
 	},
+	{
+		.id = {
+			.hw_id = ST_LSM6DSV32X_ID,
+			.name = ST_LSM6DSV32X_DEV_NAME,
+		},
+		.st_qvar_probe = true,
+		.st_mlc_probe = true,
+		.st_fsm_probe = true,
+		.st_sflp_probe = true,
+		.fs_table = {
+			[ST_LSM6DSVX_ID_ACC] = {
+				.size = 4,
+				.reg = {
+					.addr = ST_LSM6DSVX_REG_CTRL8_ADDR,
+					.mask = GENMASK(1, 0),
+				},
+				.fs_avl[0] = { ST_LSM6DSVX_ACC_FS_4G_GAIN, 0x0 },
+				.fs_avl[1] = { ST_LSM6DSVX_ACC_FS_8G_GAIN, 0x1 },
+				.fs_avl[2] = { ST_LSM6DSVX_ACC_FS_16G_GAIN, 0x2 },
+				.fs_avl[3] = { ST_LSM6DSVX_ACC_FS_32G_GAIN, 0x3 },
+			},
+			[ST_LSM6DSVX_ID_GYRO] = {
+				.size = 6,
+				.reg = {
+					.addr = ST_LSM6DSVX_REG_CTRL6_ADDR,
+					.mask = GENMASK(3, 0),
+				},
+				.fs_avl[0] = { ST_LSM6DSVX_GYRO_FS_125_GAIN, 0x0 },
+				.fs_avl[1] = { ST_LSM6DSVX_GYRO_FS_250_GAIN, 0x1 },
+				.fs_avl[2] = { ST_LSM6DSVX_GYRO_FS_500_GAIN, 0x2 },
+				.fs_avl[3] = { ST_LSM6DSVX_GYRO_FS_1000_GAIN, 0x3 },
+				.fs_avl[4] = { ST_LSM6DSVX_GYRO_FS_2000_GAIN, 0x4 },
+				.fs_avl[5] = { ST_LSM6DSVX_GYRO_FS_4000_GAIN, 0x6 },
+			},
+			[ST_LSM6DSVX_ID_TEMP] = {
+				.size = 1,
+				.fs_avl[0] = { (1000000 / ST_LSM6DSVX_TEMP_GAIN), 0x0 },
+			},
+		},
+	},
 };
 
 struct st_lsm6dsvx_hz_2_nsamples {

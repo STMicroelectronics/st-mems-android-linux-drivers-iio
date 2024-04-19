@@ -26,6 +26,7 @@
 #define ST_LSM6DSVX_ODR_LIST_SIZE		9
 #define ST_LSM6DSVX_ODR_EXPAND(odr, uodr)	((odr * 1000000) + uodr)
 
+#define ST_LSM6DSV32X_DEV_NAME			"lsm6dsv32x"
 #define ST_LSM6DSV16X_DEV_NAME			"lsm6dsv16x"
 #define ST_LSM6DSV_DEV_NAME			"lsm6dsv"
 
@@ -390,6 +391,7 @@ struct st_lsm6dsvx_fs_table_entry {
 #define ST_LSM6DSVX_ACC_FS_4G_GAIN	IIO_G_TO_M_S_2(122000)
 #define ST_LSM6DSVX_ACC_FS_8G_GAIN	IIO_G_TO_M_S_2(244000)
 #define ST_LSM6DSVX_ACC_FS_16G_GAIN	IIO_G_TO_M_S_2(488000)
+#define ST_LSM6DSVX_ACC_FS_32G_GAIN	IIO_G_TO_M_S_2(976000)
 
 #define ST_LSM6DSVX_GYRO_FS_125_GAIN	IIO_DEGREE_TO_RAD(4375000)
 #define ST_LSM6DSVX_GYRO_FS_250_GAIN	IIO_DEGREE_TO_RAD(8750000)
@@ -410,6 +412,7 @@ struct st_lsm6dsvx_ext_dev_info {
 enum st_lsm6dsvx_hw_id {
 	ST_LSM6DSV_ID,
 	ST_LSM6DSV16X_ID,
+	ST_LSM6DSV32X_ID,
 	ST_LSM6DSVX_MAX_ID,
 };
 
