@@ -796,8 +796,10 @@ int st_lsm6dsvx_mlc_check_status(struct st_lsm6dsvx_hw *hw)
 
 int st_lsm6dsvx_mlc_init_preload(struct st_lsm6dsvx_hw *hw)
 {
+#ifdef CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD
 	hw->preload_mlc = 1;
 	st_lsm6dsvx_mlc_update(&st_lsm6dsvx_mlc_preload, hw);
+#endif /* CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD */
 
 	return 0;
 }

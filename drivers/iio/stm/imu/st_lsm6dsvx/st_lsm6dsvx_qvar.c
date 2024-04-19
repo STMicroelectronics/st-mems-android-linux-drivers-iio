@@ -43,6 +43,8 @@ static const u8 qvar_fifo_config[][2] = {
 };
 #endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
 
+#define ST_LSM6DSVX_QVAR_SIZE			2
+
 static const struct st_lsm6dsvx_odr_table_entry
 st_lsm6dsvx_qvar_odr_table = {
 	.size = 1,
@@ -227,18 +229,19 @@ st_lsm6dsvx_report_1axes_event(struct st_lsm6dsvx_sensor *sensor,
 			       u8 *tmp, int64_t timestamp)
 {
 	struct iio_dev *iio_dev = sensor->hw->iio_devs[sensor->id];
-	u8 iio_buf[ALIGN(ST_LSM6DSVX_SAMPLE_SIZE, sizeof(s64)) + sizeof(s64)];
+	u8 iio_buf[ALIGN(ST_LSM6DSVX_QVAR_SIZE, sizeof(s64)) + sizeof(s64)];
 
-	memcpy(iio_buf, tmp, ST_LSM6DSVX_SAMPLE_SIZE);
+	memcpy(iio_buf, tmp, ST_LSM6DSVX_QVAR_SIZE);
 	iio_push_to_buffers_with_timestamp(iio_dev, iio_buf, timestamp);
 }
 
 static int
-st_lsm6dsvx_get_qvar_poll_data(struct st_lsm6dsvx_sensor *sensor,
-			       u8 *data)
+st_lsm6dsvx_get_qvar_poll_data(struct st_lsm6dsvx_sensor *sensor, u8 *data)
 {
 	return st_lsm6dsvx_read_locked(sensor->hw,
-				       ST_LSM6DSVX_REG_OUT_QVAR_ADDR, data, 2);
+				       ST_LSM6DSVX_REG_OUT_QVAR_ADDR,
+				       data,
+				       ST_LSM6DSVX_QVAR_SIZE);
 }
 
 static void
@@ -280,7 +283,10 @@ static const struct iio_buffer_setup_ops st_lsm6dsvx_qvar_ops = {
 
 static int st_lsm6dsvx_qvar_buffer(struct st_lsm6dsvx_hw *hw)
 {
-	struct iio_buffer *buffer;
+
+#if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
+	int err;
+#endif /* LINUX_VERSION_CODE */
 
 #if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
 	err = devm_iio_kfifo_buffer_setup(hw->dev,
@@ -296,6 +302,8 @@ static int st_lsm6dsvx_qvar_buffer(struct st_lsm6dsvx_hw *hw)
 	if (err)
 		return err;
 #else /* LINUX_VERSION_CODE */
+	struct iio_buffer *buffer;
+
 	buffer = devm_iio_kfifo_allocate(hw->dev);
 	if (!buffer)
 		return -ENOMEM;
