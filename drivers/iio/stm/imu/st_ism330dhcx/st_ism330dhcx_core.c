@@ -1842,8 +1842,12 @@ static int st_ism330dhcx_init_device(struct st_ism330dhcx_hw *hw)
 	if (err < 0)
 		return err;
 
+#ifdef CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES
 	/* init finite state machine */
-	return st_ism330dhcx_fsm_init(hw);
+	err = st_ism330dhcx_fsm_init(hw);
+#endif /* CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES */
+
+	return err;
 }
 
 /**
@@ -1923,6 +1927,7 @@ static struct iio_dev *st_ism330dhcx_alloc_iiodev(struct st_ism330dhcx_hw *hw,
 		sensor->gain = st_ism330dhcx_fs_table[id].fs_avl[0].gain;
 		sensor->offset = ST_ISM330DHCX_TEMP_OFFSET;
 		break;
+#ifdef CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES
 	case ST_ISM330DHCX_ID_STEP_COUNTER:
 		iio_dev->channels = st_ism330dhcx_step_counter_channels;
 		iio_dev->num_channels =
@@ -2072,6 +2077,7 @@ static struct iio_dev *st_ism330dhcx_alloc_iiodev(struct st_ism330dhcx_hw *hw,
 		sensor->uodr =
 			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
 		break;
+#endif /* CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES */
 	default:
 		return NULL;
 	}
@@ -2139,7 +2145,7 @@ int st_ism330dhcx_probe(struct device *dev, int irq,
 
 		hw->iio_devs[id] = st_ism330dhcx_alloc_iiodev(hw, id);
 		if (!hw->iio_devs[id])
-			return -ENOMEM;
+			continue;
 	}
 
 	err = st_ism330dhcx_shub_probe(hw);

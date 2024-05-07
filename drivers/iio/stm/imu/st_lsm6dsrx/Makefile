@@ -2,10 +2,9 @@
 st_lsm6dsrx-y := st_lsm6dsrx_core.o \
 		 st_lsm6dsrx_buffer.o \
 		 st_lsm6dsrx_mlc.o \
-		 st_lsm6dsrx_shub.o \
-		 st_lsm6dsrx_events.o \
-		 st_lsm6dsrx_embfunc.o
+		 st_lsm6dsrx_shub.o
 
+st_lsm6dsrx-$(CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES) += st_lsm6dsrx_events.o st_lsm6dsrx_embfunc.o
 st_lsm6dsrx-$(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP) += st_lsm6dsrx_hwtimestamp.o
 
 obj-$(CONFIG_IIO_ST_LSM6DSRX) += st_lsm6dsrx.o

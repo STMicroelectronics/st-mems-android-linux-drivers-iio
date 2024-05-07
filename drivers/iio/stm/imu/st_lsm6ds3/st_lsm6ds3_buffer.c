@@ -440,7 +440,8 @@ static irqreturn_t st_lsm6ds3_outdata_trigger_handler(int irq, void *p)
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t st_lsm6ds3_step_counter_trigger_handler(int irq, void *p)
+static irqreturn_t __maybe_unused
+st_lsm6ds3_step_counter_trigger_handler(int irq, void *p)
 {
 	int err;
 	u8 steps_data[2];
@@ -591,6 +592,7 @@ int st_lsm6ds3_allocate_rings(struct lsm6ds3_data *cdata)
 	if (err < 0)
 		goto buffer_cleanup_accel;
 
+#ifdef CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES
 	err = iio_triggered_buffer_setup(
 				cdata->indio_dev[ST_MASK_ID_SIGN_MOTION],
 				&st_lsm6ds3_handler_empty, NULL,
@@ -619,9 +621,11 @@ int st_lsm6ds3_allocate_rings(struct lsm6ds3_data *cdata)
 				&st_lsm6ds3_buffer_setup_ops);
 	if (err < 0)
 		goto buffer_cleanup_step_detector;
+#endif /* CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES */
 
 	return 0;
 
+#ifdef CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES
 buffer_cleanup_step_detector:
 	iio_triggered_buffer_cleanup(
 				cdata->indio_dev[ST_MASK_ID_STEP_DETECTOR]);
@@ -633,6 +637,9 @@ buffer_cleanup_sign_motion:
 				cdata->indio_dev[ST_MASK_ID_SIGN_MOTION]);
 buffer_cleanup_gyro:
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_GYRO]);
+
+#endif /* CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES */
+
 buffer_cleanup_accel:
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_ACCEL]);
 	return err;
@@ -640,6 +647,7 @@ buffer_cleanup_accel:
 
 void st_lsm6ds3_deallocate_rings(struct lsm6ds3_data *cdata)
 {
+#ifdef CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_TILT]);
 	iio_triggered_buffer_cleanup(
 				cdata->indio_dev[ST_MASK_ID_STEP_DETECTOR]);
@@ -647,6 +655,8 @@ void st_lsm6ds3_deallocate_rings(struct lsm6ds3_data *cdata)
 				cdata->indio_dev[ST_MASK_ID_STEP_COUNTER]);
 	iio_triggered_buffer_cleanup(
 				cdata->indio_dev[ST_MASK_ID_SIGN_MOTION]);
+#endif /* CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES */
+
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_ACCEL]);
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_GYRO]);
 }

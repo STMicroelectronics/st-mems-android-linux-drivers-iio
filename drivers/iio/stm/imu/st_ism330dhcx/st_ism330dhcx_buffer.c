@@ -911,6 +911,43 @@ static const struct iio_buffer_setup_ops st_ism330dhcx_buffer_ops = {
 	.postdisable = st_ism330dhcx_buffer_postdisable,
 };
 
+int __maybe_unused st_ism330dhcx_trigger_setup(struct st_ism330dhcx_hw *hw)
+{
+	struct st_ism330dhcx_sensor *sensor;
+	struct iio_dev *iio_dev;
+	int err;
+
+	iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_ORIENTATION];
+	sensor = iio_priv(iio_dev);
+
+	err = devm_iio_triggered_buffer_setup(hw->dev, iio_dev,
+					NULL,
+					st_ism330dhcx_buffer_handler_thread,
+					&st_ism330dhcx_buffer_ops);
+	if (err < 0)
+		return err;
+
+	sensor->trig = devm_iio_trigger_alloc(hw->dev, "%s-trigger",
+					      iio_dev->name);
+	if (!sensor->trig)
+		return -ENOMEM;
+
+	iio_trigger_set_drvdata(sensor->trig, iio_dev);
+	sensor->trig->ops = &st_ism330dhcx_trigger_ops;
+	sensor->trig->dev.parent = hw->dev;
+
+	err = devm_iio_trigger_register(hw->dev, sensor->trig);
+	if (err < 0) {
+		dev_err(hw->dev, "failed to register iio trigger.\n");
+
+		return err;
+	}
+
+	iio_dev->trig = iio_trigger_get(sensor->trig);
+
+	return 0;
+}
+
 /**
  * Init IIO buffers and triggers
  *
@@ -920,11 +957,9 @@ static const struct iio_buffer_setup_ops st_ism330dhcx_buffer_ops = {
 int st_ism330dhcx_buffers_setup(struct st_ism330dhcx_hw *hw)
 {
 	struct device_node *np = hw->dev->of_node;
-	struct st_ism330dhcx_sensor *sensor;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
 	struct iio_buffer *buffer;
 #endif /* LINUX_VERSION_CODE */
-	struct iio_dev *iio_dev;
 	unsigned long irq_type;
 	bool irq_active_low;
 	int i, err;
@@ -1005,32 +1040,11 @@ int st_ism330dhcx_buffers_setup(struct st_ism330dhcx_hw *hw)
 	if (err < 0)
 		return err;
 
-	iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_ORIENTATION];
-	sensor = iio_priv(iio_dev);
-
-	err = devm_iio_triggered_buffer_setup(hw->dev, iio_dev,
-				NULL, st_ism330dhcx_buffer_handler_thread,
-				&st_ism330dhcx_buffer_ops);
+#ifdef CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES
+	err = st_ism330dhcx_trigger_setup(hw);
 	if (err < 0)
 		return err;
-
-	sensor->trig = devm_iio_trigger_alloc(hw->dev, "%s-trigger",
-					      iio_dev->name);
-	if (!sensor->trig)
-		return -ENOMEM;
-
-	iio_trigger_set_drvdata(sensor->trig, iio_dev);
-	sensor->trig->ops = &st_ism330dhcx_trigger_ops;
-	sensor->trig->dev.parent = hw->dev;
-
-	err = devm_iio_trigger_register(hw->dev, sensor->trig);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to register iio trigger.\n");
-
-		return err;
-	}
-
-	iio_dev->trig = iio_trigger_get(sensor->trig);
+#endif /* CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES */
 
 	return 0;
 }

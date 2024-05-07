@@ -1921,6 +1921,7 @@ int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
 	if (err < 0)
 		return err;
 
+#ifdef CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES
 	/* allocate step counter before buffer setup because use FIFO */
 	err = st_lsm6dsrx_probe_embfunc(hw);
 	if (err < 0)
@@ -1929,6 +1930,7 @@ int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
 	err = st_lsm6dsrx_probe_event(hw);
 	if (err < 0)
 		return err;
+#endif /* CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES */
 
 	if (hw->irq > 0) {
 		err = st_lsm6dsrx_buffers_setup(hw);

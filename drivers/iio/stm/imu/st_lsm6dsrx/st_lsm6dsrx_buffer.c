@@ -569,8 +569,10 @@ static irqreturn_t st_lsm6dsrx_handler_thread(int irq, void *private)
 	clear_bit(ST_LSM6DSRX_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
+#ifdef CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES
 	st_lsm6dsrx_event_handler(hw);
 	st_lsm6dsrx_embfunc_handler_thread(hw);
+#endif /* CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES */
 
 	return IRQ_HANDLED;
 }

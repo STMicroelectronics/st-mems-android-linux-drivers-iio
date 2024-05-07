@@ -525,7 +525,7 @@ unlock:
  * @param  hw: ST IMU MEMS hw instance
  * @return  < 0 if error, 0 otherwise
  */
-int st_ism330dhcx_fsm_init(struct st_ism330dhcx_hw *hw)
+int __maybe_unused st_ism330dhcx_fsm_init(struct st_ism330dhcx_hw *hw)
 {
 	u8 nfsm[] = {
 		ARRAY_SIZE(st_ism330dhcx_fsm_sensor_list),

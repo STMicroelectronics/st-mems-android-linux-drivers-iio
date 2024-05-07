@@ -29,6 +29,25 @@ config ST_LSM6DSM_SPI_IIO
 	depends on ST_LSM6DSM_IIO
 	depends on SPI
 
+config IIO_ST_LSM6DSM_EN_BASIC_FEATURES
+	bool "Enable internal basic features event detection"
+	depends on ST_LSM6DSM_IIO
+	help
+	  Enable internal event detection features like: step counter,
+	  step detection, significant motion, tilt, tap, double tap and
+	  wrist tilt. If this feature is enabled it is necessary to
+	  extend the iio_chan_type_name spec array in industrialio-
+	  core.c by adding the custom types used by this driver.
+
+	  WARNING If this feature is enabled, it is necessary to extend the
+	  iio_chan_type_name_spec array in industrialio-core.c by adding the
+	  custom sensor-types used by this driver; otherwise, during the
+	  registration phase of the custom sensors on the iio core, a crash
+	  could occur due to access to unallocated memory.
+
+comment "WARNING ! If you don't know what you're doing, leave this flag in the default state."
+	depends on IIO_ST_LSM6DSM_EN_BASIC_FEATURES
+
 config ST_LSM6DSM_IIO_LIMIT_FIFO
 	int "Limit fifo read lenght (#n byte)"
 	depends on ST_LSM6DSM_IIO

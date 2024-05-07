@@ -260,6 +260,16 @@ struct ism330dlc_sensor_data {
 	u8 data_out_reg;
 };
 
+static bool __maybe_unused st_ism330dlc_skip_basic_features(enum st_mask_id i)
+{
+#ifndef CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES
+	if (i == ST_MASK_ID_TILT)
+		return true;
+#endif /* CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
+
+	return false;
+}
+
 int st_ism330dlc_write_data_with_mask(struct ism330dlc_data *cdata,
 			u8 reg_addr, u8 mask, u8 data, bool b_lock);
 

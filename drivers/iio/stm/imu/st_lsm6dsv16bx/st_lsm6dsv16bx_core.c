@@ -1879,6 +1879,7 @@ int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
 			return -ENOMEM;
 	}
 
+#ifdef IIO_ST_ISM330DLC_EN_BASIC_FEATURES
 	/* allocate step counter before buffer setup because use FIFO */
 	err = st_lsm6dsv16bx_probe_embfunc(hw);
 	if (err < 0)
@@ -1887,6 +1888,7 @@ int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
 	err = st_lsm6dsv16bx_probe_event(hw);
 	if (err < 0)
 		return err;
+#endif /* IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
 
 	if (hw->settings->st_qvar_probe &&
 	    (!dev_fwnode(dev) ||

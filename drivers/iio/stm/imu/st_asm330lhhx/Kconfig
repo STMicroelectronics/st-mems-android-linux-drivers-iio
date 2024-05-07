@@ -29,17 +29,29 @@ config IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
 	bool "Enable internal basic features event detection"
 	depends on IIO_ST_ASM330LHHX
 	help
-	  Enable internal basic features event detection sensor
+	  Enable internal event detection features like: free fall, sleep
+	  change, wake-up, 6D orientation. If this feature is enabled it is
+	  necessary to extend the iio_chan_type_name_spec array in industrialio-
+	  core.c by adding the custom types used by this driver.
+
+	  WARNING If this feature is enabled, it is necessary to extend the
+	  iio_chan_type_name_spec array in industrialio-core.c by adding the
+	  custom sensor-types used by this driver; otherwise, during the
+	  registration phase of the custom sensors on the iio core, a crash
+	  could occur due to access to unallocated memory.
+
+comment "WARNING ! If you don't know what you're doing, leave this flag in the default state."
+	depends on IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
 
 config IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP
-       bool "Enable async hw timestamp read"
-       depends on IIO_ST_ASM330LHHX
-       help
-         Enable async task that sends over hw timestamp events.
+	bool "Enable async hw timestamp read"
+	depends on IIO_ST_ASM330LHHX
+	help
+	  Enable async task that sends over hw timestamp events.
 
 config IIO_ST_ASM330LHHX_MLC_PRELOAD
-        bool "Preload some examples on MLC/FSM core"
-        depends on IIO_ST_ASM330LHHX
-        help
-          Preload some examples on machine learning core and finite state
-          machine. The examples code are hardcoded in to the driver.
+	bool "Preload some examples on MLC/FSM core"
+	depends on IIO_ST_ASM330LHHX
+	help
+	  Preload some examples on machine learning core and finite state
+	  machine. The examples code are hardcoded in to the driver.

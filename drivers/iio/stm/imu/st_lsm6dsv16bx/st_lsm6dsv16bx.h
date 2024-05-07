@@ -986,10 +986,33 @@ int st_lsm6dsv16bx_mlc_check_status(struct st_lsm6dsv16bx_hw *hw);
 int st_lsm6dsv16bx_mlc_init_preload(struct st_lsm6dsv16bx_hw *hw);
 
 int st_lsm6dsv16bx_probe_event(struct st_lsm6dsv16bx_hw *hw);
+int st_lsm6dsv16bx_probe_embfunc(struct st_lsm6dsv16bx_hw *hw);
+
+#ifdef CONFIG_IIO_ST_LSM6DSV16BX_EN_BASIC_FEATURES
 int st_lsm6dsv16bx_event_handler(struct st_lsm6dsv16bx_hw *hw);
 
-int st_lsm6dsv16bx_probe_embfunc(struct st_lsm6dsv16bx_hw *hw);
 int st_lsm6dsv16bx_embfunc_handler_thread(struct st_lsm6dsv16bx_hw *hw);
 int st_lsm6dsv16bx_step_counter_set_enable(struct st_lsm6dsv16bx_sensor *sensor,
 					   bool enable);
+#else /* CONFIG_IIO_ST_LSM6DSV16BX_EN_BASIC_FEATURES */
+static inline int st_lsm6dsv16bx_event_handler(struct st_lsm6dsv16bx_hw *hw)
+{
+	return 0;
+}
+
+static inline int
+st_lsm6dsv16bx_embfunc_handler_thread(struct st_lsm6dsv16bx_hw *hw)
+{
+	return 0;
+}
+
+static inline int
+st_lsm6dsv16bx_step_counter_set_enable(
+				   struct st_lsm6dsv16bx_sensor *sensor,
+				   bool enable)
+{
+	return 0;
+}
+#endif /* CONFIG_IIO_ST_LSM6DSV16BX_EN_BASIC_FEATURES */
+
 #endif /* ST_LSM6DSV16BX_H */

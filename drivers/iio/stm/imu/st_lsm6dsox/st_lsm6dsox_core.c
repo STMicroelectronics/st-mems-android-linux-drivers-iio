@@ -453,60 +453,6 @@ static const struct iio_chan_spec st_lsm6dsox_temp_channels[] = {
 };
 
 
-/**
- * Step Counter IIO channels description
- *
- * Step Counter exports to IIO framework the following data channels:
- * Step Counters (16 bit unsigned in little endian)
- * Timestamp (64 bit signed in little endian)
- * Step Counter exports to IIO framework the following event channels:
- * Flush event done
- */
-static const struct iio_chan_spec st_lsm6dsox_step_counter_channels[] = {
-	{
-		.type = STM_IIO_STEP_COUNTER,
-		.scan_index = 0,
-		.scan_type = {
-			.sign = 'u',
-			.realbits = 16,
-			.storagebits = 16,
-			.endianness = IIO_LE,
-		},
-	},
-	ST_LSM6DSOX_EVENT_CHANNEL(STM_IIO_STEP_COUNTER, flush),
-	IIO_CHAN_SOFT_TIMESTAMP(1),
-};
-
-/**
- * @brief  Step Detector IIO channels description
- *
- * Step Detector exports to IIO framework the following event channels:
- * Step detection event detection
- */
-static const struct iio_chan_spec st_lsm6dsox_step_detector_channels[] = {
-	ST_LSM6DSOX_EVENT_CHANNEL(IIO_STEPS, thr),
-};
-
-/**
- * Significant Motion IIO channels description
- *
- * Significant Motion exports to IIO framework the following event channels:
- * Significant Motion event detection
- */
-static const struct iio_chan_spec st_lsm6dsox_sign_motion_channels[] = {
-	ST_LSM6DSOX_EVENT_CHANNEL(STM_IIO_SIGN_MOTION, thr),
-};
-
-/**
- * Tilt IIO channels description
- *
- * Tilt exports to IIO framework the following event channels:
- * Tilt event detection
- */
-static const struct iio_chan_spec st_lsm6dsox_tilt_channels[] = {
-	ST_LSM6DSOX_EVENT_CHANNEL(STM_IIO_TILT, thr),
-};
-
 static __maybe_unused int st_lsm6dsox_reg_access(struct iio_dev *iio_dev,
 				 unsigned int reg, unsigned int writeval,
 				 unsigned int *readval)
@@ -972,52 +918,6 @@ static int st_lsm6dsox_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	mutex_unlock(&iio_dev->mlock);
-
-	return err;
-}
-
-/**
- * Read sensor event configuration
- *
- * @param  iio_dev: IIO Device.
- * @param  chan: IIO Channel.
- * @param  type: Event Type.
- * @param  dir: Event Direction.
- * @return  1 if Enabled, 0 Disabled
- */
-static int st_lsm6dsox_read_event_config(struct iio_dev *iio_dev,
-					 const struct iio_chan_spec *chan,
-					 enum iio_event_type type,
-					 enum iio_event_direction dir)
-{
-	struct st_lsm6dsox_sensor *sensor = iio_priv(iio_dev);
-	struct st_lsm6dsox_hw *hw = sensor->hw;
-
-	return !!(hw->enable_mask & BIT(sensor->id));
-}
-
-/**
- * Write sensor event configuration
- *
- * @param  iio_dev: IIO Device.
- * @param  chan: IIO Channel.
- * @param  type: Event Type.
- * @param  dir: Event Direction.
- * @param  state: New event state.
- * @return  0 if OK, negative for ERROR
- */
-static int st_lsm6dsox_write_event_config(struct iio_dev *iio_dev,
-					 const struct iio_chan_spec *chan,
-					 enum iio_event_type type,
-					 enum iio_event_direction dir,
-					 int state)
-{
-	struct st_lsm6dsox_sensor *sensor = iio_priv(iio_dev);
-	int err;
-
-	mutex_lock(&iio_dev->mlock);
-	err = st_lsm6dsox_embfunc_sensor_set_enable(sensor, state);
 	mutex_unlock(&iio_dev->mlock);
 
 	return err;
@@ -1616,27 +1516,6 @@ out_claim:
 	return size;
 }
 
-/**
- * Reset step counter value
- *
- * @param  dev: IIO Device.
- * @param  attr: IIO Channel attribute.
- * @param  buf: User buffer.
- * @param  size: User buffer size.
- * @return  buffer len, negative for ERROR
- */
-static ssize_t st_lsm6dsox_sysfs_reset_step_counter(struct device *dev,
-					struct device_attribute *attr,
-					const char *buf, size_t size)
-{
-	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
-	int err;
-
-	err = st_lsm6dsox_reset_step_counter(iio_dev);
-
-	return err < 0 ? err : size;
-}
-
 ssize_t st_lsm6dsox_get_module_id(struct device *dev,
 				  struct device_attribute *attr,
 				  char *buf)
@@ -1696,8 +1575,6 @@ static IIO_DEVICE_ATTR(power_mode_available, 0444,
 static IIO_DEVICE_ATTR(power_mode, 0644,
 		       st_lsm6dsox_get_power_mode,
 		       st_lsm6dsox_set_power_mode, 0);
-static IIO_DEVICE_ATTR(reset_counter, 0200, NULL,
-		       st_lsm6dsox_sysfs_reset_step_counter, 0);
 static IIO_DEVICE_ATTR(module_id, 0444, st_lsm6dsox_get_module_id, NULL, 0);
 
 static struct attribute *st_lsm6dsox_acc_attributes[] = {
@@ -1774,76 +1651,12 @@ static const struct iio_info st_lsm6dsox_temp_info = {
 	.write_raw_get_fmt = st_lsm6dsox_write_raw_get_fmt,
 };
 
-static struct attribute *st_lsm6dsox_step_counter_attributes[] = {
-	&iio_dev_attr_hwfifo_watermark_max.dev_attr.attr,
-	&iio_dev_attr_hwfifo_watermark.dev_attr.attr,
-	&iio_dev_attr_reset_counter.dev_attr.attr,
-	&iio_dev_attr_hwfifo_flush.dev_attr.attr,
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_lsm6dsox_step_counter_attribute_group = {
-	.attrs = st_lsm6dsox_step_counter_attributes,
-};
-
-static const struct iio_info st_lsm6dsox_step_counter_info = {
-	.attrs = &st_lsm6dsox_step_counter_attribute_group,
-};
-
-static struct attribute *st_lsm6dsox_step_detector_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_lsm6dsox_step_detector_attribute_group = {
-	.attrs = st_lsm6dsox_step_detector_attributes,
-};
-
-static const struct iio_info st_lsm6dsox_step_detector_info = {
-	.attrs = &st_lsm6dsox_step_detector_attribute_group,
-	.read_event_config = st_lsm6dsox_read_event_config,
-	.write_event_config = st_lsm6dsox_write_event_config,
-};
-
-static struct attribute *st_lsm6dsox_sign_motion_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_lsm6dsox_sign_motion_attribute_group = {
-	.attrs = st_lsm6dsox_sign_motion_attributes,
-};
-
-static const struct iio_info st_lsm6dsox_sign_motion_info = {
-	.attrs = &st_lsm6dsox_sign_motion_attribute_group,
-	.read_event_config = st_lsm6dsox_read_event_config,
-	.write_event_config = st_lsm6dsox_write_event_config,
-};
-
-static struct attribute *st_lsm6dsox_tilt_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_lsm6dsox_tilt_attribute_group = {
-	.attrs = st_lsm6dsox_tilt_attributes,
-};
-
-static const struct iio_info st_lsm6dsox_tilt_info = {
-	.attrs = &st_lsm6dsox_tilt_attribute_group,
-	.read_event_config = st_lsm6dsox_read_event_config,
-	.write_event_config = st_lsm6dsox_write_event_config,
-};
-
 static const unsigned long st_lsm6dsox_available_scan_masks[] = {
 	GENMASK(3, 0),
 	0x0
 };
+
 static const unsigned long st_lsm6dsox_temp_available_scan_masks[] = {
-	0x1, 0x0
-};
-static const unsigned long st_lsm6dsox_emb_available_scan_masks[] = {
 	0x1, 0x0
 };
 
@@ -2017,67 +1830,6 @@ static struct iio_dev *st_lsm6dsox_alloc_iiodev(struct st_lsm6dsox_hw *hw,
 		sensor->odr = st_lsm6dsox_odr_table[id].odr_avl[1].hz;
 		sensor->uodr = st_lsm6dsox_odr_table[id].odr_avl[1].uhz;
 		break;
-	case ST_LSM6DSOX_ID_STEP_COUNTER:
-		iio_dev->channels = st_lsm6dsox_step_counter_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lsm6dsox_step_counter_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			  "%s_step_c", hw->dev_name);
-		iio_dev->info = &st_lsm6dsox_step_counter_info;
-		iio_dev->available_scan_masks =
-					st_lsm6dsox_emb_available_scan_masks;
-
-		/* request an acc ODR at least of 26 Hz to works properly */
-		sensor->max_watermark = 1;
-		sensor->odr =
-			st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-		       st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_LSM6DSOX_ID_STEP_DETECTOR:
-		iio_dev->channels = st_lsm6dsox_step_detector_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lsm6dsox_step_detector_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			  "%s_step_d", hw->dev_name);
-		iio_dev->info = &st_lsm6dsox_step_detector_info;
-		iio_dev->available_scan_masks =
-					st_lsm6dsox_emb_available_scan_masks;
-
-		sensor->odr =
-			st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-		       st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_LSM6DSOX_ID_SIGN_MOTION:
-		iio_dev->channels = st_lsm6dsox_sign_motion_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lsm6dsox_sign_motion_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			  "%s_sign_motion", hw->dev_name);
-		iio_dev->info = &st_lsm6dsox_sign_motion_info;
-		iio_dev->available_scan_masks =
-					st_lsm6dsox_emb_available_scan_masks;
-
-		sensor->odr =
-			st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-		       st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_LSM6DSOX_ID_TILT:
-		iio_dev->channels = st_lsm6dsox_tilt_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_lsm6dsox_tilt_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			  "%s_tilt", hw->dev_name);
-		iio_dev->info = &st_lsm6dsox_tilt_info;
-		iio_dev->available_scan_masks =
-					st_lsm6dsox_emb_available_scan_masks;
-
-		sensor->odr =
-			st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-		       st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].odr_avl[2].uhz;
-		break;
 	default:
 		return NULL;
 	}
@@ -2234,6 +1986,12 @@ int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 	if (err < 0)
 		return err;
 
+#ifdef CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES
+	err = st_lsm6dsox_probe_embfunc(hw);
+	if (err)
+		return err;
+#endif /* CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES */
+
 	if (hw->irq > 0) {
 		err = st_lsm6dsox_buffers_setup(hw);
 		if (err < 0)
@@ -2260,10 +2018,6 @@ int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 		if (err)
 			return err;
 	}
-
-	err = st_lsm6dsox_embedded_function_init(hw);
-	if (err)
-		return err;
 
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev, "wakeup-source"));

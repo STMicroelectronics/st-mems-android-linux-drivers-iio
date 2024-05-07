@@ -1033,6 +1033,7 @@ int st_lsm6dsrx_mlc_remove(struct device *dev);
 int st_lsm6dsrx_mlc_check_status(struct st_lsm6dsrx_hw *hw);
 int st_lsm6dsrx_mlc_init_preload(struct st_lsm6dsrx_hw *hw);
 
+#ifdef CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES
 int st_lsm6dsrx_probe_event(struct st_lsm6dsrx_hw *hw);
 int st_lsm6dsrx_event_handler(struct st_lsm6dsrx_hw *hw);
 
@@ -1040,4 +1041,13 @@ int st_lsm6dsrx_probe_embfunc(struct st_lsm6dsrx_hw *hw);
 int st_lsm6dsrx_embfunc_handler_thread(struct st_lsm6dsrx_hw *hw);
 int st_lsm6dsrx_step_counter_set_enable(struct st_lsm6dsrx_sensor *sensor,
 					bool enable);
+#else /* CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES */
+static inline int
+st_lsm6dsrx_step_counter_set_enable(struct st_lsm6dsrx_sensor *sensor,
+				    bool enable)
+{
+	return 0;
+}
+#endif /* CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES */
+
 #endif /* ST_LSM6DSRX_H */

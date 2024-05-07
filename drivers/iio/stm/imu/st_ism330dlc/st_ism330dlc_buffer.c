@@ -528,17 +528,22 @@ int st_ism330dlc_allocate_rings(struct ism330dlc_data *cdata)
 	if (err < 0)
 		goto buffer_cleanup_accel;
 
+#ifdef CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES
 	err = iio_triggered_buffer_setup(
 				cdata->indio_dev[ST_MASK_ID_TILT],
 				&st_ism330dlc_handler_empty, NULL,
 				&st_ism330dlc_buffer_setup_ops);
 	if (err < 0)
 		goto buffer_cleanup_gyro;
+#endif /* CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
 
 	return 0;
 
+#ifdef CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES
 buffer_cleanup_gyro:
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_GYRO]);
+#endif /* CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
+
 buffer_cleanup_accel:
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_ACCEL]);
 	return err;
@@ -546,7 +551,11 @@ buffer_cleanup_accel:
 
 void st_ism330dlc_deallocate_rings(struct ism330dlc_data *cdata)
 {
+
+#ifdef CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_TILT]);
+#endif /* CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
+
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_ACCEL]);
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_GYRO]);
 }

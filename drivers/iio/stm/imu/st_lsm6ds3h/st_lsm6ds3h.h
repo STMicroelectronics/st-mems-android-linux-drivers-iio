@@ -276,6 +276,17 @@ struct lsm6ds3h_sensor_data {
 	u8 *buffer_data;
 };
 
+static bool __maybe_unused st_lsm6ds3h_skip_basic_features(enum st_mask_id i)
+{
+#ifndef CONFIG_IIO_ST_LSM6DS3H_EN_BASIC_FEATURES
+	if (i >= ST_MASK_ID_SIGN_MOTION &&
+	    i <= ST_MASK_ID_TILT)
+		return true;
+#endif /* CONFIG_IIO_ST_LSM6DS3H_EN_BASIC_FEATURES */
+
+	return false;
+}
+
 int st_lsm6ds3h_write_data_with_mask(struct lsm6ds3h_data *cdata,
 			u8 reg_addr, u8 mask, u8 data, bool b_lock);
 

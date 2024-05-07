@@ -564,50 +564,10 @@ static irqreturn_t st_lsm6dsox_handler_thread(int irq, void *private)
 	clear_bit(ST_LSM6DSOX_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
-	if (hw->enable_mask & (BIT(ST_LSM6DSOX_ID_STEP_DETECTOR) |
-			       BIT(ST_LSM6DSOX_ID_TILT) |
-			       BIT(ST_LSM6DSOX_ID_SIGN_MOTION))) {
-		struct iio_dev *iio_dev;
-		u8 status[3];
-		s64 event;
-		int err;
+#ifdef CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES
+	st_lsm6dsox_embfunc_handler_thread(hw);
+#endif /* CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES */
 
-		err = regmap_bulk_read(hw->regmap,
-				       ST_LSM6DSOX_REG_EMB_FUNC_STATUS_MAINPAGE,
-				       status, sizeof(status));
-		if (err < 0)
-			goto out;
-
-		/* embedded function sensors */
-		if (status[0] & ST_LSM6DSOX_REG_INT_STEP_DET_MASK) {
-			iio_dev = hw->iio_devs[ST_LSM6DSOX_ID_STEP_DETECTOR];
-			event = IIO_UNMOD_EVENT_CODE(IIO_STEPS, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       iio_get_time_ns(iio_dev));
-		}
-
-		if (status[0] & ST_LSM6DSOX_REG_INT_SIGMOT_MASK) {
-			iio_dev = hw->iio_devs[ST_LSM6DSOX_ID_SIGN_MOTION];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_SIGN_MOTION, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       iio_get_time_ns(iio_dev));
-		}
-
-		if (status[0] & ST_LSM6DSOX_REG_INT_TILT_MASK) {
-			iio_dev = hw->iio_devs[ST_LSM6DSOX_ID_TILT];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_TILT, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       iio_get_time_ns(iio_dev));
-		}
-	}
-
-out:
 	return IRQ_HANDLED;
 }
 

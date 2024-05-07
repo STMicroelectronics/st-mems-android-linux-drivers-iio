@@ -118,6 +118,8 @@ int st_ism330dlc_allocate_triggers(struct ism330dlc_data *cdata,
 	int err, i, n;
 
 	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
+		if (st_ism330dlc_skip_basic_features(i))
+			continue;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)
 		cdata->trig[i] = iio_trigger_alloc(cdata->dev,
@@ -145,6 +147,9 @@ int st_ism330dlc_allocate_triggers(struct ism330dlc_data *cdata,
 		goto deallocate_trigger;
 
 	for (n = 0; n < ST_INDIO_DEV_NUM; n++) {
+		if (st_ism330dlc_skip_basic_features(n))
+			continue;
+
 		err = iio_trigger_register(cdata->trig[n]);
 		if (err < 0) {
 			dev_err(cdata->dev,
@@ -158,11 +163,19 @@ int st_ism330dlc_allocate_triggers(struct ism330dlc_data *cdata,
 
 free_irq:
 	free_irq(cdata->irq, cdata);
-	for (n--; n >= 0; n--)
+	for (n--; n >= 0; n--) {
+		if (st_ism330dlc_skip_basic_features(n))
+			continue;
+
 		iio_trigger_unregister(cdata->trig[n]);
+	}
 deallocate_trigger:
-	for (i--; i >= 0; i--)
+	for (i--; i >= 0; i--) {
+		if (st_ism330dlc_skip_basic_features(i))
+			continue;
+
 		iio_trigger_free(cdata->trig[i]);
+	}
 
 	return err;
 }
@@ -174,7 +187,11 @@ void st_ism330dlc_deallocate_triggers(struct ism330dlc_data *cdata)
 
 	free_irq(cdata->irq, cdata);
 
-	for (i = 0; i < ST_INDIO_DEV_NUM; i++)
+	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
+		if (st_ism330dlc_skip_basic_features(i))
+			continue;
+
 		iio_trigger_unregister(cdata->trig[i]);
+	}
 }
 EXPORT_SYMBOL(st_ism330dlc_deallocate_triggers);

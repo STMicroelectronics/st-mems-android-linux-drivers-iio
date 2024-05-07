@@ -899,8 +899,10 @@ EXPORT_SYMBOL(st_lsm6dsox_mlc_remove);
 
 int st_lsm6dsox_mlc_init_preload(struct st_lsm6dsox_hw *hw)
 {
+#ifdef CONFIG_IIO_ST_LSM6DSOX_MLC_PRELOAD
 	hw->preload_mlc = 1;
 	st_lsm6dsox_mlc_update(&st_lsm6dsox_mlc_preload, hw);
+#endif /* CONFIG_IIO_ST_LSM6DSOX_MLC_PRELOAD */
 
 	return 0;
 }

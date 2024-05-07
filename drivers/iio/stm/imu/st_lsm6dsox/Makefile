@@ -2,9 +2,9 @@
 st_lsm6dsox-y := st_lsm6dsox_core.o \
 		 st_lsm6dsox_buffer.o \
 		 st_lsm6dsox_mlc.o \
-		 st_lsm6dsox_shub.o \
-		 st_lsm6dsox_embfunc.o
+		 st_lsm6dsox_shub.o
 
+st_lsm6dsox-$(CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES) += st_lsm6dsox_embfunc.o
 st_lsm6dsox-$(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP) += st_lsm6dsox_hwtimestamp.o
 
 obj-$(CONFIG_IIO_ST_LSM6DSOX) += st_lsm6dsox.o

@@ -2890,6 +2890,9 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 	cdata->irq_enable_accel_ext_mask = 0;
 
 	for (i = 0; i < ST_INDIO_DEV_NUM + 1; i++) {
+		if (st_lsm6ds3_skip_basic_features(i))
+			continue;
+
 		cdata->hw_odr[i] = 0;
 		cdata->v_odr[i] = 13;
 		cdata->hwfifo_enabled[i] = false;
@@ -2964,6 +2967,9 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 	}
 
 	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
+		if (st_lsm6ds3_skip_basic_features(i))
+			continue;
+
 		cdata->indio_dev[i] = devm_iio_device_alloc(cdata->dev,
 					sizeof(struct lsm6ds3_sensor_data));
 		if (!cdata->indio_dev[i]) {
@@ -3019,6 +3025,7 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 	cdata->indio_dev[ST_MASK_ID_GYRO]->num_channels =
 						ARRAY_SIZE(st_lsm6ds3_gyro_ch);
 
+#ifdef CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES
 	cdata->indio_dev[ST_MASK_ID_SIGN_MOTION]->name =
 			kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
 					ST_LSM6DS3_SIGN_MOTION_SUFFIX_NAME);
@@ -3056,6 +3063,7 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 	cdata->indio_dev[ST_MASK_ID_TILT]->channels = st_lsm6ds3_tilt_ch;
 	cdata->indio_dev[ST_MASK_ID_TILT]->num_channels =
 					ARRAY_SIZE(st_lsm6ds3_tilt_ch);
+#endif /* CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES */
 
 	err = st_lsm6ds3_init_sensor(cdata);
 	if (err < 0)
@@ -3073,6 +3081,9 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 	}
 
 	for (n = 0; n < ST_INDIO_DEV_NUM; n++) {
+		if (st_lsm6ds3_skip_basic_features(n))
+			continue;
+
 		err = iio_device_register(cdata->indio_dev[n]);
 		if (err)
 			goto iio_device_unregister_and_trigger_deallocate;
@@ -3104,8 +3115,12 @@ void st_lsm6ds3_common_remove(struct lsm6ds3_data *cdata, int irq)
 {
 	int i;
 
-	for (i = 0; i < ST_INDIO_DEV_NUM; i++)
+	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
+		if (st_lsm6ds3_skip_basic_features(i))
+			continue;
+
 		iio_device_unregister(cdata->indio_dev[i]);
+	}
 
 	if (irq > 0)
 		st_lsm6ds3_deallocate_triggers(cdata);
@@ -3129,6 +3144,9 @@ int __maybe_unused st_lsm6ds3_common_suspend(struct lsm6ds3_data *cdata)
 	tmp_sensors_enabled = cdata->sensors_enabled;
 
 	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
+		if (st_lsm6ds3_skip_basic_features(i))
+			continue;
+
 		if ((i == ST_MASK_ID_SIGN_MOTION) || (i == ST_MASK_ID_TILT))
 			continue;
 
@@ -3169,6 +3187,9 @@ int __maybe_unused st_lsm6ds3_common_resume(struct lsm6ds3_data *cdata)
 	struct lsm6ds3_sensor_data *sdata;
 
 	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
+		if (st_lsm6ds3_skip_basic_features(i))
+			continue;
+
 		if ((i == ST_MASK_ID_SIGN_MOTION) || (i == ST_MASK_ID_TILT))
 			continue;
 
