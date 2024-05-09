@@ -1254,7 +1254,7 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 
 	for (i = 0; i < ISM303DAC_SENSORS_NUMB; i++) {
 		piio_dev = devm_iio_device_alloc(cdata->dev,
-					sizeof(struct ism303dac_sensor_data *));
+					sizeof(struct ism303dac_sensor_data));
 		if (!piio_dev)
 			return -ENOMEM;
 
@@ -1286,41 +1286,21 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 	if (irq > 0) {
 		err = ism303dac_allocate_triggers(cdata, ISM303DAC_TRIGGER_OPS);
 		if (err < 0)
-			goto deallocate_ring;
+			return err;
 	}
 
 	for (n = 0; n < ISM303DAC_SENSORS_NUMB; n++) {
-		err = iio_device_register(cdata->iio_sensors_dev[n]);
+		err = devm_iio_device_register(cdata->dev,
+					       cdata->iio_sensors_dev[n]);
 		if (err)
-			goto iio_device_unregister_and_trigger_deallocate;
+			return err;
 	}
 
 	dev_info(cdata->dev, "%s: probed\n", ISM303DAC_DEV_NAME);
+
 	return 0;
-
-iio_device_unregister_and_trigger_deallocate:
-	for (n--; n >= 0; n--)
-		iio_device_unregister(cdata->iio_sensors_dev[n]);
-
-deallocate_ring:
-	ism303dac_deallocate_rings(cdata);
-	return err;
 }
 EXPORT_SYMBOL(ism303dac_common_probe);
-
-void ism303dac_common_remove(struct ism303dac_data *cdata, int irq)
-{
-	int i;
-
-	for (i = 0; i < ISM303DAC_SENSORS_NUMB; i++)
-		iio_device_unregister(cdata->iio_sensors_dev[i]);
-
-	if (irq > 0)
-		ism303dac_deallocate_triggers(cdata);
-
-	ism303dac_deallocate_rings(cdata);
-}
-EXPORT_SYMBOL(ism303dac_common_remove);
 
 #ifdef CONFIG_PM
 int __maybe_unused ism303dac_common_suspend(struct ism303dac_data *cdata)

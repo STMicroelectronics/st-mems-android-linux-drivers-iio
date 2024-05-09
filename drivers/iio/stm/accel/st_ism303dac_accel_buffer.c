@@ -181,28 +181,14 @@ int ism303dac_allocate_rings(struct ism303dac_data *cdata)
 	int err, i;
 
 	for (i = 0; i < ISM303DAC_BUFFER_SENSOR; i++) {
-		err = iio_triggered_buffer_setup(
-				cdata->iio_sensors_dev[i],
-				&ism303dac_handler_empty,
-				NULL,
-				&ism303dac_buffer_setup_ops);
+		err = devm_iio_triggered_buffer_setup(cdata->dev,
+						   cdata->iio_sensors_dev[i],
+						   &ism303dac_handler_empty,
+						   NULL,
+						   &ism303dac_buffer_setup_ops);
 		if (err < 0)
-			goto buffer_cleanup;
+			return err;
 	}
 
 	return 0;
-
-buffer_cleanup:
-	for (i--; i >= 0; i--)
-		iio_triggered_buffer_cleanup(cdata->iio_sensors_dev[i]);
-
-	return err;
-}
-
-void ism303dac_deallocate_rings(struct ism303dac_data *cdata)
-{
-	int i;
-
-	for (i = 0; i < ISM303DAC_BUFFER_SENSOR; i++)
-		iio_triggered_buffer_cleanup(cdata->iio_sensors_dev[i]);
 }

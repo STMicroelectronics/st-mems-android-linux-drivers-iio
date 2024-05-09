@@ -99,68 +99,44 @@ static irqreturn_t ism303dac_irq_thread(int irq, void *private)
 int ism303dac_allocate_triggers(struct ism303dac_data *cdata,
 				const struct iio_trigger_ops *trigger_ops)
 {
-	int err, i, n;
+	int err, i;
+
+	err = devm_request_threaded_irq(cdata->dev, cdata->irq,
+					ism303dac_irq_handler,
+					ism303dac_irq_thread,
+					IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
+					cdata->name, cdata);
+	if (err)
+		return err;
 
 	for (i = 0; i < ISM303DAC_BUFFER_SENSOR; i++) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)
-		cdata->iio_trig[i] = iio_trigger_alloc(cdata->dev,
-					"%s-trigger",
-					cdata->iio_sensors_dev[i]->name);
-#else /* LINUX_VERSION_CODE */
-		cdata->iio_trig[i] = iio_trigger_alloc("%s-trigger",
-					cdata->iio_sensors_dev[i]->name);
-#endif /* LINUX_VERSION_CODE */
+		cdata->iio_trig[i] = devm_iio_trigger_alloc(cdata->dev,
+					       "%s-trigger",
+					       cdata->iio_sensors_dev[i]->name);
 
 		if (!cdata->iio_trig[i]) {
-			dev_err(cdata->dev, "failed to allocate iio trigger.\n");
-			err = -ENOMEM;
+			dev_err(cdata->dev,
+				"failed to allocate iio trigger.\n");
 
-			goto deallocate_trigger;
+			return -ENOMEM;
 		}
+
 		iio_trigger_set_drvdata(cdata->iio_trig[i],
 					cdata->iio_sensors_dev[i]);
 		cdata->iio_trig[i]->ops = trigger_ops;
 		cdata->iio_trig[i]->dev.parent = cdata->dev;
-	}
 
-	err = request_threaded_irq(cdata->irq,
-				   ism303dac_irq_handler,
-				   ism303dac_irq_thread,
-				   IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
-				   cdata->name, cdata);
-	if (err)
-		goto deallocate_trigger;
-
-	for (n = 0; n < ISM303DAC_BUFFER_SENSOR; n++) {
-		err = iio_trigger_register(cdata->iio_trig[n]);
+		err = devm_iio_trigger_register(cdata->dev, cdata->iio_trig[i]);
 		if (err < 0) {
-			dev_err(cdata->dev, "failed to register iio trigger.\n");
+			dev_err(cdata->dev,
+				"failed to register iio trigger.\n");
 
-			goto free_irq;
+			return err;
 		}
 
-		cdata->iio_sensors_dev[n]->trig = cdata->iio_trig[n];
+		cdata->iio_sensors_dev[i]->trig =
+					    iio_trigger_get(cdata->iio_trig[i]);
 	}
 
 	return 0;
-
-free_irq:
-	free_irq(cdata->irq, cdata);
-	for (n--; n >= 0; n--)
-		iio_trigger_unregister(cdata->iio_trig[n]);
-deallocate_trigger:
-	for (i--; i >= 0; i--)
-		iio_trigger_free(cdata->iio_trig[i]);
-
-	return err;
-}
-
-void ism303dac_deallocate_triggers(struct ism303dac_data *cdata)
-{
-	int i;
-
-	free_irq(cdata->irq, cdata);
-
-	for (i = 0; i < ISM303DAC_BUFFER_SENSOR; i++)
-		iio_trigger_unregister(cdata->iio_trig[i]);
 }

@@ -316,10 +316,7 @@ int ism303dac_read_register(struct ism303dac_data *cdata, u8 reg_addr,
 			    int data_len, u8 *data, bool b_lock);
 int ism303dac_update_drdy_irq(struct ism303dac_sensor_data *sdata, bool state);
 int ism303dac_set_enable(struct ism303dac_sensor_data *sdata, bool enable);
-void ism303dac_common_remove(struct ism303dac_data *cdata, int irq);
 void ism303dac_read_xyz(struct ism303dac_data *cdata);
 void ism303dac_read_fifo(struct ism303dac_data *cdata, bool check_fifo_len);
-void ism303dac_deallocate_rings(struct ism303dac_data *cdata);
-void ism303dac_deallocate_triggers(struct ism303dac_data *cdata);
 
 #endif /* __ISM303DAC_H */

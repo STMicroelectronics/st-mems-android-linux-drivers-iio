@@ -97,10 +97,9 @@ static const struct ism303dac_transfer_function ism303dac_tf_spi = {
 
 static int ism303dac_spi_probe(struct spi_device *spi)
 {
-	int err;
 	struct ism303dac_data *cdata;
 
-	cdata = kzalloc(sizeof(*cdata), GFP_KERNEL);
+	cdata = devm_kzalloc(&spi->dev, sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
 		return -ENOMEM;
 
@@ -109,38 +108,8 @@ static int ism303dac_spi_probe(struct spi_device *spi)
 	cdata->tf = &ism303dac_tf_spi;
 	spi_set_drvdata(spi, cdata);
 
-	err = ism303dac_common_probe(cdata, spi->irq);
-	if (err < 0)
-		goto free_data;
-
-	return 0;
-
-free_data:
-	kfree(cdata);
-	return err;
+	return ism303dac_common_probe(cdata, spi->irq);
 }
-
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void ism303dac_spi_remove(struct spi_device *spi)
-{
-	struct ism303dac_data *cdata = spi_get_drvdata(spi);
-
-	ism303dac_common_remove(cdata, spi->irq);
-	dev_info(cdata->dev, "%s: removed\n", ISM303DAC_DEV_NAME);
-	kfree(cdata);
-}
-#else /* LINUX_VERSION_CODE */
-static int ism303dac_spi_remove(struct spi_device *spi)
-{
-	struct ism303dac_data *cdata = spi_get_drvdata(spi);
-
-	ism303dac_common_remove(cdata, spi->irq);
-	dev_info(cdata->dev, "%s: removed\n", ISM303DAC_DEV_NAME);
-	kfree(cdata);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
 
 #ifdef CONFIG_PM
 static int __maybe_unused ism303dac_suspend(struct device *dev)
@@ -192,7 +161,6 @@ static struct spi_driver ism303dac_spi_driver = {
 #endif /* CONFIG_OF */
 		   },
 	.probe = ism303dac_spi_probe,
-	.remove = ism303dac_spi_remove,
 	.id_table = ism303dac_ids,
 };
 
