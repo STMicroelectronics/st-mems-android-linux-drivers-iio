@@ -152,6 +152,10 @@
 
 #define ST_LIS2DU12_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
 
+/* Temperature in uC */
+#define ST_LIS2DU12_TEMP_GAIN			22
+#define ST_LIS2DU12_TEMP_OFFSET			555
+
 #define ST_LIS2DU12_ACC_CHAN(addr, ch2, idx)			 \
 {								 \
 	.type = IIO_ACCEL,					 \
@@ -171,12 +175,10 @@
 	},							 \
 }
 
-#define ST_LIS2DU12_TEMP_CHAN(addr, ch2)			 \
+#define ST_LIS2DU12_TEMP_CHAN(addr)				 \
 {								 \
 	.type = IIO_TEMP,					 \
 	.address = addr,					 \
-	.modified = 1,						 \
-	.channel2 = ch2,					 \
 	.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |		 \
 			      BIT(IIO_CHAN_INFO_OFFSET) |	 \
 			      BIT(IIO_CHAN_INFO_SCALE),		 \

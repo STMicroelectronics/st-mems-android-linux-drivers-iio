@@ -92,9 +92,8 @@ static const struct iio_chan_spec st_lis2du12_acc_channels[] = {
 };
 
 static const struct iio_chan_spec st_lis2du12_temp_channels[] = {
-	ST_LIS2DU12_TEMP_CHAN(ST_LIS2DU12_TEMP_L_ADDR, IIO_NO_MOD),
-	ST_LIS2DU12_EVENT_CHANNEL(IIO_TEMP,
-				  &st_lis2du12_fifo_flush_event),
+	ST_LIS2DU12_TEMP_CHAN(ST_LIS2DU12_TEMP_L_ADDR),
+	ST_LIS2DU12_EVENT_CHANNEL(IIO_TEMP, &st_lis2du12_fifo_flush_event),
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
@@ -584,9 +583,20 @@ static int st_lis2du12_read_raw(struct iio_dev *iio_dev,
 		}
 		break;
 	case IIO_CHAN_INFO_SCALE:
-		*val = 0;
-		*val2 = sensor->gain;
-		ret = IIO_VAL_INT_PLUS_MICRO;
+		switch (ch->type) {
+		case IIO_TEMP:
+			*val = 1000;
+			*val2 = sensor->gain;
+			ret = IIO_VAL_FRACTIONAL;
+			break;
+		case IIO_ACCEL:
+			*val = 0;
+			*val2 = sensor->gain;
+			ret = IIO_VAL_INT_PLUS_MICRO;
+			break;
+		default:
+			return -EINVAL;
+		}
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
 		*val = (int)sensor->odr;
@@ -1389,9 +1399,10 @@ static struct iio_dev *st_lis2du12_alloc_iiodev(struct st_lis2du12_hw *hw,
 
 		sensor->odr = st_lis2du12_odr_table[4].hz;
 		sensor->uodr = st_lis2du12_odr_table[4].uhz;
+
 		/* temperature has fixed gain and offset */
-		sensor->gain = 45000;
-		sensor->offset = 555;
+		sensor->gain = ST_LIS2DU12_TEMP_GAIN;
+		sensor->offset = ST_LIS2DU12_TEMP_OFFSET;
 		sensor->watermark = 1;
 		break;
 	case ST_LIS2DU12_ID_WU:
