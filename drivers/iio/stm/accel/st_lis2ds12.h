@@ -314,9 +314,9 @@ struct lis2ds12_data {
 	struct lis2ds12_transfer_buffer tb;
 };
 
-static inline s64 lis2ds12_get_time_ns(struct iio_dev *iio_dev)
+static inline s64 lis2ds12_get_time_ns(struct lis2ds12_data *cdata)
 {
-	return iio_get_time_ns(iio_dev);
+	return iio_get_time_ns(cdata->iio_sensors_dev[LIS2DS12_ACCEL]);
 }
 
 static inline int lis2ds12_iio_dev_currentmode(struct iio_dev *indio_dev)

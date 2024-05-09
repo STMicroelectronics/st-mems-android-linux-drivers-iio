@@ -589,10 +589,8 @@ int lis2ds12_update_fifo(struct lis2ds12_data *cdata, u16 watermark)
 {
 	int err;
 	int fifo_size;
-	struct iio_dev *indio_dev;
 
-	indio_dev = cdata->iio_sensors_dev[LIS2DS12_ACCEL];
-	cdata->timestamp = lis2ds12_get_time_ns(indio_dev);
+	cdata->timestamp = lis2ds12_get_time_ns(cdata);
 	cdata->sample_timestamp = cdata->timestamp;
 	cdata->samples = 0;
 
@@ -1081,7 +1079,7 @@ ssize_t lis2ds12_sysfs_flush_fifo(struct device *dev,
 		return -EINVAL;
 	}
 
-	sensor_last_timestamp = lis2ds12_get_time_ns(indio_dev);
+	sensor_last_timestamp = lis2ds12_get_time_ns(sdata->cdata);
 
 	mutex_lock(&sdata->cdata->fifo_lock);
 	lis2ds12_read_fifo(sdata->cdata, true);

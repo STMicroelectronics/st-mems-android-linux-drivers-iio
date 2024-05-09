@@ -84,7 +84,8 @@ static irqreturn_t lis2ds12_irq_handler(int irq, void *private)
 	s64 ts;
 
 	ewma_level = (cdata->common_odr >= 100) ? 120 : 96;
-	ts = lis2ds12_get_time_ns(iio_dev);
+
+	ts = lis2ds12_get_time_ns(cdata);
 	cdata->accel_deltatime = st_lis2ds12_ewma(cdata->accel_deltatime,
 						  ts - cdata->timestamp,
 						  ewma_level);
