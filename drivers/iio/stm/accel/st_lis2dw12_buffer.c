@@ -18,11 +18,6 @@
 
 #include "st_lis2dw12.h"
 
-static inline s64 st_lis2dw12_get_timestamp(struct st_lis2dw12_hw *hw)
-{
-	return iio_get_time_ns(hw->iio_devs[ST_LIS2DW12_ID_ACC]);
-}
-
 #define ST_LIS2DW12_EWMA_LEVEL			120
 #define ST_LIS2DW12_EWMA_DIV			128
 static inline s64 st_lis2dw12_ewma(s64 old, s64 new, int weight)
@@ -204,82 +199,6 @@ int st_lis2dw12_suspend_fifo(struct st_lis2dw12_hw *hw)
 	return err;
 }
 
-static irqreturn_t st_lis2dw12_emb_event(struct st_lis2dw12_hw *hw)
-{
-	u8 status;
-	s64 code;
-	int err;
-
-	err = st_lis2dw12_read(hw, ST_LIS2DW12_ALL_INT_SRC_ADDR,
-			       &status, sizeof(status));
-	if (err < 0)
-		return IRQ_HANDLED;
-
-	if (((status & ST_LIS2DW12_ALL_INT_SRC_TAP_MASK) &&
-	     (hw->enable_mask & BIT(ST_LIS2DW12_ID_TAP))) ||
-	    ((status & ST_LIS2DW12_ALL_INT_SRC_TAP_TAP_MASK) &&
-	     (hw->enable_mask & BIT(ST_LIS2DW12_ID_TAP_TAP)))) {
-		struct iio_dev *iio_dev;
-		enum iio_chan_type type;
-		u8 source;
-
-		err = st_lis2dw12_read(hw, ST_LIS2DW12_TAP_SRC_ADDR,
-			       &source, sizeof(source));
-		if (err < 0)
-			return IRQ_HANDLED;
-
-		/*
-		 * consider can have Tap and Double Tap events
-		 * contemporarely
-		 */
-		if (source & ST_LIS2DW12_DTAP_SRC_MASK) {
-			iio_dev = hw->iio_devs[ST_LIS2DW12_ID_TAP_TAP];
-			type = STM_IIO_TAP_TAP;
-			code = IIO_UNMOD_EVENT_CODE(type, -1,
-						    IIO_EV_TYPE_THRESH,
-						    IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, code, hw->ts_irq);
-		}
-
-		if (source & ST_LIS2DW12_STAP_SRC_MASK) {
-			iio_dev = hw->iio_devs[ST_LIS2DW12_ID_TAP];
-			type = STM_IIO_TAP;
-			code = IIO_UNMOD_EVENT_CODE(type, -1,
-						    IIO_EV_TYPE_THRESH,
-						    IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, code, hw->ts_irq);
-		}
-	}
-
-	if (status & ST_LIS2DW12_ALL_INT_SRC_WU_MASK) {
-		u8 wu_src;
-
-		err = st_lis2dw12_read(hw, ST_LIS2DW12_WU_SRC_ADDR,
-			       &wu_src, sizeof(wu_src));
-		if (err < 0)
-			return IRQ_HANDLED;
-
-		code = IIO_UNMOD_EVENT_CODE(STM_IIO_TAP_TAP, -1,
-					    IIO_EV_TYPE_THRESH,
-					    IIO_EV_DIR_RISING);
-		iio_push_event(hw->iio_devs[ST_LIS2DW12_ID_WU],
-			       STM_IIO_GESTURE, hw->ts_irq);
-	}
-
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t st_lis2dw12_handler_irq_emb(int irq, void *private)
-{
-	struct st_lis2dw12_hw *hw = private;
-	s64 ts;
-
-	ts = st_lis2dw12_get_timestamp(hw);
-	hw->ts_irq = ts;
-
-	return IRQ_WAKE_THREAD;
-}
-
 static irqreturn_t st_lis2dw12_handler_irq(int irq, void *private)
 {
 	struct st_lis2dw12_hw *hw = private;
@@ -310,16 +229,14 @@ static irqreturn_t st_lis2dw12_handler_thread(int irq, void *private)
 		mutex_unlock(&hw->fifo_lock);
 	}
 
+#ifdef CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES
 	if (hw->irq_emb > 0)
 		return IRQ_HANDLED;
 
-	return st_lis2dw12_emb_event(hw);
-}
+	err = st_lis2dw12_emb_event(hw);
+#endif /* CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES */
 
-static irqreturn_t st_lis2dw12_handler_thread_emb(int irq,
-						  void *private)
-{
-	return st_lis2dw12_emb_event((struct st_lis2dw12_hw *)private);
+	return IRQ_HANDLED;
 }
 
 int st_lis2dw12_fifo_setup(struct st_lis2dw12_hw *hw)
@@ -339,19 +256,6 @@ int st_lis2dw12_fifo_setup(struct st_lis2dw12_hw *hw)
 		dev_err(hw->dev, "failed to request trigger irq %d\n",
 			hw->irq);
 		return ret;
-	}
-
-	if (hw->irq_emb > 0) {
-		ret = devm_request_threaded_irq(hw->dev, hw->irq_emb,
-				       st_lis2dw12_handler_irq_emb,
-				       st_lis2dw12_handler_thread_emb,
-				       IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
-				       "st_lis2dw12", hw);
-		if (ret) {
-			dev_err(hw->dev, "failed to request trigger irq %d\n",
-				hw->irq_emb);
-			return ret;
-		}
 	}
 
 	for (i = ST_LIS2DW12_ID_ACC; i <= ST_LIS2DW12_ID_TEMP; i++) {

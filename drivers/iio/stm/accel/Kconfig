@@ -55,6 +55,16 @@ config IIO_ST_LIS2DS12_SPI
 	depends on IIO_ST_LIS2DS12
 	depends on SPI
 
+config IIO_ST_LIS2DS12_EN_BASIC_FEATURES
+        bool "Enable internal basic features event detection"
+        depends on IIO_ST_LIS2DS12
+        help
+         Enable internal event detection features like: tap, double tap,
+         step counter, step detection, significant motion and tilt. If this
+         feature is enabled it is necessary to extend iio_chan_type_name_spec
+         array in industrialio-core.c by adding the custom sensor-types used
+         by this driver.
+
 config ST_LIS2DS12_IIO_LIMIT_FIFO
 	int "Limit fifo read lenght (#n byte)"
 	depends on IIO_ST_LIS2DS12
@@ -96,6 +106,15 @@ config IIO_ST_LIS2DW12_SPI
 	depends on IIO_ST_LIS2DW12
 	depends on SPI
 
+config IIO_ST_LIS2DW12_EN_BASIC_FEATURES
+        bool "Enable internal basic features event detection"
+        depends on IIO_ST_LIS2DW12
+        help
+         Enable internal event detection features like: wake-up, tap and double
+         tap. If this feature is enabled it is necessary to extend the
+         iio_chan_type_name_spec array in industrialio-core.c by adding the
+         custom sensor-types used by this driver.
+
 menuconfig IIO_ST_ISM303DAC_ACCEL
         tristate "STMicroelectronics ISM303DAC Accelerometer Driver"
         depends on (I2C || SPI_MASTER) && SYSFS
@@ -116,6 +135,15 @@ config IIO_ST_ISM303DAC_ACCEL_SPI
         tristate
         depends on IIO_ST_ISM303DAC_ACCEL
         depends on SPI
+
+config IIO_ST_ISM303DAC_ACCEL_EN_BASIC_FEATURES
+        bool "Enable internal basic features event detection"
+        depends on IIO_ST_ISM303DAC_ACCEL
+        help
+         Enable internal event detection features like: tap and double tap.
+         If this feature is enabled it is necessary to extend iio_chan_type_name_spec
+         array in industrialio-core.c by adding the custom sensor-types used by this
+         driver.
 
 config ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO
         int "Limit fifo read lenght (#n byte)"
@@ -189,6 +217,16 @@ config IIO_ST_LIS2DUXS12_I3C
         select REGMAP_I3C
         depends on IIO_ST_LIS2DUXS12
 
+config IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
+        bool "Enable internal basic features event detection"
+        depends on IIO_ST_LIS2DUXS12
+        help
+         Enable internal event detection features like: free fall, sleep
+         change, wake-up, 6D orientation, tap, double tap, triple tap,
+         step counter, step detection and significant motion. If this feature is
+         enabled it is necessary to extend the iio_chan_type_name_spec array in
+         industrialio-core.c by adding the custom sensor-types used by this driver.
+
 config IIO_ST_H3LIS331DL
         tristate "STMicroelectronics H3LIS331DL/LIS331DLH sensor"
         depends on (I2C || SPI)
@@ -248,6 +286,16 @@ config IIO_ST_LIS2DU12_I3C
         tristate
         depends on IIO_ST_LIS2DU12
         depends on I3C
+
+config IIO_ST_LIS2DU12_EN_BASIC_FEATURES
+        bool "Enable internal basic features event detection"
+        depends on IIO_ST_LIS2DU12
+        help
+         Enable internal event detection features like: free fall, sleep
+         change, wake-up, 6D orientation, tap, double tap, triple tap,
+         step counter, step detection and significant motion. If this feature is
+         enabled it is necessary to extend the iio_chan_type_name_spec array in
+         industrialio-core.c by adding the custom sensor-types used by this driver.
 
 source "drivers/iio/stm/accel/st_iis2iclx/Kconfig"
 

@@ -110,6 +110,9 @@ int ism303dac_allocate_triggers(struct ism303dac_data *cdata,
 		return err;
 
 	for (i = 0; i < ISM303DAC_BUFFER_SENSOR; i++) {
+		if (!cdata->iio_sensors_dev[i])
+			continue;
+
 		cdata->iio_trig[i] = devm_iio_trigger_alloc(cdata->dev,
 					       "%s-trigger",
 					       cdata->iio_sensors_dev[i]->name);

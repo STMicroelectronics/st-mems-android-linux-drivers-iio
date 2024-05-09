@@ -266,6 +266,22 @@ static int st_lis2duxs12_check_valid_mlc(const struct firmware *fw,
 	return 0;
 }
 
+static int st_lis2duxs12_embedded_function_enable(struct st_lis2duxs12_hw *hw)
+{
+	int err;
+
+	err = st_lis2duxs12_update_bits_locked(hw,
+					ST_LIS2DUXS12_CTRL4_ADDR,
+					ST_LIS2DUXS12_EMB_FUNC_EN_MASK,
+					1);
+	if (err < 0)
+		return err;
+
+	usleep_range(5000, 6000);
+
+	return 0;
+}
+
 /* parse and program mlc fragments */
 static int st_lis2duxs12_program_mlc(const struct firmware *fw,
 				     struct st_lis2duxs12_hw *hw)
@@ -831,7 +847,9 @@ int st_lis2duxs12_mlc_probe(struct st_lis2duxs12_hw *hw)
 	if (!hw->mlc_config)
 		return -ENOMEM;
 
-	return 0;
+
+	/* enable embedded page access */
+	return st_lis2duxs12_embedded_function_enable(hw);
 }
 
 int st_lis2duxs12_mlc_remove(struct device *dev)

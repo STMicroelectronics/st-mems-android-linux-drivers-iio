@@ -303,11 +303,24 @@ static inline int ism303dac_iio_dev_currentmode(struct iio_dev *indio_dev)
 
 }
 
+static bool __maybe_unused ism303dac_skip_basic_features(int i)
+{
+#ifndef CONFIG_IIO_ST_ISM303DAC_ACCEL_EN_BASIC_FEATURES
+	if (i >= ISM303DAC_TAP &&
+	    i <= ISM303DAC_DOUBLE_TAP)
+		return true;
+#endif /* CONFIG_IIO_ST_ISM303DAC_ACCEL_EN_BASIC_FEATURES */
+
+	return false;
+}
+
 int ism303dac_common_probe(struct ism303dac_data *cdata, int irq);
+
 #ifdef CONFIG_PM
 int ism303dac_common_suspend(struct ism303dac_data *cdata);
 int ism303dac_common_resume(struct ism303dac_data *cdata);
 #endif
+
 int ism303dac_allocate_rings(struct ism303dac_data *cdata);
 int ism303dac_allocate_triggers(struct ism303dac_data *cdata,
 			     const struct iio_trigger_ops *trigger_ops);

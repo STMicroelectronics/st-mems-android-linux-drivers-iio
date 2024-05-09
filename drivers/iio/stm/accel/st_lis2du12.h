@@ -217,12 +217,14 @@ enum st_lis2du12_selftest_status {
 enum st_lis2du12_sensor_id {
 	ST_LIS2DU12_ID_ACC,
 	ST_LIS2DU12_ID_TEMP,
+#ifdef CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES
 	ST_LIS2DU12_ID_TAP_TAP,
 	ST_LIS2DU12_ID_TAP,
 	ST_LIS2DU12_ID_WU,
 	ST_LIS2DU12_ID_FF,
 	ST_LIS2DU12_ID_6D,
 	ST_LIS2DU12_ID_ACT,
+#endif /* CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES */
 	ST_LIS2DU12_ID_MAX,
 };
 
@@ -243,7 +245,24 @@ enum st_lis2du12_attr_id {
 	ST_LIS2DU12_SLEEP_DUR_ATTR_ID,
 };
 
+static const enum
+st_lis2du12_sensor_id st_lis2du12_hw_sensor_list[] = {
+	[0] = ST_LIS2DU12_ID_ACC,
+	[1] = ST_LIS2DU12_ID_TEMP,
+};
+
 #define ST_LIS2DU12_MAX_BUFFER	ST_LIS2DU12_ID_TEMP
+
+struct st_lis2du12_odr {
+	u16 hz;
+	u32 uhz;
+	u8 val;
+};
+
+struct st_lis2du12_fs {
+	u32 gain;
+	u8 val;
+};
 
 struct st_lis2du12_sensor {
 	enum st_lis2du12_sensor_id id;
@@ -305,6 +324,7 @@ struct st_lis2du12_hw {
 	u8 drdy_reg;
 	u8 md_reg;
 	bool fourd_enabled;
+	const struct st_lis2du12_odr *odr_table;
 };
 
 extern const struct dev_pm_ops st_lis2du12_pm_ops;
@@ -312,17 +332,6 @@ extern const struct dev_pm_ops st_lis2du12_pm_ops;
 static inline s64 st_lis2du12_get_timestamp(struct st_lis2du12_hw *hw)
 {
 	return iio_get_time_ns(hw->iio_devs[ST_LIS2DU12_ID_ACC]);
-}
-
-static inline bool
-st_lis2du12_interrupts_enabled(struct st_lis2du12_hw *hw)
-{
-	return hw->enable_mask & (BIT(ST_LIS2DU12_ID_FF) |
-				  BIT(ST_LIS2DU12_ID_TAP_TAP) |
-				  BIT(ST_LIS2DU12_ID_TAP)  |
-				  BIT(ST_LIS2DU12_ID_WU) |
-				  BIT(ST_LIS2DU12_ID_6D) |
-				  BIT(ST_LIS2DU12_ID_ACT));
 }
 
 static inline bool
@@ -363,4 +372,10 @@ ssize_t st_lis2du12_set_hwfifo_watermark(struct device *device,
 					 const char *buf, size_t size);
 int st_lis2du12_sensor_set_enable(struct st_lis2du12_sensor *sensor,
 				  bool enable);
+
+#ifdef CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES
+int st_lis2du12_handler_embfunc_thread(struct st_lis2du12_hw *hw);
+int st_lis2du12_embedded_function_probe(struct st_lis2du12_hw *hw);
+#endif /* CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES */
+
 #endif /* ST_LIS2DU12_H */

@@ -17,7 +17,7 @@
 #define ST_SENSORS_SPI_READ			0x80
 
 static int lis2ds12_spi_read(struct lis2ds12_data *cdata,
-				u8 reg_addr, int len, u8 *data, bool b_lock)
+			     u8 reg_addr, int len, u8 *data, bool b_lock)
 {
 	int err;
 
@@ -41,7 +41,7 @@ static int lis2ds12_spi_read(struct lis2ds12_data *cdata,
 	cdata->tb.tx_buf[0] = reg_addr | ST_SENSORS_SPI_READ;
 
 	err = spi_sync_transfer(to_spi_device(cdata->dev),
-						xfers, ARRAY_SIZE(xfers));
+				xfers, ARRAY_SIZE(xfers));
 	if (err)
 		goto acc_spi_read_error;
 
@@ -61,7 +61,7 @@ acc_spi_read_error:
 }
 
 static int lis2ds12_spi_write(struct lis2ds12_data *cdata,
-				u8 reg_addr, int len, u8 *data, bool b_lock)
+			      u8 reg_addr, int len, u8 *data, bool b_lock)
 {
 	int err;
 

@@ -44,8 +44,8 @@
 #define LIS2DS12_FUNC_CTRL_SIGN_MOT_MASK	0x02
 #define LIS2DS12_FUNC_CTRL_STEP_CNT_MASK	0x01
 #define LIS2DS12_FUNC_CTRL_EV_MASK		(LIS2DS12_FUNC_CTRL_TILT_MASK | \
-						LIS2DS12_FUNC_CTRL_SIGN_MOT_MASK | \
-						LIS2DS12_FUNC_CTRL_STEP_CNT_MASK)
+						 LIS2DS12_FUNC_CTRL_SIGN_MOT_MASK | \
+						 LIS2DS12_FUNC_CTRL_STEP_CNT_MASK)
 #define LIS2DS12_FIFO_THS_ADDR			0x2e
 #define LIS2DS12_FIFO_THS_MASK			0xff
 #define LIS2DS12_ODR_ADDR			LIS2DS12_CTRL1_ADDR
@@ -79,9 +79,9 @@
 
 /* Advanced Configuration Registers */
 #define LIS2DS12_FUNC_CFG_ENTER_ADDR		LIS2DS12_CTRL2_ADDR
-#define LIS2DS12_FUNC_CFG_EXIT_ADDR			0x3F
-#define LIS2DS12_FUNC_CFG_EN_MASK			0x10
-#define LIS2DS12_STEP_COUNT_DELTA			0x3A
+#define LIS2DS12_FUNC_CFG_EXIT_ADDR		0x3F
+#define LIS2DS12_FUNC_CFG_EN_MASK		0x10
+#define LIS2DS12_STEP_COUNT_DELTA		0x3A
 
 #define LIS2DS12_SIM_ADDR			LIS2DS12_CTRL2_ADDR
 #define LIS2DS12_SIM_MASK			0x01
@@ -93,7 +93,7 @@
 #define LIS2DS12_FS_2G_GAIN			IIO_G_TO_M_S_2(61)
 #define LIS2DS12_FS_4G_GAIN			IIO_G_TO_M_S_2(122)
 #define LIS2DS12_FS_8G_GAIN			IIO_G_TO_M_S_2(244)
-#define LIS2DS12_FS_16G_GAIN		IIO_G_TO_M_S_2(488)
+#define LIS2DS12_FS_16G_GAIN			IIO_G_TO_M_S_2(488)
 
 #define LIS2DS12_MODE_DEFAULT			LIS2DS12_HR_MODE
 #define LIS2DS12_INT1_S_TAP_MASK		0x40
@@ -104,12 +104,12 @@
 #define LIS2DS12_INT1_FTH_MASK			0x02
 #define LIS2DS12_INT1_DRDY_MASK			0x01
 #define LIS2DS12_INT1_EVENTS_MASK		(LIS2DS12_INT1_S_TAP_MASK | \
-						LIS2DS12_INT1_WAKEUP_MASK | \
-						LIS2DS12_INT1_FREE_FALL_MASK | \
-						LIS2DS12_INT1_TAP_MASK | \
-						LIS2DS12_INT1_6D_MASK | \
-						LIS2DS12_INT1_FTH_MASK | \
-						LIS2DS12_INT1_DRDY_MASK)
+						 LIS2DS12_INT1_WAKEUP_MASK | \
+						 LIS2DS12_INT1_FREE_FALL_MASK | \
+						 LIS2DS12_INT1_TAP_MASK | \
+						 LIS2DS12_INT1_6D_MASK | \
+						 LIS2DS12_INT1_FTH_MASK | \
+						 LIS2DS12_INT1_DRDY_MASK)
 #define LIS2DS12_INT2_ON_INT1_MASK		0x20
 #define LIS2DS12_INT2_TILT_MASK			0x10
 #define LIS2DS12_INT2_SIG_MOT_DET_MASK		0x08
@@ -117,10 +117,10 @@
 #define LIS2DS12_INT2_FTH_MASK			0x02
 #define LIS2DS12_INT2_DRDY_MASK			0x01
 #define LIS2DS12_INT2_EVENTS_MASK		(LIS2DS12_INT2_TILT_MASK | \
-						LIS2DS12_INT2_SIG_MOT_DET_MASK | \
-						LIS2DS12_INT2_STEP_DET_MASK | \
-						LIS2DS12_INT2_FTH_MASK | \
-						LIS2DS12_INT2_DRDY_MASK)
+						 LIS2DS12_INT2_SIG_MOT_DET_MASK | \
+						 LIS2DS12_INT2_STEP_DET_MASK | \
+						 LIS2DS12_INT2_FTH_MASK | \
+						 LIS2DS12_INT2_DRDY_MASK)
 #define LIS2DS12_WAKE_UP_THS_WU_MASK		0x3f
 #define LIS2DS12_WAKE_UP_THS_WU_DEFAULT		0x02
 #define LIS2DS12_FREE_FALL_THS_MASK		0x07
@@ -159,7 +159,7 @@
 #define LIS2DS12_FIFO_NUM_AXIS			3
 #define LIS2DS12_FIFO_BYTE_X_AXIS		2
 #define LIS2DS12_FIFO_BYTE_FOR_SAMPLE		(LIS2DS12_FIFO_NUM_AXIS * \
-						LIS2DS12_FIFO_BYTE_X_AXIS)
+						 LIS2DS12_FIFO_BYTE_X_AXIS)
 #define LIS2DS12_TIMESTAMP_SIZE			8
 
 #define LIS2DS12_STATUS_ADDR			0x27
@@ -171,8 +171,8 @@
 #define LIS2DS12_FUNC_CK_GATE_RST_PEDO_MASK	0x04
 #define LIS2DS12_FUNC_CK_GATE_STEP_D_MASK	0x02
 #define LIS2DS12_FUNC_CK_GATE_MASK		(LIS2DS12_FUNC_CK_GATE_TILT_INT_MASK | \
-						LIS2DS12_FUNC_CK_GATE_SIGN_M_DET_MASK | \
-						LIS2DS12_FUNC_CK_GATE_STEP_D_MASK)
+						 LIS2DS12_FUNC_CK_GATE_SIGN_M_DET_MASK | \
+						 LIS2DS12_FUNC_CK_GATE_STEP_D_MASK)
 #define LIS2DS12_WAKE_UP_IA_MASK		0x40
 #define LIS2DS12_DOUBLE_TAP_MASK		0x10
 #define LIS2DS12_TAP_MASK			0x08
@@ -180,10 +180,10 @@
 #define LIS2DS12_FF_IA_MASK			0x02
 #define LIS2DS12_DRDY_MASK			0x01
 #define LIS2DS12_EVENT_MASK			(LIS2DS12_WAKE_UP_IA_MASK | \
-						LIS2DS12_DOUBLE_TAP_MASK | \
-						LIS2DS12_TAP_MASK | \
-						LIS2DS12_6D_IA_MASK | \
-						LIS2DS12_FF_IA_MASK)
+						 LIS2DS12_DOUBLE_TAP_MASK | \
+						 LIS2DS12_TAP_MASK | \
+						 LIS2DS12_6D_IA_MASK | \
+						 LIS2DS12_FF_IA_MASK)
 #define LIS2DS12_FIFO_SRC_ADDR			0x2f
 #define LIS2DS12_FIFO_SRC_FTH_MASK		0x80
 
@@ -198,8 +198,8 @@
 #define LIS2DS12_TAP_ODR			400
 #define LIS2DS12_WAKEUP_ODR			25
 #define LIS2DS12_ACTIVITY_ODR			12
-#define LIS2DS12_MAX_FIFO_LENGHT		256
-#define LIS2DS12_MAX_FIFO_THS		(LIS2DS12_MAX_FIFO_LENGHT - 1)
+#define LIS2DS12_MAX_FIFO_LENGTH		256
+#define LIS2DS12_MAX_FIFO_THS			(LIS2DS12_MAX_FIFO_LENGTH - 1)
 #define LIS2DS12_MAX_CHANNEL_SPEC		5
 #define LIS2DS12_EVENT_CHANNEL_SPEC_SIZE	2
 #define LIS2DS12_MIN_DURATION_MS		1638
@@ -271,9 +271,9 @@ struct lis2ds12_data;
 
 struct lis2ds12_transfer_function {
 	int (*write)(struct lis2ds12_data *cdata, u8 reg_addr, int len,
-								u8 *data, bool b_lock);
+		     u8 *data, bool b_lock);
 	int (*read)(struct lis2ds12_data *cdata, u8 reg_addr, int len,
-								u8 *data, bool b_lock);
+		    u8 *data, bool b_lock);
 };
 
 struct lis2ds12_sensor_data {
@@ -332,17 +332,30 @@ static inline int lis2ds12_iio_dev_currentmode(struct iio_dev *indio_dev)
 
 }
 
+static bool __maybe_unused lis2ds12_skip_basic_features(int i)
+{
+#ifndef CONFIG_IIO_ST_LIS2DS12_EN_BASIC_FEATURES
+	if (i >= LIS2DS12_STEP_C &&
+	    i <= LIS2DS12_SIGN_M)
+		return true;
+#endif /* CONFIG_IIO_ST_LIS2DS12_EN_BASIC_FEATURES */
+
+	return false;
+}
+
 int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq);
+
 #ifdef CONFIG_PM
 int lis2ds12_common_suspend(struct lis2ds12_data *cdata);
 int lis2ds12_common_resume(struct lis2ds12_data *cdata);
 #endif
+
 int lis2ds12_allocate_rings(struct lis2ds12_data *cdata);
 int lis2ds12_allocate_triggers(struct lis2ds12_data *cdata,
-			     const struct iio_trigger_ops *trigger_ops);
+			       const struct iio_trigger_ops *trigger_ops);
 int lis2ds12_trig_set_state(struct iio_trigger *trig, bool state);
 int lis2ds12_read_register(struct lis2ds12_data *cdata, u8 reg_addr,
-							int data_len, u8 *data, bool b_lock);
+			   int data_len, u8 *data, bool b_lock);
 int lis2ds12_update_drdy_irq(struct lis2ds12_sensor_data *sdata, bool state);
 int lis2ds12_set_enable(struct lis2ds12_sensor_data *sdata, bool enable);
 int lis2ds12_update_fifo(struct lis2ds12_data *cdata, u16 watermark);

@@ -21,6 +21,12 @@
 
 #include "st_lis2dw12.h"
 
+static const enum
+st_lis2dw12_sensor_id st_lis2dw12_hw_sensor_list[] = {
+	[0] = ST_LIS2DW12_ID_ACC,
+	[1] = ST_LIS2DW12_ID_TEMP,
+};
+
 struct st_lis2dw12_std_entry {
 	u16 odr;
 	u8 val;
@@ -35,16 +41,6 @@ struct st_lis2dw12_std_entry st_lis2dw12_std_table[] = {
 	{  400, 48 },
 	{  800, 64 },
 	{ 1600, 64 },
-};
-
-struct st_lis2dw12_odr_t {
-	u16 hz;
-	u8 val;
-};
-
-struct st_lis2dw12_odr_entry_t {
-	u8 size;
-	struct st_lis2dw12_odr_t odr[9];
 };
 
 static const struct st_lis2dw12_odr_entry_t st_lis2dw12_odr_table[] = {
@@ -128,22 +124,6 @@ const struct iio_event_spec st_lis2dw12_fifo_flush_event = {
 	.dir = IIO_EV_DIR_EITHER,
 };
 
-const struct iio_event_spec st_lis2dw12_rthr_event = {
-	.type = IIO_EV_TYPE_THRESH,
-	.dir = IIO_EV_DIR_RISING,
-	.mask_separate = BIT(IIO_EV_INFO_ENABLE),
-};
-
-#define ST_LIS2DW12_EVENT_CHANNEL(chan_type, evt_spec)	\
-{							\
-	.type = chan_type,				\
-	.modified = 0,					\
-	.scan_index = -1,				\
-	.indexed = -1,					\
-	.event_spec = evt_spec,				\
-	.num_event_specs = 1,				\
-}
-
 static const struct iio_chan_spec st_lis2dw12_acc_channels[] = {
 	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_X_L_ADDR, IIO_MOD_X, 0),
 	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_Y_L_ADDR, IIO_MOD_Y, 1),
@@ -170,18 +150,6 @@ static const struct iio_chan_spec st_lis2dw12_temp_channels[] = {
 		},
 	},
 	IIO_CHAN_SOFT_TIMESTAMP(1)
-};
-
-static const struct iio_chan_spec st_lis2dw12_tap_tap_channels[] = {
-	ST_LIS2DW12_EVENT_CHANNEL(STM_IIO_TAP_TAP, &st_lis2dw12_rthr_event),
-};
-
-static const struct iio_chan_spec st_lis2dw12_tap_channels[] = {
-	ST_LIS2DW12_EVENT_CHANNEL(STM_IIO_TAP, &st_lis2dw12_rthr_event),
-};
-
-static const struct iio_chan_spec st_lis2dw12_wu_channels[] = {
-	ST_LIS2DW12_EVENT_CHANNEL(STM_IIO_GESTURE, &st_lis2dw12_rthr_event),
 };
 
 static int st_lis2dw12_set_fs(struct st_lis2dw12_sensor *sensor, u16 gain)
@@ -263,6 +231,8 @@ static u16 st_lis2dw12_check_odr_dependency(struct st_lis2dw12_hw *hw, u16 odr,
 static int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr)
 {
 	struct st_lis2dw12_hw *hw = sensor->hw;
+	struct st_lis2dw12_sensor *ref =
+				     iio_priv(hw->iio_devs[ST_LIS2DW12_ID_ACC]);
 	u16 upd_odr = req_odr;
 	u8 mode, val, i;
 	int err, odr;
@@ -276,7 +246,7 @@ static int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr)
 			upd_odr = odr;
 	}
 
-	err = st_lis2dw12_get_odr_idx(sensor, upd_odr, &i);
+	err = st_lis2dw12_get_odr_idx(ref, upd_odr, &i);
 	if (err < 0)
 		return err;
 
@@ -311,6 +281,8 @@ static int st_lis2dw12_check_whoami(struct st_lis2dw12_hw *hw)
 			data, ST_LIS2DW12_WHOAMI_VAL);
 		return -ENODEV;
 	}
+
+	hw->odr_entry = st_lis2dw12_odr_table;
 
 	return 0;
 }
@@ -406,43 +378,6 @@ static int st_lis2dw12_init_hw(struct st_lis2dw12_hw *hw)
 
 	/* configure fifo watermark */
 	err = st_lis2dw12_update_fifo_watermark(hw, hw->watermark);
-	if (err < 0)
-		return err;
-
-	/* configure default free fall event threshold */
-	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_FREE_FALL_ADDR,
-						 ST_LIS2DW12_FREE_FALL_THS_MASK,
-						 1);
-	if (err < 0)
-		return err;
-
-	/* configure default free fall event duration */
-	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_FREE_FALL_ADDR,
-						 ST_LIS2DW12_FREE_FALL_DUR_MASK,
-						 1);
-	if (err < 0)
-		return err;
-
-	/* enable tap event on all axes */
-	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_TAP_THS_Z_ADDR,
-						 ST_LIS2DW12_TAP_AXIS_MASK,
-						 0x7);
-	if (err < 0)
-		return err;
-
-	/* configure default threshold for Tap event recognition */
-	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_TAP_THS_X_ADDR,
-						 ST_LIS2DW12_TAP_THS_MAK, 9);
-	if (err < 0)
-		return err;
-
-	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_TAP_THS_Y_ADDR,
-						 ST_LIS2DW12_TAP_THS_MAK, 9);
-	if (err < 0)
-		return err;
-
-	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_TAP_THS_Z_ADDR,
-						 ST_LIS2DW12_TAP_THS_MAK, 9);
 	if (err < 0)
 		return err;
 
@@ -670,78 +605,6 @@ unlock:
 	return err;
 }
 
-static int st_lis2dw12_read_event_config(struct iio_dev *iio_dev,
-					 const struct iio_chan_spec *chan,
-					 enum iio_event_type type,
-					 enum iio_event_direction dir)
-{
-	struct st_lis2dw12_sensor *sensor = iio_priv(iio_dev);
-	struct st_lis2dw12_hw *hw = sensor->hw;
-
-	return !!(hw->enable_mask & BIT(sensor->id));
-}
-
-static int st_lis2dw12_write_event_config(struct iio_dev *iio_dev,
-					  const struct iio_chan_spec *chan,
-					  enum iio_event_type type,
-					  enum iio_event_direction dir,
-					  int state)
-{
-	struct st_lis2dw12_sensor *sensor = iio_priv(iio_dev);
-	struct st_lis2dw12_hw *hw = sensor->hw;
-	u8 data[2] = {}, drdy_val, drdy_mask;
-	int err;
-
-	/* Read initial configuration data */
-	err = st_lis2dw12_read(hw, ST_LIS2DW12_INT_DUR_ADDR,
-			       &data, sizeof(data));
-	if (err < 0)
-		return -EINVAL;
-
-	switch (sensor->id) {
-	case ST_LIS2DW12_ID_WU:
-		drdy_mask = ST_LIS2DW12_WU_INT1_MASK;
-		drdy_val = state ? 1 : 0;
-		data[1] = state ? 0x02 : 0;
-		break;
-	case ST_LIS2DW12_ID_TAP_TAP:
-		drdy_mask = ST_LIS2DW12_TAP_TAP_INT1_MASK;
-		drdy_val = state ? 1 : 0;
-		if (state) {
-			data[0] |= 0x7f;
-			data[1] |= 0x80;
-		} else {
-			data[0] &= ~0x7f;
-			data[1] &= ~0x80;
-		}
-		break;
-	case ST_LIS2DW12_ID_TAP:
-		drdy_mask = ST_LIS2DW12_TAP_INT1_MASK;
-		drdy_val = state ? 1 : 0;
-		if (state) {
-			data[0] |= 6;
-		} else {
-			data[0] &= ~6;
-		}
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	err = st_lis2dw12_write_locked(hw, ST_LIS2DW12_INT_DUR_ADDR,
-				       data, sizeof(data));
-	if (err < 0)
-		return err;
-
-	err = st_lis2dw12_write_with_mask_locked(hw,
-					       ST_LIS2DW12_CTRL4_INT1_CTRL_ADDR,
-					       drdy_mask, drdy_val);
-	if (err < 0)
-		return err;
-
-	return st_lis2dw12_sensor_set_enable(sensor, state);
-}
-
 static ssize_t st_lis2dw12_get_hwfifo_watermark(struct device *dev,
 						struct device_attribute *attr,
 						char *buf)
@@ -954,51 +817,8 @@ static const struct iio_info st_lis2dw12_temp_info = {
 	.write_raw = st_lis2dw12_write_raw,
 };
 
-static struct attribute *st_lis2dw12_wu_attributes[] = {
-	NULL,
-};
-
-static const struct attribute_group st_lis2dw12_wu_attribute_group = {
-	.attrs = st_lis2dw12_wu_attributes,
-};
-
-static const struct iio_info st_lis2dw12_wu_info = {
-	.attrs = &st_lis2dw12_wu_attribute_group,
-	.read_event_config = st_lis2dw12_read_event_config,
-	.write_event_config = st_lis2dw12_write_event_config,
-};
-
-static struct attribute *st_lis2dw12_tap_tap_attributes[] = {
-	NULL,
-};
-
-static const struct attribute_group st_lis2dw12_tap_tap_attribute_group = {
-	.attrs = st_lis2dw12_tap_tap_attributes,
-};
-
-static const struct iio_info st_lis2dw12_tap_tap_info = {
-	.attrs = &st_lis2dw12_tap_tap_attribute_group,
-	.read_event_config = st_lis2dw12_read_event_config,
-	.write_event_config = st_lis2dw12_write_event_config,
-};
-
-static struct attribute *st_lis2dw12_tap_attributes[] = {
-	NULL,
-};
-
-static const struct attribute_group st_lis2dw12_tap_attribute_group = {
-	.attrs = st_lis2dw12_tap_attributes,
-};
-
-static const struct iio_info st_lis2dw12_tap_info = {
-	.attrs = &st_lis2dw12_tap_attribute_group,
-	.read_event_config = st_lis2dw12_read_event_config,
-	.write_event_config = st_lis2dw12_write_event_config,
-};
-
 static const unsigned long st_lis2dw12_avail_scan_masks[] = { 0x7, 0x0 };
 static const unsigned long st_lis2dw12_temp_avail_scan_masks[] = { 0x1, 0x0 };
-static const unsigned long st_lis2dw12_event_avail_scan_masks[] = { 0x1, 0x0 };
 
 static void st_lis2dw12_flush_works(struct st_lis2dw12_hw *hw)
 {
@@ -1126,43 +946,6 @@ static struct iio_dev *st_lis2dw12_alloc_iiodev(struct st_lis2dw12_hw *hw,
 		hw->oldktime = ktime_set(0, 1000000000 / sensor->odr);
 		INIT_WORK(&hw->iio_work, st_lis2dw12_temp_poll_function_work);
 		break;
-	case ST_LIS2DW12_ID_WU:
-		iio_dev->channels = st_lis2dw12_wu_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_lis2dw12_wu_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			  "%s_wk", hw->name);
-		iio_dev->info = &st_lis2dw12_wu_info;
-		iio_dev->available_scan_masks =
-				st_lis2dw12_event_avail_scan_masks;
-
-		sensor->odr =
-			    st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[5].hz;
-		break;
-	case ST_LIS2DW12_ID_TAP_TAP:
-		iio_dev->channels = st_lis2dw12_tap_tap_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lis2dw12_tap_tap_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			  "%s_tap_tap", hw->name);
-		iio_dev->info = &st_lis2dw12_tap_tap_info;
-		iio_dev->available_scan_masks =
-				st_lis2dw12_event_avail_scan_masks;
-
-		sensor->odr =
-			    st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[6].hz;
-		break;
-	case ST_LIS2DW12_ID_TAP:
-		iio_dev->channels = st_lis2dw12_tap_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_lis2dw12_tap_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			  "%s_tap", hw->name);
-		iio_dev->info = &st_lis2dw12_tap_info;
-		iio_dev->available_scan_masks =
-				st_lis2dw12_event_avail_scan_masks;
-
-		sensor->odr =
-			    st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[6].hz;
-		break;
 	default:
 		return NULL;
 	}
@@ -1202,10 +985,11 @@ int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
 	if (err < 0)
 		return err;
 
-	for (i = 0; i < ST_LIS2DW12_ID_MAX; i++) {
-		hw->iio_devs[i] = st_lis2dw12_alloc_iiodev(hw, i);
+	for (i = 0; i < ARRAY_SIZE(st_lis2dw12_hw_sensor_list); i++) {
+		hw->iio_devs[i] = st_lis2dw12_alloc_iiodev(hw,
+						 st_lis2dw12_hw_sensor_list[i]);
 		if (!hw->iio_devs[i])
-			return -ENOMEM;
+			continue;
 	}
 
 	if (hw->irq > 0) {
@@ -1213,6 +997,12 @@ int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
 		if (err)
 			return err;
 	}
+
+#ifdef CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES
+	err = st_lis2dw12_embedded_function_probe(hw);
+	if (err < 0)
+		return err;
+#endif /* CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES */
 
 	/* allocate temperature sensor workqueue */
 	err = st_lis2dw12_allocate_workqueue(hw);
@@ -1256,10 +1046,10 @@ static int __maybe_unused st_lis2dw12_suspend(struct device *dev)
 	st_lis2dw12_cancel_workqueue(hw);
 
 	for (i = 0; i < ST_LIS2DW12_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
@@ -1311,10 +1101,10 @@ static int __maybe_unused st_lis2dw12_resume(struct device *dev)
 	}
 
 	for (i = 0; i < ST_LIS2DW12_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 

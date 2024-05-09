@@ -82,7 +82,7 @@ static const struct lis2ds12_transfer_function lis2ds12_tf_i2c = {
 };
 
 static int lis2ds12_i2c_probe(struct i2c_client *client,
-			    const struct i2c_device_id *id)
+			      const struct i2c_device_id *id)
 {
 	struct lis2ds12_data *cdata;
 

@@ -233,45 +233,11 @@ static const struct iio_chan_spec st_lis2duxs12_temp_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(1),
 };
 
-static const struct
-iio_chan_spec st_lis2duxs12_step_counter_channels[] = {
-	{
-		.type = STM_IIO_STEP_COUNTER,
-		.scan_index = 0,
-		.scan_type = {
-			.sign = 'u',
-			.realbits = 16,
-			.storagebits = 16,
-			.endianness = IIO_LE,
-		},
-	},
-	ST_LIS2DUXS12_EVENT_CHANNEL(STM_IIO_STEP_COUNTER, flush),
-	IIO_CHAN_SOFT_TIMESTAMP(1),
-};
-
-static const struct
-iio_chan_spec st_lis2duxs12_step_detector_channels[] = {
-	ST_LIS2DUXS12_EVENT_CHANNEL(IIO_STEPS, thr),
-};
-
-static const struct
-iio_chan_spec st_lis2duxs12_sign_motion_channels[] = {
-	ST_LIS2DUXS12_EVENT_CHANNEL(STM_IIO_SIGN_MOTION, thr),
-};
-
-static const struct iio_chan_spec st_lis2duxs12_tilt_channels[] = {
-	ST_LIS2DUXS12_EVENT_CHANNEL(STM_IIO_TILT, thr),
-};
-
 static const unsigned long st_lis2duxs12_available_scan_masks[] = {
 	GENMASK(2, 0), 0x0
 };
 
 static const unsigned long st_lis2duxs12_temp_available_scan_masks[] = {
-	BIT(0), 0x0
-};
-
-static const unsigned long st_lis2duxs12_emb_available_scan_masks[] = {
 	BIT(0), 0x0
 };
 
@@ -704,35 +670,6 @@ static int st_lis2duxs12_write_raw(struct iio_dev *iio_dev,
 	return err;
 }
 
-static int
-st_lis2duxs12_read_event_config(struct iio_dev *iio_dev,
-				const struct iio_chan_spec *chan,
-				enum iio_event_type type,
-				enum iio_event_direction dir)
-{
-	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
-	struct st_lis2duxs12_hw *hw = sensor->hw;
-
-	return !!(hw->enable_mask & BIT(sensor->id));
-}
-
-static int
-st_lis2duxs12_write_event_config(struct iio_dev *iio_dev,
-				 const struct iio_chan_spec *chan,
-				 enum iio_event_type type,
-				 enum iio_event_direction dir,
-				 int state)
-{
-	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
-	int err;
-
-	mutex_lock(&iio_dev->mlock);
-	err = st_lis2duxs12_embfunc_sensor_set_enable(sensor, state);
-	mutex_unlock(&iio_dev->mlock);
-
-	return err;
-}
-
 static ssize_t
 st_lis2duxs12_sysfs_sampling_frequency_avail(struct device *dev,
 					struct device_attribute *attr,
@@ -1098,19 +1035,6 @@ out_claim:
 	return size;
 }
 
-static ssize_t
-st_lis2duxs12_sysfs_reset_step_counter(struct device *dev,
-				       struct device_attribute *attr,
-				       const char *buf, size_t size)
-{
-	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
-	int err;
-
-	err = st_lis2duxs12_reset_step_counter(iio_dev);
-
-	return err < 0 ? err : size;
-}
-
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(st_lis2duxs12_sysfs_sampling_frequency_avail);
 static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
 		       st_lis2duxs12_sysfs_scale_avail, NULL, 0);
@@ -1135,8 +1059,6 @@ static IIO_DEVICE_ATTR(selftest_available, 0444,
 static IIO_DEVICE_ATTR(selftest, 0644,
 		       st_lis2duxs12_sysfs_get_selftest_status,
 		       st_lis2duxs12_sysfs_start_selftest, 0);
-static IIO_DEVICE_ATTR(reset_counter, 0200, NULL,
-		       st_lis2duxs12_sysfs_reset_step_counter, 0);
 
 static struct attribute *st_lis2duxs12_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -1183,65 +1105,6 @@ static const struct iio_info st_lis2duxs12_temp_info = {
 	.attrs = &st_lis2duxs12_temp_attribute_group,
 	.read_raw = st_lis2duxs12_read_raw,
 	.write_raw = st_lis2duxs12_write_raw,
-};
-
-static struct attribute *st_lis2duxs12_sc_attributes[] = {
-	&iio_dev_attr_hwfifo_watermark_max.dev_attr.attr,
-	&iio_dev_attr_hwfifo_watermark.dev_attr.attr,
-	&iio_dev_attr_reset_counter.dev_attr.attr,
-	&iio_dev_attr_hwfifo_flush.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_lis2duxs12_sc_attribute_group = {
-	.attrs = st_lis2duxs12_sc_attributes,
-};
-
-static const struct iio_info st_lis2duxs12_sc_info = {
-	.attrs = &st_lis2duxs12_sc_attribute_group,
-};
-
-static struct attribute *st_lis2duxs12_sd_attributes[] = {
-	NULL,
-};
-
-static const struct attribute_group st_lis2duxs12_sd_attribute_group = {
-	.attrs = st_lis2duxs12_sd_attributes,
-};
-
-static const struct iio_info st_lis2duxs12_sd_info = {
-	.attrs = &st_lis2duxs12_sd_attribute_group,
-	.read_event_config = st_lis2duxs12_read_event_config,
-	.write_event_config = st_lis2duxs12_write_event_config,
-};
-
-static struct attribute *st_lis2duxs12_sm_attributes[] = {
-	NULL,
-};
-
-static const struct attribute_group st_lis2duxs12_sm_attribute_group = {
-	.attrs = st_lis2duxs12_sm_attributes,
-};
-
-static const struct iio_info st_lis2duxs12_sm_info = {
-	.attrs = &st_lis2duxs12_sm_attribute_group,
-	.read_event_config = st_lis2duxs12_read_event_config,
-	.write_event_config = st_lis2duxs12_write_event_config,
-};
-
-static struct attribute *st_lis2duxs12_tilt_attributes[] = {
-	NULL,
-};
-
-static const struct
-attribute_group st_lis2duxs12_tilt_attribute_group = {
-	.attrs = st_lis2duxs12_tilt_attributes,
-};
-
-static const struct iio_info st_lis2duxs12_tilt_info = {
-	.attrs = &st_lis2duxs12_tilt_attribute_group,
-	.read_event_config = st_lis2duxs12_read_event_config,
-	.write_event_config = st_lis2duxs12_write_event_config,
 };
 
 /*
@@ -1408,62 +1271,6 @@ iio_dev *st_lis2duxs12_alloc_iiodev(struct st_lis2duxs12_hw *hw,
 		/* set default FS to each sensor */
 		sensor->gain = st_lis2duxs12_fs_table[id].fs_avl[0].gain;
 		break;
-	case ST_LIS2DUXS12_ID_STEP_COUNTER:
-		iio_dev->channels = st_lis2duxs12_step_counter_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lis2duxs12_step_counter_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			 "%s_step_c", hw->settings->id.name);
-		iio_dev->info = &st_lis2duxs12_sc_info;
-		iio_dev->available_scan_masks =
-				st_lis2duxs12_emb_available_scan_masks;
-
-		/* request ODR @50 Hz to works properly */
-		sensor->max_watermark = 1;
-		sensor->odr = 50;
-		sensor->uodr = 0;
-		break;
-	case ST_LIS2DUXS12_ID_STEP_DETECTOR:
-		iio_dev->channels = st_lis2duxs12_step_detector_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lis2duxs12_step_detector_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			 "%s_step_d", hw->settings->id.name);
-		iio_dev->info = &st_lis2duxs12_sd_info;
-		iio_dev->available_scan_masks =
-				st_lis2duxs12_emb_available_scan_masks;
-
-		/* request ODR @50 Hz to works properly */
-		sensor->odr = 50;
-		sensor->uodr = 0;
-		break;
-	case ST_LIS2DUXS12_ID_SIGN_MOTION:
-		iio_dev->channels = st_lis2duxs12_sign_motion_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lis2duxs12_sign_motion_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			 "%s_sign_motion", hw->settings->id.name);
-		iio_dev->info = &st_lis2duxs12_sm_info;
-		iio_dev->available_scan_masks =
-				st_lis2duxs12_emb_available_scan_masks;
-
-		/* request ODR @50 Hz to works properly */
-		sensor->odr = 50;
-		sensor->uodr = 0;
-		break;
-	case ST_LIS2DUXS12_ID_TILT:
-		iio_dev->channels = st_lis2duxs12_tilt_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_lis2duxs12_tilt_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			 "%s_tilt", hw->settings->id.name);
-		iio_dev->info = &st_lis2duxs12_tilt_info;
-		iio_dev->available_scan_masks =
-				st_lis2duxs12_emb_available_scan_masks;
-
-		/* request ODR @50 Hz to works properly */
-		sensor->odr = 50;
-		sensor->uodr = 0;
-		break;
 	default:
 		return NULL;
 	}
@@ -1531,7 +1338,7 @@ int st_lis2duxs12_probe(struct device *dev, int irq,
 {
 	enum st_lis2duxs12_sensor_id id;
 	struct st_lis2duxs12_hw *hw;
-	int err;
+	int err, i;
 
 	hw = devm_kzalloc(dev, sizeof(*hw), GFP_KERNEL);
 	if (!hw)
@@ -1580,12 +1387,19 @@ int st_lis2duxs12_probe(struct device *dev, int irq,
 		return err;
 	}
 
-	for (id = ST_LIS2DUXS12_ID_ACC;
-	     id <= ST_LIS2DUXS12_ID_TILT; id++) {
+	for (i = 0; i < ARRAY_SIZE(st_lis2duxs12_hw_list); i++) {
+		id = st_lis2duxs12_hw_list[i];
+
 		hw->iio_devs[id] = st_lis2duxs12_alloc_iiodev(hw, id);
 		if (!hw->iio_devs[id])
 			return -ENOMEM;
 	}
+
+#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
+	err = st_lis2duxs12_embedded_function_probe(hw);
+	if (err < 0)
+		return err;
+#endif /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
 
 	if (hw->settings->st_qvar_support) {
 		err = st_lis2duxs12_qvar_probe(hw);
@@ -1593,16 +1407,14 @@ int st_lis2duxs12_probe(struct device *dev, int irq,
 			return err;
 	}
 
-	err = st_lis2duxs12_probe_basicfunc(hw);
+#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
+	err = st_lis2duxs12_basicfunc_probe(hw);
 	if (err < 0)
 		return err;
+#endif /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
 
 	err = st_lis2duxs12_mlc_probe(hw);
 	if (err < 0)
-		return err;
-
-	err = st_lis2duxs12_embedded_function_init(hw);
-	if (err)
 		return err;
 
 	if (hw->irq > 0) {

@@ -535,6 +535,7 @@ static irqreturn_t st_lis2duxs12_handler_irq(int irq, void *private)
 static irqreturn_t st_lis2duxs12_handler_thread(int irq, void *private)
 {
 	struct st_lis2duxs12_hw *hw = (struct st_lis2duxs12_hw *)private;
+	int err = IRQ_HANDLED;
 
 	st_lis2duxs12_mlc_check_status(hw);
 
@@ -543,51 +544,17 @@ static irqreturn_t st_lis2duxs12_handler_thread(int irq, void *private)
 	clear_bit(ST_LIS2DUXS12_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
-	if (hw->enable_mask & (BIT(ST_LIS2DUXS12_ID_STEP_DETECTOR) |
-			       BIT(ST_LIS2DUXS12_ID_TILT) |
-			       BIT(ST_LIS2DUXS12_ID_SIGN_MOTION))) {
-		struct iio_dev *iio_dev;
-		u8 status;
-		s64 event;
-		int err;
+#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
+	err = st_lis2duxs12_event_handler(hw);
+	if (err < 0)
+		return err;
 
-		err = st_lis2duxs12_read_locked(hw,
-			    ST_LIS2DUXS12_EMB_FUNC_STATUS_MAINPAGE_ADDR,
-			    &status, sizeof(status));
-		if (err < 0)
-			goto out;
+	err = st_lis2duxs12_embedded_function_handler(hw);
+	if (err < 0)
+		return err;
+#endif /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
 
-		/* embedded function sensors */
-		if (status & ST_LIS2DUXS12_IS_STEP_DET_MASK) {
-			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_STEP_DETECTOR];
-			event = IIO_UNMOD_EVENT_CODE(IIO_STEPS, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       iio_get_time_ns(iio_dev));
-		}
-
-		if (status & ST_LIS2DUXS12_IS_SIGMOT_MASK) {
-			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_SIGN_MOTION];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_SIGN_MOTION, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       iio_get_time_ns(iio_dev));
-		}
-
-		if (status & ST_LIS2DUXS12_IS_TILT_MASK) {
-			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_TILT];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_TILT, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       iio_get_time_ns(iio_dev));
-		}
-	}
-
-out:
-	return st_lis2duxs12_event_handler(hw);
+	return err;
 }
 
 static int st_lis2duxs12_fifo_preenable(struct iio_dev *iio_dev)

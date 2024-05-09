@@ -181,6 +181,9 @@ int ism303dac_allocate_rings(struct ism303dac_data *cdata)
 	int err, i;
 
 	for (i = 0; i < ISM303DAC_BUFFER_SENSOR; i++) {
+		if (!cdata->iio_sensors_dev[i])
+			continue;
+
 		err = devm_iio_triggered_buffer_setup(cdata->dev,
 						   cdata->iio_sensors_dev[i],
 						   &ism303dac_handler_empty,

@@ -129,6 +129,16 @@
 #define ST_LIS2DW12_SHIFT_VAL(val, mask) (((val) << __ffs(mask)) & \
 					  (mask))
 
+#define ST_LIS2DW12_EVENT_CHANNEL(chan_type, evt_spec)	\
+{							\
+	.type = chan_type,				\
+	.modified = 0,					\
+	.scan_index = -1,				\
+	.indexed = -1,					\
+	.event_spec = evt_spec,				\
+	.num_event_specs = 1,				\
+}
+
 enum st_lis2dw12_fifo_mode {
 	ST_LIS2DW12_FIFO_BYPASS = 0x0,
 	ST_LIS2DW12_FIFO_CONTINUOUS = 0x6,
@@ -143,11 +153,26 @@ enum st_lis2dw12_selftest_status {
 enum st_lis2dw12_sensor_id {
 	ST_LIS2DW12_ID_ACC,
 	ST_LIS2DW12_ID_TEMP,
+
+#ifdef CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES
 	ST_LIS2DW12_ID_TAP_TAP,
 	ST_LIS2DW12_ID_TAP,
 	ST_LIS2DW12_ID_WU,
+#endif /* CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES */
+
 	ST_LIS2DW12_ID_MAX,
 };
+
+struct st_lis2dw12_odr_t {
+	u16 hz;
+	u8 val;
+};
+
+struct st_lis2dw12_odr_entry_t {
+	u8 size;
+	struct st_lis2dw12_odr_t odr[9];
+};
+
 
 struct st_lis2dw12_sensor {
 	enum st_lis2dw12_sensor_id id;
@@ -189,12 +214,20 @@ struct st_lis2dw12_hw {
 
 	struct workqueue_struct *temp_workqueue;
 	s64 timestamp;
+
+	const struct st_lis2dw12_odr_entry_t *odr_entry;
 };
+
 /* HW devices that can wakeup the target */
-#define ST_LIS2DW12_WAKE_UP_SENSORS (BIT(ST_LIS2DW12_ID_ACC)      | \
-				     BIT(ST_LIS2DW12_ID_TAP_TAP)  | \
-				     BIT(ST_LIS2DW12_ID_TAP)      | \
+#ifdef CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES
+#define ST_LIS2DW12_WAKE_UP_SENSORS (BIT(ST_LIS2DW12_ID_ACC) |		\
+				     BIT(ST_LIS2DW12_ID_TAP_TAP) |	\
+				     BIT(ST_LIS2DW12_ID_TAP) |		\
 				     BIT(ST_LIS2DW12_ID_WU))
+#else /* CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES */
+#define ST_LIS2DW12_WAKE_UP_SENSORS (BIT(ST_LIS2DW12_ID_ACC))
+#endif /* CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES */
+
 
 /* this is the minimal ODR for wake-up sensors and dependencies */
 #define ST_LIS2DW12_MIN_ODR_IN_WAKEUP	25
@@ -283,6 +316,10 @@ static inline bool st_lis2dw12_is_volatile_reg(struct device *dev,
 	}
 }
 
+static inline s64 st_lis2dw12_get_timestamp(struct st_lis2dw12_hw *hw)
+{
+	return iio_get_time_ns(hw->iio_devs[ST_LIS2DW12_ID_ACC]);
+}
 
 static inline int
 st_lis2dw12_set_fifo_mode(struct st_lis2dw12_hw *hw,
@@ -315,5 +352,10 @@ ssize_t st_lis2dw12_set_hwfifo_watermark(struct device *device,
 int st_lis2dw12_sensor_set_enable(struct st_lis2dw12_sensor *sensor,
 				  bool enable);
 int st_lis2dw12_suspend_fifo(struct st_lis2dw12_hw *hw);
+
+#ifdef CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES
+int st_lis2dw12_emb_event(struct st_lis2dw12_hw *hw);
+int st_lis2dw12_embedded_function_probe(struct st_lis2dw12_hw *hw);
+#endif /* CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES */
 
 #endif /* ST_LIS2DW12_H */

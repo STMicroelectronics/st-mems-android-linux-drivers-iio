@@ -35,7 +35,7 @@ enum {
 };
 
 #define LIS2DS12_ADD_CHANNEL(device_type, modif, index, mod, endian, sbits,\
-							rbits, addr, s) \
+			     rbits, addr, s) \
 { \
 	.type = device_type, \
 	.modified = modif, \
@@ -321,13 +321,13 @@ static const struct {
 };
 
 int lis2ds12_read_register(struct lis2ds12_data *cdata, u8 reg_addr,
-							int data_len, u8 *data, bool b_lock)
+			   int data_len, u8 *data, bool b_lock)
 {
 	return cdata->tf->read(cdata, reg_addr, data_len, data, b_lock);
 }
 
 static int lis2ds12_write_register(struct lis2ds12_data *cdata, u8 reg_addr,
-							u8 mask, u8 data, bool b_lock)
+				   u8 mask, u8 data, bool b_lock)
 {
 	int err;
 	u8 new_data = 0x00, old_data = 0x00;
@@ -344,7 +344,7 @@ static int lis2ds12_write_register(struct lis2ds12_data *cdata, u8 reg_addr,
 }
 
 static int lis2ds12_write_advanced_cfg_regs(struct lis2ds12_data *cdata,
-						u8 reg_addr, u8 *data, int len)
+					    u8 reg_addr, u8 *data, int len)
 {
 	int err = 0, err2 = 0;
 	int count = 0;
@@ -352,7 +352,8 @@ static int lis2ds12_write_advanced_cfg_regs(struct lis2ds12_data *cdata,
 	mutex_lock(&cdata->regs_lock);
 
 	err = lis2ds12_write_register(cdata, LIS2DS12_FUNC_CFG_ENTER_ADDR,
-						LIS2DS12_FUNC_CFG_EN_MASK, LIS2DS12_EN_BIT, false);
+				      LIS2DS12_FUNC_CFG_EN_MASK,
+				      LIS2DS12_EN_BIT, false);
 	if (err < 0)
 		goto lis2ds12_write_advanced_cfg_regs_mutex_unlock;
 
@@ -361,7 +362,8 @@ static int lis2ds12_write_advanced_cfg_regs(struct lis2ds12_data *cdata,
 		goto lis2ds12_write_advanced_cfg_regs_switch_bank_regs;
 
 	err = lis2ds12_write_register(cdata, LIS2DS12_FUNC_CFG_EXIT_ADDR,
-						LIS2DS12_FUNC_CFG_EN_MASK, LIS2DS12_DIS_BIT, false);
+				      LIS2DS12_FUNC_CFG_EN_MASK,
+				      LIS2DS12_DIS_BIT, false);
 	if (err < 0)
 		goto lis2ds12_write_advanced_cfg_regs_switch_bank_regs;
 
@@ -372,8 +374,10 @@ static int lis2ds12_write_advanced_cfg_regs(struct lis2ds12_data *cdata,
 lis2ds12_write_advanced_cfg_regs_switch_bank_regs:
 	do {
 		msleep(200);
-		err2 = lis2ds12_write_register(cdata, LIS2DS12_FUNC_CFG_EXIT_ADDR,
-						LIS2DS12_FUNC_CFG_EN_MASK, LIS2DS12_DIS_BIT, false);
+		err2 = lis2ds12_write_register(cdata,
+					       LIS2DS12_FUNC_CFG_EXIT_ADDR,
+					       LIS2DS12_FUNC_CFG_EN_MASK,
+					       LIS2DS12_DIS_BIT, false);
 	} while (err2 < 0 && count++ < 10);
 
 lis2ds12_write_advanced_cfg_regs_mutex_unlock:
@@ -404,7 +408,8 @@ int lis2ds12_set_fifo_mode(struct lis2ds12_data *cdata, enum fifo_mode fm)
 	}
 
 	return lis2ds12_write_register(cdata, LIS2DS12_FIFO_MODE_ADDR,
-				LIS2DS12_FIFO_MODE_MASK, reg_value, true);
+				       LIS2DS12_FIFO_MODE_MASK, reg_value,
+				       true);
 }
 EXPORT_SYMBOL(lis2ds12_set_fifo_mode);
 
@@ -419,13 +424,14 @@ int lis2ds12_update_event_functions(struct lis2ds12_data *cdata)
 		reg_val |= LIS2DS12_FUNC_CTRL_TILT_MASK;
 
 	if ((CHECK_BIT(cdata->enabled_sensor, LIS2DS12_STEP_D)) ||
-			(CHECK_BIT(cdata->enabled_sensor, LIS2DS12_STEP_C)))
+	    (CHECK_BIT(cdata->enabled_sensor, LIS2DS12_STEP_C)))
 		reg_val |= LIS2DS12_FUNC_CTRL_STEP_CNT_MASK;
 
 	return lis2ds12_write_register(cdata,
 				LIS2DS12_FUNC_CTRL_ADDR,
 				LIS2DS12_FUNC_CTRL_EV_MASK,
-				reg_val >> __ffs(LIS2DS12_FUNC_CTRL_EV_MASK), true);
+				reg_val >> __ffs(LIS2DS12_FUNC_CTRL_EV_MASK),
+				true);
 }
 
 int lis2ds12_set_fs(struct lis2ds12_sensor_data *sdata, unsigned int fs)
@@ -441,9 +447,9 @@ int lis2ds12_set_fs(struct lis2ds12_sensor_data *sdata, unsigned int fs)
 		return -EINVAL;
 
 	err = lis2ds12_write_register(sdata->cdata,
-				lis2ds12_fs_table.addr,
-				lis2ds12_fs_table.mask,
-				lis2ds12_fs_table.fs_avl[i].value, true);
+				      lis2ds12_fs_table.addr,
+				      lis2ds12_fs_table.mask,
+				      lis2ds12_fs_table.fs_avl[i].value, true);
 	if (err < 0)
 		return err;
 
@@ -484,7 +490,7 @@ u8 lis2ds12_event_irq2_value(struct lis2ds12_data *cdata)
 		value |= LIS2DS12_INT2_SIG_MOT_DET_MASK;
 
 	if (CHECK_BIT(cdata->enabled_sensor, LIS2DS12_STEP_D) ||
-			CHECK_BIT(cdata->enabled_sensor, LIS2DS12_STEP_C))
+	    CHECK_BIT(cdata->enabled_sensor, LIS2DS12_STEP_C))
 		value |= LIS2DS12_INT2_STEP_DET_MASK;
 
 	return value;
@@ -496,12 +502,16 @@ int lis2ds12_write_max_odr(struct lis2ds12_sensor_data *sdata) {
 	u8 power_mode = sdata->cdata->power_mode;
 	struct lis2ds12_sensor_data *t_sdata;
 
-	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++)
+	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++) {
+		if (!sdata->cdata->iio_sensors_dev[i])
+			continue;
+
 		if (CHECK_BIT(sdata->cdata->enabled_sensor, i)) {
 			t_sdata = iio_priv(sdata->cdata->iio_sensors_dev[i]);
 			if (t_sdata->odr > max_odr)
 				max_odr = t_sdata->odr;
 		}
+	}
 
 	for (i = 0; i < LIS2DS12_ODR_LP_LIST_NUM; i++) {
 		if (lis2ds12_odr_table.odr_avl[power_mode][i].hz >= max_odr)
@@ -519,7 +529,8 @@ int lis2ds12_write_max_odr(struct lis2ds12_sensor_data *sdata) {
 		return err;
 
 	sdata->cdata->common_odr = max_odr;
-	sdata->cdata->std_level = lis2ds12_odr_table.odr_avl[power_mode][i].std_level;
+	sdata->cdata->std_level =
+			    lis2ds12_odr_table.odr_avl[power_mode][i].std_level;
 
 	switch (max_odr) {
 	case 0:
@@ -532,9 +543,8 @@ int lis2ds12_write_max_odr(struct lis2ds12_sensor_data *sdata) {
 		break;
 
 	default:
-		sdata->cdata->accel_deltatime =
-			div_s64(1000000000LL, max_odr) *
-			sdata->cdata->hwfifo_watermark;
+		sdata->cdata->accel_deltatime = div_s64(1000000000LL, max_odr) *
+						 sdata->cdata->hwfifo_watermark;
 		break;
 	}
 
@@ -566,9 +576,8 @@ int lis2ds12_update_drdy_irq(struct lis2ds12_sensor_data *sdata, bool state)
 
 	case LIS2DS12_ACCEL:
 		reg_addr = LIS2DS12_CTRL4_INT1_PAD_ADDR;
-		reg_mask = (sdata->cdata->hwfifo_enabled) ?
-						LIS2DS12_INT1_FTH_MASK:
-						LIS2DS12_DRDY_MASK;
+		reg_mask = (sdata->cdata->hwfifo_enabled) ? LIS2DS12_INT1_FTH_MASK :
+							    LIS2DS12_DRDY_MASK;
 		if (state)
 			reg_val = LIS2DS12_EN_BIT;
 		else
@@ -581,7 +590,7 @@ int lis2ds12_update_drdy_irq(struct lis2ds12_sensor_data *sdata, bool state)
 	}
 
 	return lis2ds12_write_register(sdata->cdata, reg_addr, reg_mask,
-				reg_val, true);
+				       reg_val, true);
 }
 EXPORT_SYMBOL(lis2ds12_update_drdy_irq);
 
@@ -595,8 +604,8 @@ int lis2ds12_update_fifo(struct lis2ds12_data *cdata, u16 watermark)
 	cdata->samples = 0;
 
 	err = lis2ds12_write_register(cdata, LIS2DS12_FIFO_THS_ADDR,
-				LIS2DS12_FIFO_THS_MASK,
-				watermark, true);
+				      LIS2DS12_FIFO_THS_MASK,
+				      watermark, true);
 	if (err < 0)
 		return err;
 
@@ -641,7 +650,7 @@ int lis2ds12_set_enable(struct lis2ds12_sensor_data *sdata, bool state)
 	switch (sdata->sindex) {
 	case LIS2DS12_TAP:
 		if (state && CHECK_BIT(sdata->cdata->enabled_sensor,
-							LIS2DS12_DOUBLE_TAP)) {
+				       LIS2DS12_DOUBLE_TAP)) {
 			err = -EINVAL;
 
 			goto enable_sensor_error;
@@ -651,7 +660,7 @@ int lis2ds12_set_enable(struct lis2ds12_sensor_data *sdata, bool state)
 
 	case LIS2DS12_DOUBLE_TAP:
 		if (state && CHECK_BIT(sdata->cdata->enabled_sensor,
-							LIS2DS12_TAP)) {
+				       LIS2DS12_TAP)) {
 			err = -EINVAL;
 
 			goto enable_sensor_error;
@@ -709,6 +718,9 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	struct lis2ds12_sensor_data *sdata;
 
 	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++) {
+		if (!cdata->iio_sensors_dev[i])
+			continue;
+
 		sdata = iio_priv(cdata->iio_sensors_dev[i]);
 
 		err = lis2ds12_set_enable(sdata, false);
@@ -728,8 +740,8 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	 * Soft reset the device on power on.
 	 */
 	err = lis2ds12_write_register(cdata, LIS2DS12_SOFT_RESET_ADDR,
-				LIS2DS12_SOFT_RESET_MASK,
-				LIS2DS12_EN_BIT, true);
+				      LIS2DS12_SOFT_RESET_MASK,
+				      LIS2DS12_EN_BIT, true);
 	if (err < 0)
 		return err;
 
@@ -746,8 +758,8 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	 * Enable latched interrupt mode.
 	 */
 	err = lis2ds12_write_register(cdata, LIS2DS12_LIR_ADDR,
-				LIS2DS12_LIR_MASK,
-				LIS2DS12_EN_BIT, true);
+				      LIS2DS12_LIR_MASK,
+				      LIS2DS12_EN_BIT, true);
 	if (err < 0)
 		return err;
 
@@ -755,8 +767,8 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	 * Enable block data update feature.
 	 */
 	err = lis2ds12_write_register(cdata, LIS2DS12_BDU_ADDR,
-				LIS2DS12_BDU_MASK,
-				LIS2DS12_EN_BIT, true);
+				      LIS2DS12_BDU_MASK,
+				      LIS2DS12_EN_BIT, true);
 	if (err < 0)
 		return err;
 
@@ -764,8 +776,8 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	 * Route interrupt from INT2 to INT1 pin.
 	 */
 	err = lis2ds12_write_register(cdata, LIS2DS12_INT2_ON_INT1_ADDR,
-				LIS2DS12_INT2_ON_INT1_MASK,
-				LIS2DS12_EN_BIT, true);
+				      LIS2DS12_INT2_ON_INT1_MASK,
+				      LIS2DS12_EN_BIT, true);
 	if (err < 0)
 		return err;
 
@@ -782,8 +794,8 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	 * Configure default free fall event duration.
 	 */
 	err = lis2ds12_write_register(sdata->cdata, LIS2DS12_FREE_FALL_ADDR,
-				LIS2DS12_FREE_FALL_DUR_MASK,
-				LIS2DS12_FREE_FALL_DUR_DEFAULT, true);
+				      LIS2DS12_FREE_FALL_DUR_MASK,
+				      LIS2DS12_FREE_FALL_DUR_DEFAULT, true);
 	if (err < 0)
 		return err;
 
@@ -791,8 +803,8 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	 * Configure Tap event recognition on all direction (X, Y and Z axes).
 	 */
 	err = lis2ds12_write_register(sdata->cdata, LIS2DS12_TAP_AXIS_ADDR,
-				LIS2DS12_TAP_AXIS_MASK,
-				LIS2DS12_TAP_AXIS_ANABLE_ALL, true);
+				      LIS2DS12_TAP_AXIS_MASK,
+				      LIS2DS12_TAP_AXIS_ANABLE_ALL, true);
 	if (err < 0)
 		return err;
 
@@ -800,8 +812,8 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	 * Configure default threshold for Tap event recognition.
 	 */
 	err = lis2ds12_write_register(sdata->cdata, LIS2DS12_TAP_THS_ADDR,
-				LIS2DS12_TAP_THS_MASK,
-				LIS2DS12_TAP_THS_DEFAULT, true);
+				      LIS2DS12_TAP_THS_MASK,
+				      LIS2DS12_TAP_THS_DEFAULT, true);
 	if (err < 0)
 		return err;
 
@@ -809,8 +821,8 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	 * Configure default threshold for Wake Up event recognition.
 	 */
 	err = lis2ds12_write_register(sdata->cdata, LIS2DS12_WAKE_UP_THS_ADDR,
-				LIS2DS12_WAKE_UP_THS_WU_MASK,
-				LIS2DS12_WAKE_UP_THS_WU_DEFAULT, true);
+				      LIS2DS12_WAKE_UP_THS_WU_MASK,
+				      LIS2DS12_WAKE_UP_THS_WU_DEFAULT, true);
 	if (err < 0)
 		return err;
 
@@ -818,8 +830,8 @@ int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 }
 
 static ssize_t lis2ds12_get_sampling_frequency(struct device *dev,
-					struct device_attribute *attr,
-					char *buf)
+					       struct device_attribute *attr,
+					       char *buf)
 {
 	struct lis2ds12_sensor_data *sdata = iio_priv(dev_to_iio_dev(dev));
 
@@ -861,19 +873,19 @@ ssize_t lis2ds12_set_sampling_frequency(struct device * dev,
 }
 
 static ssize_t lis2ds12_get_sampling_frequency_avail(struct device *dev,
-						struct device_attribute
-						*attr, char *buf)
+						     struct device_attribute
+						     *attr, char *buf)
 {
 	int i, len = 0, mode_count, mode;
 	struct lis2ds12_sensor_data *sdata = iio_priv(dev_to_iio_dev(dev));
 
 	mode = sdata->cdata->power_mode;
 	mode_count = (mode == LIS2DS12_LP_MODE) ?
-			LIS2DS12_ODR_LP_LIST_NUM : LIS2DS12_ODR_HR_LIST_NUM;
+		     LIS2DS12_ODR_LP_LIST_NUM : LIS2DS12_ODR_HR_LIST_NUM;
 
 	for (i = 1; i < mode_count; i++) {
 		len += scnprintf(buf + len, PAGE_SIZE - len, "%d ",
-				lis2ds12_odr_table.odr_avl[mode][i].hz);
+				 lis2ds12_odr_table.odr_avl[mode][i].hz);
 	}
 	buf[len - 1] = '\n';
 
@@ -881,13 +893,14 @@ static ssize_t lis2ds12_get_sampling_frequency_avail(struct device *dev,
 }
 
 static ssize_t lis2ds12_get_scale_avail(struct device *dev,
-				      struct device_attribute *attr, char *buf)
+					struct device_attribute *attr,
+					char *buf)
 {
 	int i, len = 0;
 
 	for (i = 0; i < LIS2DS12_FS_LIST_NUM; i++) {
 		len += scnprintf(buf + len, PAGE_SIZE - len, "0.%06u ",
-				lis2ds12_fs_table.fs_avl[i].gain);
+				 lis2ds12_fs_table.fs_avl[i].gain);
 	}
 	buf[len - 1] = '\n';
 
@@ -895,8 +908,8 @@ static ssize_t lis2ds12_get_scale_avail(struct device *dev,
 }
 
 static int lis2ds12_read_raw(struct iio_dev *indio_dev,
-			struct iio_chan_spec const *ch, int *val,
-							int *val2, long mask)
+			     struct iio_chan_spec const *ch, int *val,
+			     int *val2, long mask)
 {
 	int err;
 	u8 outdata[2];
@@ -905,7 +918,8 @@ static int lis2ds12_read_raw(struct iio_dev *indio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
 		mutex_lock(&indio_dev->mlock);
-		if (lis2ds12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
+		if (lis2ds12_iio_dev_currentmode(indio_dev) ==
+						       INDIO_BUFFER_TRIGGERED) {
 			mutex_unlock(&indio_dev->mlock);
 			return -EBUSY;
 		}
@@ -919,7 +933,7 @@ static int lis2ds12_read_raw(struct iio_dev *indio_dev,
 		msleep(40);
 
 		err = lis2ds12_read_register(sdata->cdata, ch->address, 2,
-								outdata, true);
+					     outdata, true);
 		if (err < 0) {
 			mutex_unlock(&indio_dev->mlock);
 			return err;
@@ -950,7 +964,8 @@ static int lis2ds12_read_raw(struct iio_dev *indio_dev,
 }
 
 static int lis2ds12_write_raw(struct iio_dev *indio_dev,
-		struct iio_chan_spec const *chan, int val, int val2, long mask)
+			      struct iio_chan_spec const *chan, int val,
+			      int val2, long mask)
 {
 	int err, i;
 	struct lis2ds12_sensor_data *sdata = iio_priv(indio_dev);
@@ -959,7 +974,8 @@ static int lis2ds12_write_raw(struct iio_dev *indio_dev,
 	case IIO_CHAN_INFO_SCALE:
 		mutex_lock(&indio_dev->mlock);
 
-		if (lis2ds12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
+		if (lis2ds12_iio_dev_currentmode(indio_dev) ==
+						       INDIO_BUFFER_TRIGGERED) {
 			mutex_unlock(&indio_dev->mlock);
 			return -EBUSY;
 		}
@@ -982,7 +998,8 @@ static int lis2ds12_write_raw(struct iio_dev *indio_dev,
 }
 
 static ssize_t lis2ds12_sysfs_get_hwfifo_enabled(struct device *dev,
-				struct device_attribute *attr, char *buf)
+						 struct device_attribute *attr,
+						 char *buf)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lis2ds12_sensor_data *sdata = iio_priv(indio_dev);
@@ -991,7 +1008,8 @@ static ssize_t lis2ds12_sysfs_get_hwfifo_enabled(struct device *dev,
 }
 
 ssize_t lis2ds12_sysfs_set_hwfifo_enabled(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
 {
 	int err = 0, enable = 0;
 	u8 mode = BYPASS;
@@ -1016,8 +1034,9 @@ ssize_t lis2ds12_sysfs_set_hwfifo_enabled(struct device *dev,
 	return count;
 }
 
-static ssize_t lis2ds12_sysfs_get_hwfifo_watermark(struct device *dev,
-				struct device_attribute *attr, char *buf)
+static ssize_t
+lis2ds12_sysfs_get_hwfifo_watermark(struct device *dev,
+				    struct device_attribute *attr, char *buf)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lis2ds12_sensor_data *sdata = iio_priv(indio_dev);
@@ -1026,7 +1045,8 @@ static ssize_t lis2ds12_sysfs_get_hwfifo_watermark(struct device *dev,
 }
 
 ssize_t lis2ds12_sysfs_set_hwfifo_watermark(struct device * dev,
-		struct device_attribute * attr, const char *buf, size_t count)
+					    struct device_attribute *attr,
+					    const char *buf, size_t count)
 {
 	int err = 0, watermark = 0;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
@@ -1050,20 +1070,25 @@ ssize_t lis2ds12_sysfs_set_hwfifo_watermark(struct device * dev,
 	return count;
 }
 
-static ssize_t lis2ds12_sysfs_get_hwfifo_watermark_min(struct device *dev,
-				struct device_attribute *attr, char *buf)
+static ssize_t
+lis2ds12_sysfs_get_hwfifo_watermark_min(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
 {
 	return sprintf(buf, "%d\n", 1);
 }
 
-static ssize_t lis2ds12_sysfs_get_hwfifo_watermark_max(struct device *dev,
-				struct device_attribute *attr, char *buf)
+static ssize_t
+lis2ds12_sysfs_get_hwfifo_watermark_max(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
 {
 	return sprintf(buf, "%d\n", LIS2DS12_MAX_FIFO_THS);
 }
 
 ssize_t lis2ds12_sysfs_flush_fifo(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				  struct device_attribute *attr,
+				  const char *buf, size_t size)
 {
 	u64 event_type;
 	int64_t sensor_last_timestamp;
@@ -1093,8 +1118,8 @@ ssize_t lis2ds12_sysfs_flush_fifo(struct device *dev,
 		event_type = STM_IIO_EV_DIR_FIFO_DATA;
 
 	iio_push_event(indio_dev, IIO_UNMOD_EVENT_CODE(IIO_ACCEL,
-				-1, STM_IIO_EV_TYPE_FIFO_FLUSH, event_type),
-				sensor_last_timestamp);
+		       -1, STM_IIO_EV_TYPE_FIFO_FLUSH, event_type),
+		       sensor_last_timestamp);
 
 	enable_irq(sdata->cdata->irq);
 	mutex_unlock(&indio_dev->mlock);
@@ -1103,19 +1128,22 @@ ssize_t lis2ds12_sysfs_flush_fifo(struct device *dev,
 }
 
 ssize_t lis2ds12_reset_step_counter(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				    struct device_attribute *attr,
+				    const char *buf, size_t size)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lis2ds12_sensor_data *sdata = iio_priv(indio_dev);
 
 	return lis2ds12_write_register(sdata->cdata,
-					LIS2DS12_STEP_C_MINTHS_ADDR,
-					LIS2DS12_STEP_C_MINTHS_RST_NSTEP_MASK,
-					LIS2DS12_EN_BIT, true);
+				       LIS2DS12_STEP_C_MINTHS_ADDR,
+				       LIS2DS12_STEP_C_MINTHS_RST_NSTEP_MASK,
+				       LIS2DS12_EN_BIT, true);
 }
 
-static ssize_t lis2ds12_sysfs_set_max_delivery_rate(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+static ssize_t
+lis2ds12_sysfs_set_max_delivery_rate(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t size)
 {
 	u8 duration;
 	int err;
@@ -1133,7 +1161,8 @@ static ssize_t lis2ds12_sysfs_set_max_delivery_rate(struct device *dev,
 	duration = max_delivery_rate / LIS2DS12_MIN_DURATION_MS;
 
 	err = lis2ds12_write_advanced_cfg_regs(sdata->cdata,
-					LIS2DS12_STEP_COUNT_DELTA, &duration, 1);
+					       LIS2DS12_STEP_COUNT_DELTA,
+					       &duration, 1);
 	if (err < 0)
 		return err;
 
@@ -1142,8 +1171,9 @@ static ssize_t lis2ds12_sysfs_set_max_delivery_rate(struct device *dev,
 	return size;
 }
 
-static ssize_t lis2ds12_sysfs_get_max_delivery_rate(struct device *dev,
-				struct device_attribute *attr, char *buf)
+static ssize_t
+lis2ds12_sysfs_get_max_delivery_rate(struct device *dev,
+				     struct device_attribute *attr, char *buf)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lis2ds12_sensor_data *sdata = iio_priv(indio_dev);
@@ -1152,15 +1182,17 @@ static ssize_t lis2ds12_sysfs_get_max_delivery_rate(struct device *dev,
 }
 
 static ssize_t lis2ds12_get_selftest_avail(struct device *dev,
-				      struct device_attribute *attr, char *buf)
+					   struct device_attribute *attr,
+					   char *buf)
 {
 	return sprintf(buf, "%s %s %s\n", lis2ds12_selftest_table[0].mode_str,
-					lis2ds12_selftest_table[1].mode_str,
-					lis2ds12_selftest_table[2].mode_str);
+		       lis2ds12_selftest_table[1].mode_str,
+		       lis2ds12_selftest_table[2].mode_str);
 }
 
 static ssize_t lis2ds12_get_selftest_status(struct device *dev,
-				struct device_attribute *attr, char *buf)
+					    struct device_attribute *attr,
+					    char *buf)
 {
 	u8 status;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
@@ -1171,8 +1203,8 @@ static ssize_t lis2ds12_get_selftest_status(struct device *dev,
 }
 
 static ssize_t lis2ds12_set_selftest_status(struct device *dev,
-					struct device_attribute *attr,
-					const char *buf, size_t size)
+					    struct device_attribute *attr,
+					    const char *buf, size_t size)
 {
 	int err, i;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
@@ -1180,7 +1212,7 @@ static ssize_t lis2ds12_set_selftest_status(struct device *dev,
 
 	for (i = 0; i < ARRAY_SIZE(lis2ds12_selftest_table); i++) {
 		if (strncmp(buf, lis2ds12_selftest_table[i].mode_str,
-								size - 2) == 0)
+			    size - 2) == 0)
 			break;
 	}
 	if (i == ARRAY_SIZE(lis2ds12_selftest_table))
@@ -1202,21 +1234,21 @@ static ST_LIS2DS12_HWFIFO_WATERMARK_MAX();
 static ST_LIS2DS12_HWFIFO_FLUSH();
 
 static IIO_DEV_ATTR_SAMP_FREQ(S_IWUSR | S_IRUGO,
-					lis2ds12_get_sampling_frequency,
-					lis2ds12_set_sampling_frequency);
+			      lis2ds12_get_sampling_frequency,
+			      lis2ds12_set_sampling_frequency);
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(lis2ds12_get_sampling_frequency_avail);
 static IIO_DEVICE_ATTR(in_accel_scale_available, S_IRUGO,
-					lis2ds12_get_scale_avail, NULL, 0);
+		       lis2ds12_get_scale_avail, NULL, 0);
 static IIO_DEVICE_ATTR(reset_counter, S_IWUSR,
-					NULL, lis2ds12_reset_step_counter, 0);
+		       NULL, lis2ds12_reset_step_counter, 0);
 static IIO_DEVICE_ATTR(selftest_available, S_IRUGO,
-					lis2ds12_get_selftest_avail, NULL, 0);
+		       lis2ds12_get_selftest_avail, NULL, 0);
 static IIO_DEVICE_ATTR(selftest, S_IWUSR | S_IRUGO,
-					lis2ds12_get_selftest_status,
-					lis2ds12_set_selftest_status, 0);
+		       lis2ds12_get_selftest_status,
+		       lis2ds12_set_selftest_status, 0);
 static IIO_DEVICE_ATTR(max_delivery_rate, S_IWUSR | S_IRUGO,
-					lis2ds12_sysfs_get_max_delivery_rate,
-					lis2ds12_sysfs_set_max_delivery_rate, 0);
+		       lis2ds12_sysfs_get_max_delivery_rate,
+		       lis2ds12_sysfs_set_max_delivery_rate, 0);
 
 static struct attribute *lis2ds12_accel_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -1324,7 +1356,7 @@ static u32 lis2ds12_parse_dt(struct lis2ds12_data *cdata)
 		return -EINVAL;
 
 	if (!of_property_read_u32(np, "st,drdy-int-pin", &val) &&
-							(val <= 2) && (val > 0))
+	    (val <= 2) && (val > 0))
 		cdata->drdy_int_pin = (u8) val;
 	else
 		cdata->drdy_int_pin = 1;
@@ -1370,7 +1402,8 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 	if (err < 0)
 		return err;
 
-	err = lis2ds12_read_register(cdata, LIS2DS12_WHO_AM_I_ADDR, 1, &wai, true);
+	err = lis2ds12_read_register(cdata, LIS2DS12_WHO_AM_I_ADDR, 1,
+				     &wai, true);
 	if (err < 0) {
 		dev_err(cdata->dev, "failed to read Who-Am-I register.\n");
 
@@ -1390,6 +1423,7 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 
 	if (irq > 0) {
 		cdata->irq = irq;
+
 #ifdef CONFIG_OF
 		err = lis2ds12_parse_dt(cdata);
 		if (err < 0)
@@ -1400,14 +1434,15 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 				cdata->dev->platform_data)->drdy_int_pin;
 
 			if ((cdata->drdy_int_pin > 2) ||
-						(cdata->drdy_int_pin < 1))
+			    (cdata->drdy_int_pin < 1))
 				cdata->drdy_int_pin = 1;
-		} else
+		} else {
 			cdata->drdy_int_pin = 1;
+		}
 #endif /* CONFIG_OF */
 
 		dev_info(cdata->dev, "driver use DRDY int pin %d\n",
-						cdata->drdy_int_pin);
+			 cdata->drdy_int_pin);
 	}
 
 	cdata->common_odr = 0;
@@ -1424,6 +1459,8 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 	cdata->power_mode = LIS2DS12_MODE_DEFAULT;
 
 	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++) {
+		if (lis2ds12_skip_basic_features(i))
+			continue;
 
 		piio_dev = devm_iio_device_alloc(cdata->dev,
 					   sizeof(struct lis2ds12_sensor_data));
@@ -1462,6 +1499,9 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 	}
 
 	for (n = 0; n < LIS2DS12_SENSORS_NUMB; n++) {
+		if (!cdata->iio_sensors_dev[n])
+			continue;
+
 		err = devm_iio_device_register(cdata->dev,
 					       cdata->iio_sensors_dev[n]);
 		if (err)

@@ -519,11 +519,25 @@ enum st_lis2duxs12_sensor_id {
 };
 
 static const enum
+st_lis2duxs12_sensor_id st_lis2duxs12_hw_list[] = {
+	[0] = ST_LIS2DUXS12_ID_ACC,
+	[1] = ST_LIS2DUXS12_ID_TEMP,
+};
+
+static const enum
 st_lis2duxs12_sensor_id st_lis2duxs12_buffered_sensor_list[] = {
 	[0] = ST_LIS2DUXS12_ID_ACC,
 	[1] = ST_LIS2DUXS12_ID_TEMP,
 	[2] = ST_LIS2DUXS12_ID_STEP_COUNTER,
 	[3] = ST_LIS2DUXS12_ID_QVAR,
+};
+
+static const enum
+st_lis2duxs12_sensor_id st_lis2duxs12_embedded_function_sensor_list[] = {
+	[0] = ST_LIS2DUXS12_ID_STEP_COUNTER,
+	[1] = ST_LIS2DUXS12_ID_STEP_DETECTOR,
+	[2] = ST_LIS2DUXS12_ID_SIGN_MOTION,
+	[3] = ST_LIS2DUXS12_ID_TILT,
 };
 
 #define ST_LIS2DUXS12_BUFFERED_ENABLED (BIT(ST_LIS2DUXS12_ID_ACC) | \
@@ -898,14 +912,23 @@ int st_lis2duxs12_mlc_remove(struct device *dev);
 int st_lis2duxs12_mlc_check_status(struct st_lis2duxs12_hw *hw);
 int st_lis2duxs12_mlc_init_preload(struct st_lis2duxs12_hw *hw);
 
+#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
 int st_lis2duxs12_reset_step_counter(struct iio_dev *iio_dev);
-int st_lis2duxs12_embedded_function_init(struct st_lis2duxs12_hw *hw);
+int st_lis2duxs12_embedded_function_probe(struct st_lis2duxs12_hw *hw);
 int st_lis2duxs12_step_counter_set_enable(struct st_lis2duxs12_sensor *sensor,
 					  bool enable);
 int st_lis2duxs12_embfunc_sensor_set_enable(struct st_lis2duxs12_sensor *sensor,
 					    bool enable);
-int st_lis2duxs12_probe_basicfunc(struct st_lis2duxs12_hw *hw);
+int st_lis2duxs12_basicfunc_probe(struct st_lis2duxs12_hw *hw);
 int st_lis2duxs12_event_handler(struct st_lis2duxs12_hw *hw);
+int st_lis2duxs12_embedded_function_handler(struct st_lis2duxs12_hw *hw);
+#else /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
+static inline int
+st_lis2duxs12_step_counter_set_enable(struct st_lis2duxs12_sensor *sensor,
+				      bool enable) {
+	return 0;
+}
+#endif /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
 
 /* qvar */
 int st_lis2duxs12_qvar_probe(struct st_lis2duxs12_hw *hw);

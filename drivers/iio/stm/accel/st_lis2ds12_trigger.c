@@ -19,31 +19,31 @@
 #include "st_lis2ds12.h"
 
 static void lis2ds12_event_management(struct lis2ds12_data *cdata, u8 int_reg_val,
-			     u8 ck_gate_val)
+				      u8 ck_gate_val)
 {
 	if (CHECK_BIT(cdata->enabled_sensor, LIS2DS12_TAP) &&
-				(int_reg_val & LIS2DS12_TAP_MASK))
+	    (int_reg_val & LIS2DS12_TAP_MASK))
 		iio_push_event(cdata->iio_sensors_dev[LIS2DS12_TAP],
-					IIO_UNMOD_EVENT_CODE(STM_IIO_TAP, 0,
-					IIO_EV_TYPE_THRESH,
-					IIO_EV_DIR_EITHER),
-					cdata->timestamp);
+			       IIO_UNMOD_EVENT_CODE(STM_IIO_TAP, 0,
+			       IIO_EV_TYPE_THRESH,
+			       IIO_EV_DIR_EITHER),
+			       cdata->timestamp);
 
 	if (CHECK_BIT(cdata->enabled_sensor, LIS2DS12_DOUBLE_TAP) &&
-				(int_reg_val & LIS2DS12_DOUBLE_TAP_MASK))
+	    (int_reg_val & LIS2DS12_DOUBLE_TAP_MASK))
 		iio_push_event(cdata->iio_sensors_dev[LIS2DS12_DOUBLE_TAP],
-					IIO_UNMOD_EVENT_CODE(STM_IIO_TAP_TAP, 0,
-					IIO_EV_TYPE_THRESH,
-					IIO_EV_DIR_EITHER),
-					cdata->timestamp);
+			       IIO_UNMOD_EVENT_CODE(STM_IIO_TAP_TAP, 0,
+			       IIO_EV_TYPE_THRESH,
+			       IIO_EV_DIR_EITHER),
+			       cdata->timestamp);
 
 	if (ck_gate_val & LIS2DS12_FUNC_CK_GATE_STEP_D_MASK) {
 		if (CHECK_BIT(cdata->enabled_sensor, LIS2DS12_STEP_D))
 			iio_push_event(cdata->iio_sensors_dev[LIS2DS12_STEP_D],
-					IIO_UNMOD_EVENT_CODE(IIO_STEPS, 0,
-					IIO_EV_TYPE_THRESH,
-					IIO_EV_DIR_EITHER),
-					cdata->timestamp);
+				       IIO_UNMOD_EVENT_CODE(IIO_STEPS, 0,
+				       IIO_EV_TYPE_THRESH,
+				       IIO_EV_DIR_EITHER),
+				       cdata->timestamp);
 
 		if(CHECK_BIT(cdata->enabled_sensor, LIS2DS12_STEP_C))
 			lis2ds12_read_step_c(cdata);
@@ -52,18 +52,18 @@ static void lis2ds12_event_management(struct lis2ds12_data *cdata, u8 int_reg_va
 	if (CHECK_BIT(cdata->enabled_sensor, LIS2DS12_TILT) &&
 			(ck_gate_val & LIS2DS12_FUNC_CK_GATE_TILT_INT_MASK))
 		iio_push_event(cdata->iio_sensors_dev[LIS2DS12_TILT],
-					IIO_UNMOD_EVENT_CODE(STM_IIO_TILT, 0,
-					IIO_EV_TYPE_THRESH,
-					IIO_EV_DIR_EITHER),
-					cdata->timestamp);
+			       IIO_UNMOD_EVENT_CODE(STM_IIO_TILT, 0,
+			       IIO_EV_TYPE_THRESH,
+			       IIO_EV_DIR_EITHER),
+			       cdata->timestamp);
 
 	if (CHECK_BIT(cdata->enabled_sensor, LIS2DS12_SIGN_M) &&
 			(ck_gate_val & LIS2DS12_FUNC_CK_GATE_SIGN_M_DET_MASK))
 		iio_push_event(cdata->iio_sensors_dev[LIS2DS12_SIGN_M],
-					IIO_UNMOD_EVENT_CODE(STM_IIO_SIGN_MOTION, 0,
-					IIO_EV_TYPE_THRESH,
-					IIO_EV_DIR_EITHER),
-					cdata->timestamp);
+			       IIO_UNMOD_EVENT_CODE(STM_IIO_SIGN_MOTION, 0,
+			       IIO_EV_TYPE_THRESH,
+			       IIO_EV_DIR_EITHER),
+			       cdata->timestamp);
 }
 
 static inline s64 st_lis2ds12_ewma(s64 old, s64 new, int weight)
@@ -78,9 +78,8 @@ static inline s64 st_lis2ds12_ewma(s64 old, s64 new, int weight)
 
 static irqreturn_t lis2ds12_irq_handler(int irq, void *private)
 {
-	u8 ewma_level;
 	struct lis2ds12_data *cdata = private;
-	struct iio_dev *iio_dev = dev_to_iio_dev(cdata->dev);
+	u8 ewma_level;
 	s64 ts;
 
 	ewma_level = (cdata->common_odr >= 100) ? 120 : 96;
@@ -104,14 +103,17 @@ static irqreturn_t lis2ds12_irq_thread(int irq, void *private)
 		lis2ds12_read_fifo(cdata, true);
 		mutex_unlock(&cdata->fifo_lock);
 	} else {
-		cdata->tf->read(cdata, LIS2DS12_STATUS_DUP_ADDR, 1, &status, true);
+		cdata->tf->read(cdata, LIS2DS12_STATUS_DUP_ADDR, 1,
+				&status, true);
 		if (status & (LIS2DS12_DRDY_MASK))
 			lis2ds12_read_xyz(cdata);
 	}
 
 	if (cdata->enabled_sensor & ~(1 << LIS2DS12_ACCEL)) {
-		cdata->tf->read(cdata, LIS2DS12_FUNC_CK_GATE_ADDR, 1, &func, true);
-		cdata->tf->read(cdata, LIS2DS12_STATUS_DUP_ADDR, 1, &status, true);
+		cdata->tf->read(cdata, LIS2DS12_FUNC_CK_GATE_ADDR, 1,
+				&func, true);
+		cdata->tf->read(cdata, LIS2DS12_STATUS_DUP_ADDR, 1,
+				&status, true);
 		if (status & (LIS2DS12_EVENT_MASK | LIS2DS12_FUNC_CK_GATE_MASK))
 			lis2ds12_event_management(cdata, status, func);
 	}
@@ -120,7 +122,7 @@ static irqreturn_t lis2ds12_irq_thread(int irq, void *private)
 }
 
 int lis2ds12_allocate_triggers(struct lis2ds12_data *cdata,
-			     const struct iio_trigger_ops *trigger_ops)
+			       const struct iio_trigger_ops *trigger_ops)
 {
 	int err, i;
 
@@ -139,6 +141,8 @@ int lis2ds12_allocate_triggers(struct lis2ds12_data *cdata,
 	}
 
 	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++) {
+		if (!cdata->iio_sensors_dev[i])
+			continue;
 
 		cdata->iio_trig[i] = devm_iio_trigger_alloc(cdata->dev,
 					       "%s-trigger",

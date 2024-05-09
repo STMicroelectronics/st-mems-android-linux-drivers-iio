@@ -29,7 +29,7 @@
 		      LIS2DS12_TIMESTAMP_SIZE)
 
 static void lis2ds12_push_accel_data(struct lis2ds12_data *cdata,
-					u8 *acc_buf, u16 read_length)
+				     u8 *acc_buf, u16 read_length)
 {
 	size_t offset;
 	uint16_t i, j, k;
@@ -71,7 +71,8 @@ void lis2ds12_read_xyz(struct lis2ds12_data *cdata)
 	u8 xyz_buf[LIS2DS12_FIFO_BYTE_FOR_SAMPLE];
 
 	err = lis2ds12_read_register(cdata, LIS2DS12_OUTX_L_ADDR,
-				LIS2DS12_FIFO_BYTE_FOR_SAMPLE, xyz_buf, true);
+				     LIS2DS12_FIFO_BYTE_FOR_SAMPLE,
+				     xyz_buf, true);
 	if (err < 0)
 		return;
 
@@ -89,12 +90,11 @@ void lis2ds12_read_fifo(struct lis2ds12_data *cdata, bool check_fifo_len)
 #endif /* CONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO */
 
 	err = lis2ds12_read_register(cdata, LIS2DS12_FIFO_SRC, 2,
-							fifo_src, true);
+				     fifo_src, true);
 	if (err < 0)
 		return;
 
-	read_len = (fifo_src[0] & LIS2DS12_FIFO_SRC_DIFF_MASK) ?
-							(1 << 8) : 0;
+	read_len = (fifo_src[0] & LIS2DS12_FIFO_SRC_DIFF_MASK) ? (1 << 8) : 0;
 	read_len |= fifo_src[1];
 	read_len *= LIS2DS12_FIFO_BYTE_FOR_SAMPLE;
 
@@ -103,7 +103,7 @@ void lis2ds12_read_fifo(struct lis2ds12_data *cdata, bool check_fifo_len)
 
 #if (CONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO == 0)
 	err = lis2ds12_read_register(cdata, LIS2DS12_OUTX_L_ADDR, read_len,
-							cdata->fifo_data, true);
+				     cdata->fifo_data, true);
 	if (err < 0)
 		return;
 #else /* CONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO */
@@ -123,8 +123,11 @@ void lis2ds12_read_fifo(struct lis2ds12_data *cdata, bool check_fifo_len)
 				data_to_read = LIS2DS12_FIFO_BYTE_FOR_SAMPLE;
 		}
 
-		err = lis2ds12_read_register(cdata, LIS2DS12_OUTX_L_ADDR, data_to_read,
-							&cdata->fifo_data[read_len - data_remaining], true);
+		err = lis2ds12_read_register(cdata, LIS2DS12_OUTX_L_ADDR,
+					     data_to_read,
+					     &cdata->fifo_data[read_len -
+							       data_remaining],
+					     true);
 		if (err < 0)
 			return;
 
@@ -143,13 +146,13 @@ void lis2ds12_read_step_c(struct lis2ds12_data *cdata)
 	struct iio_dev *indio_dev = cdata->iio_sensors_dev[LIS2DS12_STEP_C];
 
 	err = lis2ds12_read_register(cdata, (u8)indio_dev->channels[0].address,
-								2, buffer, true);
+				     2, buffer, true);
 	if (err < 0)
 		goto lis2ds12_step_counter_done;
 
 	timestamp = cdata->timestamp;
 	if (indio_dev->scan_timestamp)
-		*(s64 *) ((u8 *) buffer +
+		*(s64 *)((u8 *) buffer +
 			ALIGN(LIS2DS12_FIFO_BYTE_X_AXIS, sizeof(s64))) =
 								timestamp;
 
@@ -209,6 +212,9 @@ int lis2ds12_allocate_rings(struct lis2ds12_data *cdata)
 	int err, i;
 
 	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++) {
+		if (!cdata->iio_sensors_dev[i])
+			continue;
+
 		err = devm_iio_triggered_buffer_setup(cdata->dev,
 						cdata->iio_sensors_dev[i],
 						&lis2ds12_handler_empty,

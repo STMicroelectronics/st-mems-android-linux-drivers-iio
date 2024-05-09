@@ -363,12 +363,16 @@ static int ism303dac_write_max_odr(struct ism303dac_sensor_data *sdata)
 	u8 power_mode = sdata->cdata->power_mode;
 	struct ism303dac_sensor_data *t_sdata;
 
-	for (i = 0; i < ISM303DAC_SENSORS_NUMB; i++)
+	for (i = 0; i < ISM303DAC_SENSORS_NUMB; i++) {
+		if (!sdata->cdata->iio_sensors_dev[i])
+			continue;
+
 		if (CHECK_BIT(sdata->cdata->enabled_sensor, i)) {
 			t_sdata = iio_priv(sdata->cdata->iio_sensors_dev[i]);
 			if (t_sdata->odr > max_odr)
 				max_odr = t_sdata->odr;
 		}
+	}
 
 	for (i = 0; i < ISM303DAC_ODR_LP_LIST_NUM; i++) {
 		if (ism303dac_odr_table.odr_avl[power_mode][i].hz >= max_odr)
@@ -553,6 +557,9 @@ static int ism303dac_init_sensors(struct ism303dac_data *cdata)
 	struct ism303dac_sensor_data *sdata;
 
 	for (i = 0; i < ISM303DAC_SENSORS_NUMB; i++) {
+		if (!cdata->iio_sensors_dev[i])
+			continue;
+
 		sdata = iio_priv(cdata->iio_sensors_dev[i]);
 
 		err = ism303dac_set_enable(sdata, false);
@@ -1199,7 +1206,8 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 	if (err < 0)
 		return err;
 
-	err = ism303dac_read_register(cdata, ISM303DAC_WHO_AM_I_ADDR, 1, &wai, true);
+	err = ism303dac_read_register(cdata, ISM303DAC_WHO_AM_I_ADDR, 1,
+				      &wai, true);
 	if (err < 0) {
 		dev_err(cdata->dev, "failed to read Who-Am-I register.\n");
 
@@ -1253,6 +1261,9 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 	cdata->power_mode = ISM303DAC_MODE_DEFAULT;
 
 	for (i = 0; i < ISM303DAC_SENSORS_NUMB; i++) {
+		if (ism303dac_skip_basic_features(i))
+			continue;
+
 		piio_dev = devm_iio_device_alloc(cdata->dev,
 					sizeof(struct ism303dac_sensor_data));
 		if (!piio_dev)
@@ -1290,6 +1301,9 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 	}
 
 	for (n = 0; n < ISM303DAC_SENSORS_NUMB; n++) {
+		if (!cdata->iio_sensors_dev[n])
+			continue;
+
 		err = devm_iio_device_register(cdata->dev,
 					       cdata->iio_sensors_dev[n]);
 		if (err)
