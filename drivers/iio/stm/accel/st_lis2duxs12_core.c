@@ -631,7 +631,7 @@ static int st_lis2duxs12_read_raw(struct iio_dev *iio_dev,
 	case IIO_CHAN_INFO_SCALE:
 		switch (ch->type) {
 		case IIO_TEMP:
-			*val = 1;
+			*val = 1000;
 			*val2 = ST_LIS2DUXS12_TEMP_GAIN;
 			ret = IIO_VAL_FRACTIONAL;
 			break;
