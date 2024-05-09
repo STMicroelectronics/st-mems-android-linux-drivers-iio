@@ -445,10 +445,8 @@ static int ism303dac_update_fifo(struct ism303dac_data *cdata, u16 watermark)
 {
 	int err;
 	int fifo_size;
-	struct iio_dev *indio_dev;
 
-	indio_dev = cdata->iio_sensors_dev[ISM303DAC_ACCEL];
-	cdata->timestamp = ism303dac_get_time_ns(indio_dev);
+	cdata->timestamp = ism303dac_get_time_ns(cdata);
 	cdata->sample_timestamp = cdata->timestamp;
 	cdata->samples = 0;
 
@@ -986,7 +984,7 @@ ssize_t ism303dac_sysfs_flush_fifo(struct device *dev,
 		return -EINVAL;
 	}
 
-	sensor_last_timestamp = ism303dac_get_time_ns(indio_dev);
+	sensor_last_timestamp = ism303dac_get_time_ns(sdata->cdata);
 
 	mutex_lock(&sdata->cdata->fifo_lock);
 	ism303dac_read_fifo(sdata->cdata, true);

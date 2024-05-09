@@ -285,9 +285,9 @@ struct ism303dac_data {
 	struct ism303dac_transfer_buffer tb;
 };
 
-static inline s64 ism303dac_get_time_ns(struct iio_dev *iio_sensors_dev)
+static inline s64 ism303dac_get_time_ns(struct ism303dac_data *cdata)
 {
-	return iio_get_time_ns(iio_sensors_dev);
+	return iio_get_time_ns(cdata->iio_sensors_dev[ISM303DAC_ACCEL]);
 }
 
 static inline int ism303dac_iio_dev_currentmode(struct iio_dev *indio_dev)

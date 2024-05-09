@@ -61,7 +61,7 @@ static irqreturn_t ism303dac_irq_handler(int irq, void *private)
 	s64 ts;
 
 	ewma_level = (cdata->common_odr >= 100) ? 120 : 96;
-	ts = ism303dac_get_time_ns(cdata->iio_sensors_dev[ISM303DAC_ACCEL]);
+	ts = ism303dac_get_time_ns(cdata);
 	cdata->accel_deltatime = st_ism303dac_ewma(cdata->accel_deltatime,
 						   ts - cdata->timestamp,
 						   ewma_level);
