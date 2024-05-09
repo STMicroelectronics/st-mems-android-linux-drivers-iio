@@ -122,69 +122,52 @@ static irqreturn_t lis2ds12_irq_thread(int irq, void *private)
 int lis2ds12_allocate_triggers(struct lis2ds12_data *cdata,
 			     const struct iio_trigger_ops *trigger_ops)
 {
-	int err, i, n;
+	int err, i;
 
-	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)
-		cdata->iio_trig[i] = iio_trigger_alloc(cdata->dev,
-						"%s-trigger",
-						cdata->iio_sensors_dev[i]->name);
-#else /* LINUX_VERSION_CODE */
-		cdata->iio_trig[i] = iio_trigger_alloc("%s-trigger",
-						cdata->iio_sensors_dev[i]->name);
-#endif /* LINUX_VERSION_CODE */
-
-		if (!cdata->iio_trig[i]) {
-			dev_err(cdata->dev, "failed to allocate iio trigger.\n");
-			err = -ENOMEM;
-
-			goto deallocate_trigger;
-		}
-		iio_trigger_set_drvdata(cdata->iio_trig[i],
-						cdata->iio_sensors_dev[i]);
-		cdata->iio_trig[i]->ops = trigger_ops;
-		cdata->iio_trig[i]->dev.parent = cdata->dev;
-	}
-
-	err = request_threaded_irq(cdata->irq,
+	err = devm_request_threaded_irq(cdata->dev,
+					cdata->irq,
 					lis2ds12_irq_handler,
 					lis2ds12_irq_thread,
 					IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
 					cdata->name, cdata);
-	if (err)
-		goto deallocate_trigger;
+	if (err) {
+		dev_err(cdata->dev,
+			"failed to request threaded irq %d.\n",
+			cdata->irq);
 
-	for (n = 0; n < LIS2DS12_SENSORS_NUMB; n++) {
-		err = iio_trigger_register(cdata->iio_trig[n]);
-		if (err < 0) {
-			dev_err(cdata->dev, "failed to register iio trigger.\n");
+		return err;
+	}
 
-			goto free_irq;
+	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++) {
+
+		cdata->iio_trig[i] = devm_iio_trigger_alloc(cdata->dev,
+					       "%s-trigger",
+					       cdata->iio_sensors_dev[i]->name);
+		if (!cdata->iio_trig[i]) {
+			dev_err(cdata->dev,
+				"failed to allocate iio trigger.\n");
+			err = -ENOMEM;
+
+			return err;
 		}
-		cdata->iio_sensors_dev[n]->trig = cdata->iio_trig[n];
+		iio_trigger_set_drvdata(cdata->iio_trig[i],
+					cdata->iio_sensors_dev[i]);
+		cdata->iio_trig[i]->ops = trigger_ops;
+		cdata->iio_trig[i]->dev.parent = cdata->dev;
+
+		err = devm_iio_trigger_register(cdata->dev, cdata->iio_trig[i]);
+		if (err < 0) {
+			dev_err(cdata->dev,
+				"failed to register iio trigger.\n");
+
+			return err;
+		}
+
+		cdata->iio_sensors_dev[i]->trig =
+					    iio_trigger_get(cdata->iio_trig[i]);
 	}
 
 	return 0;
-
-free_irq:
-	free_irq(cdata->irq, cdata);
-	for (n--; n >= 0; n--)
-		iio_trigger_unregister(cdata->iio_trig[n]);
-deallocate_trigger:
-	for (i--; i >= 0; i--)
-		iio_trigger_free(cdata->iio_trig[i]);
-
-	return err;
 }
 EXPORT_SYMBOL(lis2ds12_allocate_triggers);
 
-void lis2ds12_deallocate_triggers(struct lis2ds12_data *cdata)
-{
-	int i;
-
-	free_irq(cdata->irq, cdata);
-
-	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++)
-		iio_trigger_unregister(cdata->iio_trig[i]);
-}
-EXPORT_SYMBOL(lis2ds12_deallocate_triggers);

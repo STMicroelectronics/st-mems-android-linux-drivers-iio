@@ -37,8 +37,9 @@ static int lis2ds12_i2c_read(struct lis2ds12_data *cdata,
 		mutex_lock(&cdata->regs_lock);
 		err = i2c_transfer(client->adapter, msg, 2);
 		mutex_unlock(&cdata->regs_lock);
-	} else
+	} else {
 		err = i2c_transfer(client->adapter, msg, 2);
+	}
 
 	return err;
 }
@@ -83,10 +84,9 @@ static const struct lis2ds12_transfer_function lis2ds12_tf_i2c = {
 static int lis2ds12_i2c_probe(struct i2c_client *client,
 			    const struct i2c_device_id *id)
 {
-	int err;
 	struct lis2ds12_data *cdata;
 
-	cdata = kzalloc(sizeof(*cdata), GFP_KERNEL);
+	cdata = devm_kzalloc(&client->dev, sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
 		return -ENOMEM;
 
@@ -95,38 +95,8 @@ static int lis2ds12_i2c_probe(struct i2c_client *client,
 	cdata->tf = &lis2ds12_tf_i2c;
 	i2c_set_clientdata(client, cdata);
 
-	err = lis2ds12_common_probe(cdata, client->irq);
-	if (err < 0)
-		goto free_data;
-
-	return 0;
-
-free_data:
-	kfree(cdata);
-	return err;
+	return lis2ds12_common_probe(cdata, client->irq);
 }
-
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void lis2ds12_i2c_remove(struct i2c_client *client)
-{
-	struct lis2ds12_data *cdata = i2c_get_clientdata(client);
-
-	lis2ds12_common_remove(cdata, client->irq);
-	dev_info(cdata->dev, "%s: removed\n", LIS2DS12_DEV_NAME);
-	kfree(cdata);
-}
-#else /* LINUX_VERSION_CODE */
-static int lis2ds12_i2c_remove(struct i2c_client *client)
-{
-	struct lis2ds12_data *cdata = i2c_get_clientdata(client);
-
-	lis2ds12_common_remove(cdata, client->irq);
-	dev_info(cdata->dev, "%s: removed\n", LIS2DS12_DEV_NAME);
-	kfree(cdata);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
 
 #ifdef CONFIG_PM
 static int __maybe_unused lis2ds12_suspend(struct device *dev)
@@ -182,7 +152,6 @@ static struct i2c_driver lis2ds12_i2c_driver = {
 #endif
 		   },
 	.probe = lis2ds12_i2c_probe,
-	.remove = lis2ds12_i2c_remove,
 	.id_table = lis2ds12_ids,
 };
 

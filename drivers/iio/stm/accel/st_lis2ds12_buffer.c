@@ -209,28 +209,14 @@ int lis2ds12_allocate_rings(struct lis2ds12_data *cdata)
 	int err, i;
 
 	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++) {
-		err = iio_triggered_buffer_setup(
-				cdata->iio_sensors_dev[i],
-				&lis2ds12_handler_empty,
-				NULL,
-				&lis2ds12_buffer_setup_ops);
+		err = devm_iio_triggered_buffer_setup(cdata->dev,
+						cdata->iio_sensors_dev[i],
+						&lis2ds12_handler_empty,
+						NULL,
+						&lis2ds12_buffer_setup_ops);
 		if (err < 0)
-			goto buffer_cleanup;
+			return err;
 	}
 
 	return 0;
-
-buffer_cleanup:
-	for (i--; i >= 0; i--)
-		iio_triggered_buffer_cleanup(cdata->iio_sensors_dev[i]);
-
-	return err;
-}
-
-void lis2ds12_deallocate_rings(struct lis2ds12_data *cdata)
-{
-	int i;
-
-	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++)
-		iio_triggered_buffer_cleanup(cdata->iio_sensors_dev[i]);
 }

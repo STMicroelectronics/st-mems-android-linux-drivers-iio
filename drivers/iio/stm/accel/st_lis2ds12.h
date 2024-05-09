@@ -346,11 +346,8 @@ int lis2ds12_read_register(struct lis2ds12_data *cdata, u8 reg_addr,
 int lis2ds12_update_drdy_irq(struct lis2ds12_sensor_data *sdata, bool state);
 int lis2ds12_set_enable(struct lis2ds12_sensor_data *sdata, bool enable);
 int lis2ds12_update_fifo(struct lis2ds12_data *cdata, u16 watermark);
-void lis2ds12_common_remove(struct lis2ds12_data *cdata, int irq);
 void lis2ds12_read_xyz(struct lis2ds12_data *cdata);
 void lis2ds12_read_fifo(struct lis2ds12_data *cdata, bool check_fifo_len);
 void lis2ds12_read_step_c(struct lis2ds12_data *cdata);
-void lis2ds12_deallocate_rings(struct lis2ds12_data *cdata);
-void lis2ds12_deallocate_triggers(struct lis2ds12_data *cdata);
 
 #endif /* __LIS2DS12_H */

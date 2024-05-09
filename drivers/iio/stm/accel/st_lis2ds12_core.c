@@ -1424,14 +1424,11 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 	cdata->power_mode = LIS2DS12_MODE_DEFAULT;
 
 	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++) {
-		piio_dev =
-			devm_iio_device_alloc(cdata->dev,
-					      sizeof(struct lis2ds12_sensor_data *));
-		if (piio_dev == NULL) {
-			err = -ENOMEM;
 
-			goto iio_device_free;
-		}
+		piio_dev = devm_iio_device_alloc(cdata->dev,
+					   sizeof(struct lis2ds12_sensor_data));
+		if (!piio_dev)
+			return -ENOMEM;
 
 		cdata->iio_sensors_dev[i] = piio_dev;
 		sdata = iio_priv(piio_dev);
@@ -1452,59 +1449,30 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 
 	err = lis2ds12_init_sensors(cdata);
 	if (err < 0)
-		goto iio_device_free;
+		return err;
 
 	err = lis2ds12_allocate_rings(cdata);
 	if (err < 0)
-		goto iio_device_free;
+		return err;
 
 	if (irq > 0) {
 		err = lis2ds12_allocate_triggers(cdata, LIS2DS12_TRIGGER_OPS);
 		if (err < 0)
-			goto deallocate_ring;
+			return err;
 	}
 
 	for (n = 0; n < LIS2DS12_SENSORS_NUMB; n++) {
-		err = iio_device_register(cdata->iio_sensors_dev[n]);
+		err = devm_iio_device_register(cdata->dev,
+					       cdata->iio_sensors_dev[n]);
 		if (err)
-			goto iio_device_unregister_and_trigger_deallocate;
+			return err;
 	}
 
 	dev_info(cdata->dev, "%s: probed\n", LIS2DS12_DEV_NAME);
+
 	return 0;
-
-iio_device_unregister_and_trigger_deallocate:
-	for (n--; n >= 0; n--)
-		iio_device_unregister(cdata->iio_sensors_dev[n]);
-
-deallocate_ring:
-	lis2ds12_deallocate_rings(cdata);
-
-iio_device_free:
-	for (i--; i >= 0; i--)
-		iio_device_free(cdata->iio_sensors_dev[i]);
-
-	return err;
 }
 EXPORT_SYMBOL(lis2ds12_common_probe);
-
-void lis2ds12_common_remove(struct lis2ds12_data *cdata, int irq)
-{
-	int i;
-
-	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++)
-		iio_device_unregister(cdata->iio_sensors_dev[i]);
-
-	if (irq > 0)
-		lis2ds12_deallocate_triggers(cdata);
-
-	lis2ds12_deallocate_rings(cdata);
-
-	for (i = 0; i < LIS2DS12_SENSORS_NUMB; i++)
-		iio_device_free(cdata->iio_sensors_dev[i]);
-}
-
-EXPORT_SYMBOL(lis2ds12_common_remove);
 
 #ifdef CONFIG_PM
 int lis2ds12_common_suspend(struct lis2ds12_data *cdata)

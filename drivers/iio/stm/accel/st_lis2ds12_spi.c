@@ -97,10 +97,9 @@ static const struct lis2ds12_transfer_function lis2ds12_tf_spi = {
 
 static int lis2ds12_spi_probe(struct spi_device *spi)
 {
-	int err;
 	struct lis2ds12_data *cdata;
 
-	cdata = kzalloc(sizeof(*cdata), GFP_KERNEL);
+	cdata = devm_kzalloc(&spi->dev, sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
 		return -ENOMEM;
 
@@ -109,38 +108,8 @@ static int lis2ds12_spi_probe(struct spi_device *spi)
 	cdata->tf = &lis2ds12_tf_spi;
 	spi_set_drvdata(spi, cdata);
 
-	err = lis2ds12_common_probe(cdata, spi->irq);
-	if (err < 0)
-		goto free_data;
-
-	return 0;
-
-free_data:
-	kfree(cdata);
-	return err;
+	return lis2ds12_common_probe(cdata, spi->irq);
 }
-
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void lis2ds12_spi_remove(struct spi_device *spi)
-{
-	struct lis2ds12_data *cdata = spi_get_drvdata(spi);
-
-	lis2ds12_common_remove(cdata, spi->irq);
-	dev_info(cdata->dev, "%s: removed\n", LIS2DS12_DEV_NAME);
-	kfree(cdata);
-}
-#else /* LINUX_VERSION_CODE */
-static int lis2ds12_spi_remove(struct spi_device *spi)
-{
-	struct lis2ds12_data *cdata = spi_get_drvdata(spi);
-
-	lis2ds12_common_remove(cdata, spi->irq);
-	dev_info(cdata->dev, "%s: removed\n", LIS2DS12_DEV_NAME);
-	kfree(cdata);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
 
 #ifdef CONFIG_PM
 static int __maybe_unused lis2ds12_suspend(struct device *dev)
@@ -196,7 +165,6 @@ static struct spi_driver lis2ds12_spi_driver = {
 #endif /* CONFIG_OF */
 		   },
 	.probe = lis2ds12_spi_probe,
-	.remove = lis2ds12_spi_remove,
 	.id_table = lis2ds12_ids,
 };
 
