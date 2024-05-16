@@ -17,6 +17,7 @@
 #include <linux/iio/events.h>
 #include <linux/pm.h>
 #include <linux/interrupt.h>
+#include <linux/spi/spi.h>
 #include <linux/version.h>
 #include <linux/of.h>
 #include <linux/regulator/consumer.h>
@@ -308,11 +309,26 @@ st_lis2duxs12_reg_access(struct iio_dev *iio_dev, unsigned int reg,
 
 static int st_lis2duxs12_power_up_command(struct st_lis2duxs12_hw *hw)
 {
+	struct device *dev = regmap_get_device(hw->regmap);
 	int data;
 
-	regmap_read(hw->regmap, ST_LIS2DUXS12_WHOAMI_ADDR, &data);
+	if (dev->bus == &spi_bus_type) {
+		int err;
+
+		/* power-up command on SPI */
+		err = regmap_write(hw->regmap,
+				   ST_LIS2DUXS12_EN_DEVICE_CONFIG_ADDR,
+				   FIELD_PREP(ST_LIS2DUXS12_SOFT_PD_MASK, 1));
+		if (err < 0)
+			return err;
+	} else {
+		/* power-up command on I2C */
+		regmap_read(hw->regmap, ST_LIS2DUXS12_WHOAMI_ADDR, &data);
+	}
 
 	usleep_range(25000, 26000);
+
+	regmap_read(hw->regmap, ST_LIS2DUXS12_WHOAMI_ADDR, &data);
 
 	return data;
 }
