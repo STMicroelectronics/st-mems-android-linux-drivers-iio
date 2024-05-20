@@ -17,6 +17,7 @@
 
 #define ST_ISM330DHCX_REG_MASTER_CONFIG_ADDR	0x14
 #define ST_ISM330DHCX_REG_WRITE_ONCE_MASK		BIT(6)
+#define ST_ISM330DHCX_REG_SHUB_PU_EN_MASK		BIT(3)
 #define ST_ISM330DHCX_REG_MASTER_ON_MASK		BIT(2)
 
 #define ST_ISM330DHCX_REG_SLV0_ADDR		0x15
@@ -402,7 +403,7 @@ static int st_ism330dhcx_shub_write(struct st_ism330dhcx_sensor *sensor, u8 addr
 {
 	struct st_ism330dhcx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	struct st_ism330dhcx_hw *hw = sensor->hw;
-	u8 mconfig = ST_ISM330DHCX_REG_WRITE_ONCE_MASK | 3;
+	u8 mconfig = ST_ISM330DHCX_REG_WRITE_ONCE_MASK | 3 | hw->i2c_master_pu;
 	u8 config[3] = {};
 	int err, i;
 
@@ -928,9 +929,29 @@ int st_ism330dhcx_shub_probe(struct st_ism330dhcx_hw *hw)
 {
 	const struct st_ism330dhcx_ext_dev_settings *settings;
 	struct st_ism330dhcx_sensor *acc_sensor, *sensor;
+	struct device_node *np = hw->dev->of_node;
 	u8 config[3], data, num_ext_dev = 0;
 	enum st_ism330dhcx_sensor_id id;
 	int err, i = 0, j;
+
+	if (np && of_property_read_bool(np, "drive-pullup-shub")) {
+		dev_info(hw->dev, "enabling pull up on i2c master\n");
+		err = st_ism330dhcx_shub_read_reg(hw,
+				   ST_ISM330DHCX_REG_MASTER_CONFIG_ADDR,
+				   &data, sizeof(data));
+		if (err < 0)
+			return err;
+
+		data |= ST_ISM330DHCX_REG_SHUB_PU_EN_MASK;
+		err = st_ism330dhcx_shub_write_reg(hw,
+				   ST_ISM330DHCX_REG_MASTER_CONFIG_ADDR,
+				   &data, sizeof(data));
+
+		if (err < 0)
+			return err;
+
+		hw->i2c_master_pu = ST_ISM330DHCX_REG_SHUB_PU_EN_MASK;
+	}
 
 	acc_sensor = iio_priv(hw->iio_devs[ST_ISM330DHCX_ID_ACC]);
 	while (i < ARRAY_SIZE(st_ism330dhcx_ext_dev_table) &&
@@ -1000,7 +1021,9 @@ int st_ism330dhcx_shub_probe(struct st_ism330dhcx_hw *hw)
 		return err;
 
 	/* AuxSens = 3 + wr once */
-	data = ST_ISM330DHCX_REG_WRITE_ONCE_MASK | 3;
-	return st_ism330dhcx_shub_write_reg(hw, ST_ISM330DHCX_REG_MASTER_CONFIG_ADDR,
-					 &data, sizeof(data));
+	data = ST_ISM330DHCX_REG_WRITE_ONCE_MASK | 3 | hw->i2c_master_pu;
+
+	return st_ism330dhcx_shub_write_reg(hw,
+					   ST_ISM330DHCX_REG_MASTER_CONFIG_ADDR,
+					   &data, sizeof(data));
 }

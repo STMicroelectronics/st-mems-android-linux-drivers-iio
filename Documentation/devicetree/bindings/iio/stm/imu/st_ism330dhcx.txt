@@ -8,30 +8,32 @@ Required properties for the i2c bindings:
 - reg: i2c slave address
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
-- spi-max-frequency: maximal bus speed, should be set to 1000000 unless
-                     constrained by external circuitry
+- reg:                the chipselect index
+- spi-max-frequency:  maximal bus speed, should be set to 1000000 unless
+                      constrained by external circuitry
 
-Optional properties for all bus drivers:
-- st,int-pin:       the pin on the package that will be used to signal
-                    "data ready" (valid values: 1 or 2, default: 1).
+Optional properties  for all bus drivers:
+- st,int-pin:        the pin on the package that will be used to signal
+                     "data ready" (valid values: 1 or 2, default: 1).
 
-- drive-open-drain: the interrupt/data ready line will be configured as open drain,
-                    which is useful if several sensors share the same interrupt line.
+- drive-open-drain:  the interrupt/data ready line will be configured as open drain,
+                     which is useful if several sensors share the same interrupt line.
 
-- interrupts:       interrupt mapping for IRQ. It should be configured with
-                    flags IRQ_TYPE_LEVEL_HIGH, IRQ_TYPE_EDGE_RISING,
-                    IRQ_TYPE_LEVEL_LOW or IRQ_TYPE_EDGE_FALLING.
+- interrupts:        interrupt mapping for IRQ. It should be configured with
+                     flags IRQ_TYPE_LEVEL_HIGH, IRQ_TYPE_EDGE_RISING,
+                     IRQ_TYPE_LEVEL_LOW or IRQ_TYPE_EDGE_FALLING.
 
-                    Refer to interrupt-controller/interrupts.txt for generic interrupt
-                    client node bindings.
+                     Refer to interrupt-controller/interrupts.txt for generic interrupt
+                     client node bindings.
 
-- st,module_id:     module identifier.
-                    This is used by user-space to identify which devices
-                    are part of the same module (particularly important for
-                    supporting multiple sensors of the same type).
+- drive-pullup-shub: enable pull up on the i2c master interface. Default is disabled.
 
-- wakeup-source:    https://www.kernel.org/doc/Documentation/devicetree/bindings/power/wakeup-source.txt
+- st,module_id:      module identifier.
+                     This is used by user-space to identify which devices
+                     are part of the same module (particularly important for
+                     supporting multiple sensors of the same type).
+
+- wakeup-source:     https://www.kernel.org/doc/Documentation/devicetree/bindings/power/wakeup-source.txt
 
 Example for an spi device node:
 

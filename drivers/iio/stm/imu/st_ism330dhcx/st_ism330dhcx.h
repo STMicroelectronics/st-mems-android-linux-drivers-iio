@@ -455,6 +455,7 @@ struct st_ism330dhcx_sensor {
  * delta_ts: Delta time between two consecutive interrupts.
  * delta_hw_ts:
  * ts: Latest timestamp from irq handler.
+ * @i2c_master_pu: I2C master line Pull Up configuration.
  * @module_id: identify iio devices of the same sensor module.
  * iio_devs: Pointers to acc/gyro iio_dev instances.
  * tf: Transfer function structure used by I/O operations.
@@ -490,6 +491,7 @@ struct st_ism330dhcx_hw {
 	s64 tsample;
 	s64 delta_ts;
 	s64 ts;
+	u8 i2c_master_pu;
 	u32 module_id;
 
 	struct iio_dev *iio_devs[ST_ISM330DHCX_ID_MAX];
