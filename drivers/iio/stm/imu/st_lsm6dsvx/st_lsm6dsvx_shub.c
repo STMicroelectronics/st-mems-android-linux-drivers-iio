@@ -9,6 +9,7 @@
 
 #include <asm/unaligned.h>
 #include <linux/delay.h>
+#include <linux/i2c.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
 #include <linux/module.h>
@@ -184,7 +185,7 @@ static inline void st_lsm6dsvx_shub_wait_complete(struct st_lsm6dsvx_hw *hw,
 					      struct st_lsm6dsvx_sensor *sensor)
 {
 	struct st_lsm6dsvx_sensor *acc_sensor;
-	int delay;
+	int delay, data, trycount = 3;
 	u16 odr, accel_odr;
 
 	acc_sensor = iio_priv(hw->iio_devs[ST_LSM6DSVX_ID_ACC]);
@@ -193,9 +194,21 @@ static inline void st_lsm6dsvx_shub_wait_complete(struct st_lsm6dsvx_hw *hw,
 	accel_odr = hw->odr_table[ST_LSM6DSVX_ID_ACC].odr_avl[0].hz;
 	odr = (hw->enable_mask & BIT(ST_LSM6DSVX_ID_ACC)) ?
 	      acc_sensor->odr : max_t(int, sensor->odr, accel_odr);
-	delay = 2000000U / odr + 1;
 
-	usleep_range(delay, 2 * delay);
+	/* just to be sure stay 10% more than one requested ODR */
+	delay = (1100000U / odr) + 1;
+	do {
+		usleep_range(delay, delay + 1000);
+
+		regmap_bulk_read(hw->regmap,
+				 ST_LSM6DSVX_STATUS_MASTER_MAINPAGE_ADDR,
+				 (unsigned int *)&data, 1);
+
+		if (data & ST_LSM6DSVX_SENS_HUB_ENDOP_MASK)
+			break;
+
+		trycount--;
+	} while (trycount > 0);
 }
 
 /**
@@ -321,7 +334,7 @@ int st_lsm6dsvx_shub_read(struct st_lsm6dsvx_sensor *sensor,
 	u8 config[3];
 	int err;
 
-	config[0] = (ext_info->ext_dev_i2c_addr << 1) | 1;
+	config[0] = (ext_info->ext_dev_i2c_addr << 1) | I2C_M_RD;
 	config[1] = addr;
 	config[2] = len & 0x7;
 
@@ -457,7 +470,7 @@ st_lsm6dsvx_shub_config_channels(struct st_lsm6dsvx_sensor *sensor,
 			continue;
 
 		ext_info = &cur_sensor->ext_dev_info;
-		config[j] = (ext_info->ext_dev_i2c_addr << 1) | 1;
+		config[j] = (ext_info->ext_dev_i2c_addr << 1) | I2C_M_RD;
 		config[j + 1] = ext_info->ext_dev_settings->ext_channels[0].address;
 		config[j + 2] = ST_LSM6DSVX_REG_BATCH_EXT_SENS_EN_MASK |
 				(ext_info->ext_dev_settings->data_len &
@@ -544,9 +557,12 @@ int st_lsm6dsvx_shub_set_enable(struct st_lsm6dsvx_sensor *sensor, bool enable)
 	struct st_lsm6dsvx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	int err;
 
-	err = st_lsm6dsvx_shub_config_channels(sensor, enable);
-	if (err < 0)
-		return err;
+	/* use fifo configuration when available */
+	if (sensor->hw->has_hw_fifo) {
+		err = st_lsm6dsvx_shub_config_channels(sensor, enable);
+		if (err < 0)
+			return err;
+	}
 
 	if (enable) {
 		err = st_lsm6dsvx_shub_set_odr(sensor, sensor->odr);
@@ -894,10 +910,10 @@ int st_lsm6dsvx_shub_probe(struct st_lsm6dsvx_hw *hw)
 {
 	const struct st_lsm6dsvx_ext_dev_settings *settings;
 	struct st_lsm6dsvx_sensor *acc_sensor, *sensor;
+	struct device_node *np = hw->dev->of_node;
 	u8 config[3], data, num_ext_dev = 0;
 	enum st_lsm6dsvx_sensor_id id;
-	int err, i = 0, j;
-	struct device_node *np = hw->dev->of_node;
+	int err, i = 0, j, odr_save;
 
 	if (np && of_property_read_bool(np, "drive-pullup-shub")) {
 		dev_info(hw->dev, "enabling pull up on i2c master\n");
@@ -911,6 +927,11 @@ int st_lsm6dsvx_shub_probe(struct st_lsm6dsvx_hw *hw)
 	}
 
 	acc_sensor = iio_priv(hw->iio_devs[ST_LSM6DSVX_ID_ACC]);
+	odr_save = acc_sensor->odr;
+
+	/* speed up I2C master to max frequency */
+	acc_sensor->odr = hw->odr_table[ST_LSM6DSVX_ID_ACC].odr_avl[4].hz;
+
 	while (i < ARRAY_SIZE(st_lsm6dsvx_ext_dev_table) &&
 	       num_ext_dev < ST_LSM6DSVX_MAX_SLV_NUM) {
 		settings = &st_lsm6dsvx_ext_dev_table[i];
@@ -919,7 +940,7 @@ int st_lsm6dsvx_shub_probe(struct st_lsm6dsvx_hw *hw)
 				continue;
 
 			/* read wai slave register */
-			config[0] = (settings->i2c_addr[j] << 1) | 1;
+			config[0] = (settings->i2c_addr[j] << 1) | I2C_M_RD;
 			config[1] = settings->wai_addr;
 			config[2] = 0x1;
 
@@ -933,7 +954,7 @@ int st_lsm6dsvx_shub_probe(struct st_lsm6dsvx_hw *hw)
 			if (err < 0)
 				return err;
 
-			st_lsm6dsvx_shub_wait_complete(hw, sensor);
+			st_lsm6dsvx_shub_wait_complete(hw, acc_sensor);
 
 			err = st_lsm6dsvx_shub_read_reg(hw,
 				      ST_LSM6DSVX_REG_SENSOR_HUB_1_ADDR,
@@ -960,12 +981,18 @@ int st_lsm6dsvx_shub_probe(struct st_lsm6dsvx_hw *hw)
 				return err;
 
 			num_ext_dev++;
-			hw->ext_data_len += settings->data_len;
+
+			/* in case of fifo set the SHUB register offset */
+			if (hw->has_hw_fifo)
+				hw->ext_data_len += settings->data_len;
 			break;
 		}
 
 		i++;
 	}
+
+	/* restore I2C master trigger ODR */
+	acc_sensor->odr = odr_save;
 
 	if (!num_ext_dev)
 		return 0;
