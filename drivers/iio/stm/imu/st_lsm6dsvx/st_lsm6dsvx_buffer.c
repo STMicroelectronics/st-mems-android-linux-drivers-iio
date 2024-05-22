@@ -742,19 +742,19 @@ static irqreturn_t st_lsm6dsvx_buffer_pollfunc(int irq, void *private)
 	switch (indio_dev->channels[0].type) {
 	case IIO_ACCEL:
 	case IIO_ANGL_VEL:
-		st_lsm6dsvx_read_locked(hw, addr, &iio_buf,
+		st_lsm6dsvx_read_locked(hw, addr, iio_buf,
 					ST_LSM6DSVX_SAMPLE_SIZE);
 		break;
 	case IIO_TEMP:
-		st_lsm6dsvx_read_locked(hw, addr, &iio_buf,
+		st_lsm6dsvx_read_locked(hw, addr, iio_buf,
 					ST_LSM6DSVX_PT_SAMPLE_SIZE);
 		break;
 	case IIO_PRESSURE:
-		st_lsm6dsvx_shub_read(sensor, addr, (u8 *)&iio_buf,
+		st_lsm6dsvx_shub_read(sensor, addr, (u8 *)iio_buf,
 				      ST_LSM6DSVX_PT_SAMPLE_SIZE);
 		break;
 	case IIO_MAGN:
-		st_lsm6dsvx_shub_read(sensor, addr, (u8 *)&iio_buf,
+		st_lsm6dsvx_shub_read(sensor, addr, (u8 *)iio_buf,
 				      ST_LSM6DSVX_SAMPLE_SIZE);
 		break;
 	default:
