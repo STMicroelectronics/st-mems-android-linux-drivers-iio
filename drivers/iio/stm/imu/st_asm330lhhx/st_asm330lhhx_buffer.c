@@ -13,6 +13,9 @@
 #include <linux/iio/kfifo_buf.h>
 #include <linux/iio/events.h>
 #include <linux/iio/buffer.h>
+#include <linux/iio/trigger.h>
+#include <linux/iio/triggered_buffer.h>
+#include <linux/iio/trigger_consumer.h>
 #include <asm/unaligned.h>
 #include <linux/iio/buffer.h>
 #include <linux/version.h>
@@ -438,6 +441,12 @@ ssize_t st_asm330lhhx_set_watermark(struct device *dev,
 	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
+	if (!sensor->hw->has_hw_fifo) {
+		err = -EINVAL;
+
+		return err;
+	}
+
 	err = iio_device_claim_direct_mode(iio_dev);
 	if (err)
 		return err;
@@ -471,6 +480,9 @@ ssize_t st_asm330lhhx_flush_fifo(struct device *dev,
 	s64 fts;
 	s64 ts;
 
+	if (!hw->has_hw_fifo)
+		return -EINVAL;
+
 	mutex_lock(&hw->fifo_lock);
 	ts = st_asm330lhhx_get_time_ns(iio_dev);
 	hw->delta_ts = ts - hw->ts;
@@ -493,6 +505,9 @@ int st_asm330lhhx_suspend_fifo(struct st_asm330lhhx_hw *hw)
 {
 	int err;
 
+	if (!hw->has_hw_fifo)
+		return 0;
+
 	mutex_lock(&hw->fifo_lock);
 	st_asm330lhhx_read_fifo(hw);
 	err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_BYPASS);
@@ -507,6 +522,9 @@ int st_asm330lhhx_update_batching(struct iio_dev *iio_dev, bool enable)
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	int err;
 
+	if (!hw->has_hw_fifo)
+		return 0;
+
 	disable_irq(hw->irq);
 
 	err = st_asm330lhhx_set_sensor_batching_odr(sensor, enable);
@@ -515,10 +533,10 @@ int st_asm330lhhx_update_batching(struct iio_dev *iio_dev, bool enable)
 	return err;
 }
 
-static int st_asm330lhhx_update_fifo(struct iio_dev *iio_dev,
-				     bool enable)
+static int
+st_asm330lhhx_update_fifo(struct st_asm330lhhx_sensor *sensor,
+			  bool enable)
 {
-	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	int err;
 
@@ -580,6 +598,26 @@ out:
 	return err;
 }
 
+static int st_asm330lhhx_update_enable(struct st_asm330lhhx_sensor *sensor,
+				       bool enable)
+{
+	if (sensor->id == ST_ASM330LHHX_ID_EXT0 ||
+	    sensor->id == ST_ASM330LHHX_ID_EXT1)
+		return st_asm330lhhx_shub_set_enable(sensor, enable);
+
+	return st_asm330lhhx_sensor_set_enable(sensor, enable);
+}
+
+static int st_asm330lhhx_buffer_enable(struct iio_dev *iio_dev, bool enable)
+{
+	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
+
+	if (sensor->hw->has_hw_fifo)
+		return st_asm330lhhx_update_fifo(sensor, enable);
+
+	return st_asm330lhhx_update_enable(sensor, enable);
+}
+
 static irqreturn_t st_asm330lhhx_handler_irq(int irq, void *private)
 {
 	struct st_asm330lhhx_hw *hw = (struct st_asm330lhhx_hw *)private;
@@ -605,31 +643,159 @@ static irqreturn_t st_asm330lhhx_handler_thread(int irq, void *private)
 
 #ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
 	return st_asm330lhhx_event_handler(hw);
-#else /* CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES */
-	return IRQ_HANDLED;
 #endif /* CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES */
+
+	return IRQ_HANDLED;
 }
 
 static int st_asm330lhhx_fifo_preenable(struct iio_dev *iio_dev)
 {
-	return st_asm330lhhx_update_fifo(iio_dev, true);
+	return st_asm330lhhx_buffer_enable(iio_dev, true);
 }
 
 static int st_asm330lhhx_fifo_postdisable(struct iio_dev *iio_dev)
 {
-	return st_asm330lhhx_update_fifo(iio_dev, false);
+	return st_asm330lhhx_buffer_enable(iio_dev, false);
 }
 
-static const struct iio_buffer_setup_ops st_asm330lhhx_fifo_ops = {
+static const struct iio_buffer_setup_ops st_asm330lhhx_buffer_setup_ops = {
 	.preenable = st_asm330lhhx_fifo_preenable,
+#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
+	.postenable = iio_triggered_buffer_postenable,
+	.predisable = iio_triggered_buffer_predisable,
+#endif /* LINUX_VERSION_CODE */
 	.postdisable = st_asm330lhhx_fifo_postdisable,
+ };
+
+static irqreturn_t st_asm330lhhx_buffer_pollfunc(int irq, void *private)
+{
+	u8 iio_buf[ALIGN(ST_ASM330LHHX_SAMPLE_SIZE, sizeof(s64)) +
+		   sizeof(s64) + sizeof(s64)];
+	struct iio_poll_func *pf = private;
+	struct iio_dev *indio_dev = pf->indio_dev;
+	struct st_asm330lhhx_sensor *sensor = iio_priv(indio_dev);
+	struct st_asm330lhhx_hw *hw = sensor->hw;
+	int addr = indio_dev->channels[0].address;
+
+	switch (indio_dev->channels[0].type) {
+	case IIO_ACCEL:
+	case IIO_ANGL_VEL:
+		st_asm330lhhx_read_locked(hw, addr, &iio_buf,
+					  ST_ASM330LHHX_SAMPLE_SIZE);
+		break;
+	case IIO_TEMP:
+		st_asm330lhhx_read_locked(hw, addr, &iio_buf,
+					  ST_ASM330LHHX_PT_SAMPLE_SIZE);
+		break;
+	case IIO_PRESSURE:
+		st_asm330lhhx_shub_read(sensor, addr, (u8 *)&iio_buf,
+					ST_ASM330LHHX_PT_SAMPLE_SIZE);
+		break;
+	case IIO_MAGN:
+		st_asm330lhhx_shub_read(sensor, addr, (u8 *)&iio_buf,
+					ST_ASM330LHHX_SAMPLE_SIZE);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	iio_push_to_buffers_with_timestamp(indio_dev, iio_buf,
+				  st_asm330lhhx_get_time_ns(indio_dev));
+	iio_trigger_notify_done(indio_dev->trig);
+
+	return IRQ_HANDLED;
+}
+
+static int st_asm330lhhx_trig_set_state(struct iio_trigger *trig,
+					bool state)
+{
+	struct st_asm330lhhx_hw *hw = iio_trigger_get_drvdata(trig);
+
+	dev_dbg(hw->dev, "trigger set %d\n", state);
+
+	return 0;
+}
+
+static const struct iio_trigger_ops st_asm330lhhx_trigger_ops = {
+	.set_trigger_state = st_asm330lhhx_trig_set_state,
 };
 
-int st_asm330lhhx_buffers_setup(struct st_asm330lhhx_hw *hw)
+static int st_asm330lhhx_config_interrupt(struct st_asm330lhhx_hw *hw,
+					  bool enable)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
-	struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
+	u8 drdy_reg;
+	int err;
+
+	err = st_asm330lhhx_get_int_reg(hw, &drdy_reg);
+	if (err < 0)
+		return err;
+
+	/* latch interrupts */
+	err = regmap_update_bits(hw->regmap,
+				 ST_ASM330LHHX_REG_TAP_CFG0_ADDR,
+				 ST_ASM330LHHX_REG_LIR_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_REG_LIR_MASK,
+					    enable ? 1 : 0));
+	if (err < 0)
+	return err;
+
+	/* enable FIFO watermak interrupt */
+	return regmap_update_bits(hw->regmap, drdy_reg,
+			  ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
+			  FIELD_PREP(ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
+				     enable ? 1 : 0));
+}
+
+static int st_asm330lhhx_config_timestamp(struct st_asm330lhhx_hw *hw)
+{
+	int err;
+
+	err = st_asm330lhhx_hwtimesync_init(hw);
+	if (err)
+		return err;
+
+	/* init timestamp engine */
+	err = regmap_update_bits(hw->regmap,
+				 ST_ASM330LHHX_REG_CTRL10_C_ADDR,
+				 ST_ASM330LHHX_REG_TIMESTAMP_EN_MASK,
+				 ST_ASM330LHHX_SHIFT_VAL(1,
+				  ST_ASM330LHHX_REG_TIMESTAMP_EN_MASK));
+	if (err < 0)
+		return err;
+
+	return regmap_update_bits(hw->regmap,
+				  ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
+				  ST_ASM330LHHX_REG_DEC_TS_MASK,
+				  FIELD_PREP(ST_ASM330LHHX_REG_DEC_TS_MASK, 1));
+}
+
+int st_asm330lhhx_allocate_buffers(struct st_asm330lhhx_hw *hw)
+{
+	int i;
+
+	for (i = 0;
+	     i < ARRAY_SIZE(st_asm330lhhx_triggered_main_sensor_list);
+	     i++) {
+		enum st_asm330lhhx_sensor_id id;
+		int err;
+
+		id = st_asm330lhhx_triggered_main_sensor_list[i];
+		if (!hw->iio_devs[id])
+			continue;
+
+		err = devm_iio_triggered_buffer_setup(hw->dev,
+				hw->iio_devs[id], NULL,
+				st_asm330lhhx_buffer_pollfunc,
+				&st_asm330lhhx_buffer_setup_ops);
+		if (err)
+		return err;
+	}
+
+	return 0;
+}
+
+int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw)
+{
 	unsigned long irq_type;
 	bool irq_active_low;
 	int i, err;
@@ -681,40 +847,44 @@ int st_asm330lhhx_buffers_setup(struct st_asm330lhhx_hw *hw)
 		return err;
 	}
 
-	for (i = ST_ASM330LHHX_ID_GYRO; i <= ST_ASM330LHHX_ID_EXT1; i++) {
-		if (!hw->iio_devs[i])
+	/* attach trigger to iio devs */
+	for (i = 0;
+	     i < ARRAY_SIZE(st_asm330lhhx_triggered_main_sensor_list);
+	     i++) {
+		struct st_asm330lhhx_sensor *sensor;
+		enum st_asm330lhhx_sensor_id id;
+
+		id = st_asm330lhhx_triggered_main_sensor_list[i];
+		if (!hw->iio_devs[id])
 			continue;
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-						  &st_asm330lhhx_fifo_ops);
-		if (err)
-			return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-						  INDIO_BUFFER_SOFTWARE,
-						  &st_asm330lhhx_fifo_ops);
-		if (err)
-			return err;
-#else /* LINUX_VERSION_CODE */
-		buffer = devm_iio_kfifo_allocate(hw->dev);
-		if (!buffer)
+		sensor = iio_priv(hw->iio_devs[id]);
+		sensor->trig = devm_iio_trigger_alloc(hw->dev,
+						"st_%s-trigger",
+						hw->iio_devs[id]->name);
+		if (!sensor->trig) {
+			dev_err(hw->dev, "failed to allocate iio trigger.\n");
+
 			return -ENOMEM;
+		}
 
-		iio_device_attach_buffer(hw->iio_devs[i], buffer);
-		hw->iio_devs[i]->modes |= INDIO_BUFFER_SOFTWARE;
-		hw->iio_devs[i]->setup_ops = &st_asm330lhhx_fifo_ops;
-#endif /* LINUX_VERSION_CODE */
+		iio_trigger_set_drvdata(sensor->trig, hw);
+		sensor->trig->ops = &st_asm330lhhx_trigger_ops;
+		sensor->trig->dev.parent = hw->dev;
 
+		err = devm_iio_trigger_register(hw->dev, sensor->trig);
+		if (err < 0) {
+			dev_err(hw->dev, "failed to register iio trigger.\n");
+
+			return err;
+		}
+
+		hw->iio_devs[i]->trig = iio_trigger_get(sensor->trig);
 	}
 
-	err = st_asm330lhhx_hwtimesync_init(hw);
-	if (err)
+	err = st_asm330lhhx_config_interrupt(hw, true);
+	if (err < 0)
 		return err;
 
-	return regmap_update_bits(hw->regmap,
-				  ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
-				  ST_ASM330LHHX_REG_DEC_TS_MASK,
-				  FIELD_PREP(ST_ASM330LHHX_REG_DEC_TS_MASK,
-					     1));
+	return st_asm330lhhx_config_timestamp(hw);
 }

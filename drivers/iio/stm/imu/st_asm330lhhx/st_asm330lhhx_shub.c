@@ -427,8 +427,8 @@ out:
  * @param  len: Data read len.
  * @return  0 if OK, < 0 if ERROR
  */
-static int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
-				   u8 addr, u8 *data, int len)
+int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
+			    u8 addr, u8 *data, int len)
 {
 	struct st_asm330lhhx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	struct st_asm330lhhx_hw *hw = sensor->hw;

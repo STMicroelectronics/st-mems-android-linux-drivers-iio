@@ -670,7 +670,7 @@ int st_asm330lhhx_of_get_pin(struct st_asm330lhhx_hw *hw, int *pin)
 	return device_property_read_u32(hw->dev, "st,int-pin", pin);
 }
 
-static int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw, u8 *drdy_reg)
+int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw, u8 *drdy_reg)
 {
 	int err = 0, int_pin;
 
@@ -2024,15 +2024,18 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 	st_asm330lhhx_bk_regs(hw);
 
 	/* disable FIFO watermak interrupt */
-	ret = st_asm330lhhx_get_int_reg(hw, &drdy_reg);
-	if (ret < 0)
-		goto restore_regs;
+	if (hw->irq > 0) {
+		/* disable FIFO watermak interrupt */
+		ret = st_asm330lhhx_get_int_reg(hw, &drdy_reg);
+		if (ret < 0)
+			goto restore_regs;
 
-	ret = st_asm330lhhx_update_bits_locked(hw, drdy_reg,
-					   ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
-					   0);
-	if (ret < 0)
-		goto restore_regs;
+		ret = st_asm330lhhx_update_bits_locked(hw, drdy_reg,
+				     ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
+				     0);
+		if (ret < 0)
+			goto restore_regs;
+	}
 
 	gain = sensor->gain;
 	if (id == ST_ASM330LHHX_ID_ACC) {
@@ -2367,16 +2370,7 @@ static int st_asm330lhhx_reset_device(struct st_asm330lhhx_hw *hw)
 
 static int st_asm330lhhx_init_device(struct st_asm330lhhx_hw *hw)
 {
-	u8 drdy_reg;
 	int err;
-
-	/* latch interrupts */
-	err = regmap_update_bits(hw->regmap,
-				 ST_ASM330LHHX_REG_TAP_CFG0_ADDR,
-				 ST_ASM330LHHX_REG_LIR_MASK,
-				 FIELD_PREP(ST_ASM330LHHX_REG_LIR_MASK, 1));
-	if (err < 0)
-		return err;
 
 	/* enable Block Data Update */
 	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_CTRL3_C_ADDR,
@@ -2391,19 +2385,6 @@ static int st_asm330lhhx_init_device(struct st_asm330lhhx_hw *hw)
 	if (err < 0)
 		return err;
 
-	/* init timestamp engine */
-	err = regmap_update_bits(hw->regmap,
-				 ST_ASM330LHHX_REG_CTRL10_C_ADDR,
-				 ST_ASM330LHHX_REG_TIMESTAMP_EN_MASK,
-				 ST_ASM330LHHX_SHIFT_VAL(true,
-				  ST_ASM330LHHX_REG_TIMESTAMP_EN_MASK));
-	if (err < 0)
-		return err;
-
-	err = st_asm330lhhx_get_int_reg(hw, &drdy_reg);
-	if (err < 0)
-		return err;
-
 	/* initialize sensors filter bandwidth configuration */
 	hw->enable_drdy_mask = true;
 	err = st_asm330lhhx_init_xl_filters(hw);
@@ -2415,18 +2396,11 @@ static int st_asm330lhhx_init_device(struct st_asm330lhhx_hw *hw)
 		return err;
 
 	/* Enable DRDY MASK for filters settling time */
-	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_CTRL4_C_ADDR,
+	return regmap_update_bits(hw->regmap,
+				 ST_ASM330LHHX_REG_CTRL4_C_ADDR,
 				 ST_ASM330LHHX_REG_DRDY_MASK,
 				 FIELD_PREP(ST_ASM330LHHX_REG_DRDY_MASK,
 					    hw->enable_drdy_mask ? 1 : 0));
-
-	if (err < 0)
-		return err;
-
-	/* enable FIFO watermak interrupt */
-	return regmap_update_bits(hw->regmap, drdy_reg,
-				  ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
-				  FIELD_PREP(ST_ASM330LHHX_REG_INT_FIFO_TH_MASK, 1));
 }
 
 #ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
@@ -2627,6 +2601,7 @@ int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 	hw->irq = irq;
 	hw->odr_table_entry = st_asm330lhhx_odr_table;
 	hw->hw_timestamp_global = 0;
+	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	err = st_asm330lhhx_power_enable(hw);
 	if (err != 0)
@@ -2682,16 +2657,20 @@ int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 			return err;
 	}
 
-	if (hw->irq > 0) {
-		err = st_asm330lhhx_buffers_setup(hw);
-		if (err < 0)
-			return err;
-	}
+	err = st_asm330lhhx_allocate_buffers(hw);;
+	if (err < 0)
+		return err;
 
-	if (hw->settings->st_mlc_probe) {
-		err = st_asm330lhhx_mlc_probe(hw);
+	if (hw->has_hw_fifo) {
+		err = st_asm330lhhx_trigger_setup(hw);
 		if (err < 0)
 			return err;
+
+		if (hw->settings->st_mlc_probe) {
+			err = st_asm330lhhx_mlc_probe(hw);
+			if (err < 0)
+				return err;
+		}
 	}
 
 	for (i = ST_ASM330LHHX_ID_GYRO; i < ST_ASM330LHHX_ID_MAX; i++) {
@@ -2703,7 +2682,7 @@ int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 			return err;
 	}
 
-	if (hw->settings->st_mlc_probe) {
+	if (hw->settings->st_mlc_probe && hw->has_hw_fifo) {
 		err = st_asm330lhhx_mlc_init_preload(hw);
 		if (err)
 			return err;

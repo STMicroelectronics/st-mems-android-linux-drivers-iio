@@ -224,6 +224,7 @@
 /* FIFO simple size and depth */
 #define ST_ASM330LHHX_SAMPLE_SIZE		6
 #define ST_ASM330LHHX_TS_SAMPLE_SIZE		4
+#define ST_ASM330LHHX_PT_SAMPLE_SIZE		2
 #define ST_ASM330LHHX_TAG_SIZE			1
 #define ST_ASM330LHHX_FIFO_SAMPLE_SIZE		(ST_ASM330LHHX_SAMPLE_SIZE + \
 					 	 ST_ASM330LHHX_TAG_SIZE)
@@ -487,6 +488,15 @@ enum st_asm330lhhx_sensor_id {
 	ST_ASM330LHHX_ID_MAX,
 };
 
+static const enum st_asm330lhhx_sensor_id
+st_asm330lhhx_triggered_main_sensor_list[] = {
+	 [0] = ST_ASM330LHHX_ID_GYRO,
+	 [1] = ST_ASM330LHHX_ID_ACC,
+	 [2] = ST_ASM330LHHX_ID_TEMP,
+	 [3] = ST_ASM330LHHX_ID_EXT0,
+	 [4] = ST_ASM330LHHX_ID_EXT1,
+};
+
 static const enum st_asm330lhhx_sensor_id st_asm330lhhx_mlc_sensor_list[] = {
 	 [0] = ST_ASM330LHHX_ID_MLC_0,
 	 [1] = ST_ASM330LHHX_ID_MLC_1,
@@ -732,6 +742,7 @@ struct st_asm330lhhx_sensor {
  * @enable_drdy_mask: Indicate if drdy mask is enabled.
  * @xl_odr_div: Configured accel odr bandwidth.
  * @g_ftype:  Configured gyro odr ftype.
+ * @has_hw_fifo: Indicate if the hw fifo configuration was done.
  */
 struct st_asm330lhhx_hw {
 	struct device *dev;
@@ -785,6 +796,7 @@ struct st_asm330lhhx_hw {
 	bool enable_drdy_mask;
 	int xl_odr_div;
 	int g_ftype;
+	bool has_hw_fifo;
 };
 
 /**
@@ -1040,7 +1052,8 @@ int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 void st_asm330lhhx_remove(struct device *dev);
 int st_asm330lhhx_sensor_set_enable(struct st_asm330lhhx_sensor *sensor,
 				    bool enable);
-int st_asm330lhhx_buffers_setup(struct st_asm330lhhx_hw *hw);
+int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw);
+int st_asm330lhhx_allocate_buffers(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_get_odr_from_reg(enum st_asm330lhhx_sensor_id id,
 				   u8 reg_val, u16 *podr, u32 *puodr);
 int st_asm330lhhx_get_batch_val(struct st_asm330lhhx_sensor *sensor,
@@ -1073,7 +1086,11 @@ int st_asm330lhhx_reset_hwts(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_shub_set_enable(struct st_asm330lhhx_sensor *sensor,
 			      bool enable);
+int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
+			    u8 addr, u8 *data, int len);
 int st_asm330lhhx_of_get_pin(struct st_asm330lhhx_hw *hw, int *pin);
+int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw,
+			      u8 *drdy_reg);
 
 #ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
 int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw);
