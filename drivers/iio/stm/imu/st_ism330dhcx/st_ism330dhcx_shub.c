@@ -354,8 +354,8 @@ out:
  * @param  len: Data read len.
  * @return  0 if OK, < 0 if ERROR
  */
-static int st_ism330dhcx_shub_read(struct st_ism330dhcx_sensor *sensor, u8 addr,
-				u8 *data, int len)
+int st_ism330dhcx_shub_read(struct st_ism330dhcx_sensor *sensor, u8 addr,
+			    u8 *data, int len)
 {
 	struct st_ism330dhcx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	struct st_ism330dhcx_hw *hw = sensor->hw;

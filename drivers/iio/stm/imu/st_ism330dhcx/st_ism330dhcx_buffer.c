@@ -483,6 +483,9 @@ ssize_t st_ism330dhcx_set_watermark(struct device *dev,
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
+	if (!sensor->hw->has_hw_fifo)
+		return -EINVAL;
+
 	mutex_lock(&iio_dev->mlock);
 	if (iio_buffer_enabled(iio_dev)) {
 		err = -EBUSY;
@@ -527,6 +530,9 @@ ssize_t st_ism330dhcx_flush_fifo(struct device *dev,
 	s64 fts;
 	s64 ts;
 
+	if (!hw->has_hw_fifo)
+		return -EINVAL;
+
 	mutex_lock(&hw->fifo_lock);
 	ts = st_ism330dhcx_get_time_ns(hw);
 	hw->delta_ts = ts - hw->ts;
@@ -558,6 +564,9 @@ int st_ism330dhcx_suspend_fifo(struct st_ism330dhcx_hw *hw)
 {
 	int err;
 
+	if (!hw->has_hw_fifo)
+		return -EINVAL;
+
 	mutex_lock(&hw->fifo_lock);
 	st_ism330dhcx_read_fifo(hw);
 	err = st_ism330dhcx_set_fifo_mode(hw, ST_ISM330DHCX_FIFO_BYPASS);
@@ -578,6 +587,9 @@ int st_ism330dhcx_update_batching(struct iio_dev *iio_dev, bool enable)
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	struct st_ism330dhcx_hw *hw = sensor->hw;
 	int err;
+
+	if (!hw->has_hw_fifo)
+		return -EINVAL;
 
 	disable_irq(hw->irq);
 
@@ -601,9 +613,9 @@ out:
  * @param  enable: enable/disable batcing in FIFO
  * @return  < 0 if error, 0 otherwise
  */
-static int st_ism330dhcx_update_fifo(struct iio_dev *iio_dev, bool enable)
+static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
+				     bool enable)
 {
-	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	struct st_ism330dhcx_hw *hw = sensor->hw;
 	int err;
 	int podr, puodr;
@@ -681,31 +693,24 @@ out:
 	return err;
 }
 
-/**
- * Bottom handler for FSM Orientation sensor event generation
- *
- * @param  irq: IIO trigger irq number
- * @param  p: iio poll function environment
- * @return  IRQ_HANDLED or < 0 for error
- */
-static irqreturn_t st_ism330dhcx_buffer_handler_thread(int irq, void *p)
+static int st_ism330dhcx_update_enable(struct st_ism330dhcx_sensor *sensor,
+				       bool enable)
 {
-	struct iio_poll_func *pf = p;
-	struct iio_dev *iio_dev = pf->indio_dev;
+	if (sensor->id == ST_ISM330DHCX_ID_EXT0 ||
+	    sensor->id == ST_ISM330DHCX_ID_EXT1)
+		return st_ism330dhcx_shub_set_enable(sensor, enable);
+
+	return st_ism330dhcx_sensor_set_enable(sensor, enable);
+}
+
+static int st_ism330dhcx_buffer_enable(struct iio_dev *iio_dev, bool enable)
+{
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
-	u8 buffer[sizeof(u8) + sizeof(s64)];
-	int err;
 
-	err = st_ism330dhcx_fsm_get_orientation(sensor->hw, buffer);
-	if (err < 0)
-		goto out;
+	if (sensor->hw->has_hw_fifo)
+		return st_ism330dhcx_update_fifo(sensor, enable);
 
-	iio_push_to_buffers_with_timestamp(iio_dev, buffer,
-					   st_ism330dhcx_get_time_ns(sensor->hw));
-out:
-	iio_trigger_notify_done(sensor->trig);
-
-	return IRQ_HANDLED;
+	return st_ism330dhcx_update_enable(sensor, enable);
 }
 
 /**
@@ -830,11 +835,15 @@ static irqreturn_t st_ism330dhcx_handler_thread(int irq, void *private)
 				       st_ism330dhcx_get_time_ns(hw));
 		}
 		if (status[1] & ST_ISM330DHCX_REG_INT_ORIENTATION_MASK) {
-			struct st_ism330dhcx_sensor *sensor;
+			u8 fsm_orientation;
 
+			st_ism330dhcx_fsm_get_orientation(hw, &fsm_orientation);
 			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_ORIENTATION];
-			sensor = iio_priv(iio_dev);
-			iio_trigger_poll_chained(sensor->trig);
+			event = IIO_UNMOD_EVENT_CODE(STM_IIO_GESTURE, -1,
+						     IIO_EV_TYPE_THRESH,
+						     fsm_orientation);
+			iio_push_event(iio_dev, event,
+				       st_ism330dhcx_get_time_ns(hw));
 		}
 		if (status[1] & ST_ISM330DHCX_REG_INT_WRIST_MASK) {
 			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_WRIST_TILT];
@@ -850,100 +859,158 @@ static irqreturn_t st_ism330dhcx_handler_thread(int irq, void *private)
 }
 
 /**
- * IIO fifo pre enabled callback function
- *
- * @param  iio_dev: IIO device
- * @return  < 0 if error, 0 otherwise
- */
-static int st_ism330dhcx_fifo_preenable(struct iio_dev *iio_dev)
-{
-	return st_ism330dhcx_update_fifo(iio_dev, true);
-}
-
-/**
- * IIO fifo post disable callback function
- *
- * @param  iio_dev: IIO device
- * @return  < 0 if error, 0 otherwise
- */
-static int st_ism330dhcx_fifo_postdisable(struct iio_dev *iio_dev)
-{
-	return st_ism330dhcx_update_fifo(iio_dev, false);
-}
-
-/**
- * IIO fifo callback registruction structure
- */
-static const struct iio_buffer_setup_ops st_ism330dhcx_fifo_ops = {
-	.preenable = st_ism330dhcx_fifo_preenable,
-	.postdisable = st_ism330dhcx_fifo_postdisable,
-};
-
-/**
- * Enable HW FIFO
+ * Enable FIFO Timestamp
  *
  * @param  hw: ST IMU MEMS hw instance
  * @return  < 0 if error, 0 otherwise
  */
-static int st_ism330dhcx_fifo_init(struct st_ism330dhcx_hw *hw)
+static int st_ism330dhcx_config_timestamp(struct st_ism330dhcx_hw *hw)
 {
 	return st_ism330dhcx_write_with_mask(hw,
-					  ST_ISM330DHCX_REG_FIFO_CTRL4_ADDR,
-					  ST_ISM330DHCX_REG_DEC_TS_MASK, 1);
+					     ST_ISM330DHCX_REG_FIFO_CTRL4_ADDR,
+					     ST_ISM330DHCX_REG_DEC_TS_MASK, 1);
 }
 
-static const struct iio_trigger_ops st_ism330dhcx_trigger_ops = {
-	NULL
-};
+/**
+ * Enable interrupt on FIFO watermark
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @return  < 0 if error, 0 otherwise
+ */
+static int st_ism330dhcx_config_interrupt(struct st_ism330dhcx_hw *hw)
+{
+	u8 drdy_reg, ef_irq_reg;
+	int err;
+
+	/* configure latch interrupts enabled */
+	err = st_ism330dhcx_write_with_mask(hw,
+					    ST_ISM330DHCX_REG_TAP_CFG0_ADDR,
+					    ST_ISM330DHCX_REG_LIR_MASK, 1);
+	if (err < 0)
+		return err;
+
+	/* init timestamp engine */
+	err = st_ism330dhcx_write_with_mask(hw,
+					    ST_ISM330DHCX_REG_CTRL10_C_ADDR,
+					    ST_ISM330DHCX_REG_TIMESTAMP_EN_MASK,
+					    1);
+	if (err < 0)
+		return err;
+
+	/* configure interrupt registers */
+	err = st_ism330dhcx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
+	if (err < 0)
+		return err;
+
+	/* enable FIFO watermak interrupt */
+	err = st_ism330dhcx_write_with_mask(hw, drdy_reg,
+					 ST_ISM330DHCX_REG_INT_FIFO_TH_MASK, 1);
+	if (err < 0)
+		return err;
+
+	/* enable enbedded function interrupts */
+	return st_ism330dhcx_write_with_mask(hw, ef_irq_reg,
+					ST_ISM330DHCX_REG_INT_EMB_FUNC_MASK, 1);
+}
 
 static int st_ism330dhcx_buffer_preenable(struct iio_dev *iio_dev)
 {
-	return st_ism330dhcx_embfunc_sensor_set_enable(iio_priv(iio_dev), true);
+	return st_ism330dhcx_buffer_enable(iio_dev, true);
 }
 
 static int st_ism330dhcx_buffer_postdisable(struct iio_dev *iio_dev)
 {
-	return st_ism330dhcx_embfunc_sensor_set_enable(iio_priv(iio_dev), false);
+	return st_ism330dhcx_buffer_enable(iio_dev, false);
 }
 
-static const struct iio_buffer_setup_ops st_ism330dhcx_buffer_ops = {
-	.preenable = st_ism330dhcx_buffer_preenable,
-	.postdisable = st_ism330dhcx_buffer_postdisable,
-};
-
-int __maybe_unused st_ism330dhcx_trigger_setup(struct st_ism330dhcx_hw *hw)
+static irqreturn_t st_ism330dhcx_buffer_pollfunc(int irq, void *private)
 {
-	struct st_ism330dhcx_sensor *sensor;
-	struct iio_dev *iio_dev;
-	int err;
+	u8 iio_buf[ALIGN(ST_ISM330DHCX_SAMPLE_SIZE, sizeof(s64)) +
+		   sizeof(s64) + sizeof(s64)];
+	struct iio_poll_func *pf = private;
+	struct iio_dev *indio_dev = pf->indio_dev;
+	struct st_ism330dhcx_sensor *sensor = iio_priv(indio_dev);
+	struct st_ism330dhcx_hw *hw = sensor->hw;
+	int addr = indio_dev->channels[0].address;
 
-	iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_ORIENTATION];
-	sensor = iio_priv(iio_dev);
-
-	err = devm_iio_triggered_buffer_setup(hw->dev, iio_dev,
-					NULL,
-					st_ism330dhcx_buffer_handler_thread,
-					&st_ism330dhcx_buffer_ops);
-	if (err < 0)
-		return err;
-
-	sensor->trig = devm_iio_trigger_alloc(hw->dev, "%s-trigger",
-					      iio_dev->name);
-	if (!sensor->trig)
-		return -ENOMEM;
-
-	iio_trigger_set_drvdata(sensor->trig, iio_dev);
-	sensor->trig->ops = &st_ism330dhcx_trigger_ops;
-	sensor->trig->dev.parent = hw->dev;
-
-	err = devm_iio_trigger_register(hw->dev, sensor->trig);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to register iio trigger.\n");
-
-		return err;
+	/*
+	 * poll mode works only for those sensors that not requests fifo
+	 * and an hw interrupt line
+	 */
+	switch ((int)indio_dev->channels[0].type) {
+	case IIO_ACCEL:
+	case IIO_ANGL_VEL:
+		st_ism330dhcx_read_atomic(hw, addr,
+					  ST_ISM330DHCX_SAMPLE_SIZE, iio_buf);
+		break;
+	case IIO_TEMP:
+		st_ism330dhcx_read_atomic(hw, addr,
+					  ST_ISM330DHCX_PT_SAMPLE_SIZE,
+					  iio_buf);
+		break;
+	case IIO_PRESSURE:
+		st_ism330dhcx_shub_read(sensor, addr, (u8 *)&iio_buf,
+					ST_ISM330DHCX_PT_SAMPLE_SIZE);
+		break;
+	case IIO_MAGN:
+		st_ism330dhcx_shub_read(sensor, addr, (u8 *)&iio_buf,
+					ST_ISM330DHCX_SAMPLE_SIZE);
+		break;
+	default:
+		return -EINVAL;
 	}
 
-	iio_dev->trig = iio_trigger_get(sensor->trig);
+	iio_push_to_buffers_with_timestamp(indio_dev, iio_buf,
+					   iio_get_time_ns(indio_dev));
+	iio_trigger_notify_done(indio_dev->trig);
+
+	return IRQ_HANDLED;
+}
+
+static int st_ism330dhcx_trig_set_state(struct iio_trigger *trig, bool state)
+{
+	struct st_ism330dhcx_hw *hw = iio_trigger_get_drvdata(trig);
+
+	dev_dbg(hw->dev, "trigger set %d\n", state);
+
+	return 0;
+}
+
+static const struct iio_trigger_ops st_ism330dhcx_trigger_ops = {
+	.set_trigger_state = st_ism330dhcx_trig_set_state,
+};
+
+static const struct iio_buffer_setup_ops st_ism330dhcx_buffer_setup_ops = {
+	.preenable = st_ism330dhcx_buffer_preenable,
+	.postdisable = st_ism330dhcx_buffer_postdisable,
+
+#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
+	.postenable = iio_triggered_buffer_postenable,
+	.predisable = iio_triggered_buffer_predisable,
+#endif /* LINUX_VERSION_CODE */
+};
+
+int st_ism330dhcx_allocate_sw_trigger(struct st_ism330dhcx_hw *hw)
+{
+	int i;
+
+	for (i = 0;
+	     i < ARRAY_SIZE(st_ism330dhcx_buffered_sensor_list);
+	     i++) {
+		enum st_ism330dhcx_sensor_id id;
+		int err;
+
+		id = st_ism330dhcx_buffered_sensor_list[i];
+		if (!hw->iio_devs[id])
+			continue;
+
+		err = devm_iio_triggered_buffer_setup(hw->dev,
+					       hw->iio_devs[id], NULL,
+					       st_ism330dhcx_buffer_pollfunc,
+					       &st_ism330dhcx_buffer_setup_ops);
+		if (err)
+			return err;
+	}
 
 	return 0;
 }
@@ -954,7 +1021,7 @@ int __maybe_unused st_ism330dhcx_trigger_setup(struct st_ism330dhcx_hw *hw)
  * @param  hw: ST IMU MEMS hw instance
  * @return  < 0 if error, 0 otherwise
  */
-int st_ism330dhcx_buffers_setup(struct st_ism330dhcx_hw *hw)
+int st_ism330dhcx_hw_trigger_setup(struct st_ism330dhcx_hw *hw)
 {
 	struct device_node *np = hw->dev->of_node;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
@@ -1009,42 +1076,49 @@ int st_ism330dhcx_buffers_setup(struct st_ism330dhcx_hw *hw)
 		return err;
 	}
 
-	for (i = ST_ISM330DHCX_ID_GYRO; i <= ST_ISM330DHCX_ID_STEP_COUNTER; i++) {
-		if (!hw->iio_devs[i])
+	for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_buffered_sensor_list); i++) {
+		struct st_ism330dhcx_sensor *sensor;
+		enum st_ism330dhcx_sensor_id id =
+					  st_ism330dhcx_buffered_sensor_list[i];
+
+		if (!hw->iio_devs[id])
 			continue;
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-						  &st_ism330dhcx_fifo_ops);
-		if (err)
-			return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-						  INDIO_BUFFER_SOFTWARE,
-						  &st_ism330dhcx_fifo_ops);
-		if (err)
-			return err;
-#else /* LINUX_VERSION_CODE */
-		buffer = devm_iio_kfifo_allocate(hw->dev);
-		if (!buffer)
+		sensor = iio_priv(hw->iio_devs[id]);
+		sensor->trig = devm_iio_trigger_alloc(hw->dev, "st_%s-trigger",
+						      hw->iio_devs[id]->name);
+		if (!sensor->trig) {
+			dev_err(hw->dev, "failed to allocate iio trigger.\n");
+
 			return -ENOMEM;
+		}
 
-		iio_device_attach_buffer(hw->iio_devs[i], buffer);
-		hw->iio_devs[i]->modes |= INDIO_BUFFER_SOFTWARE;
-		hw->iio_devs[i]->setup_ops = &st_ism330dhcx_fifo_ops;
-#endif /* LINUX_VERSION_CODE */
+		iio_trigger_set_drvdata(sensor->trig, hw);
+		sensor->trig->ops = &st_ism330dhcx_trigger_ops;
+		sensor->trig->dev.parent = hw->dev;
 
+		err = devm_iio_trigger_register(hw->dev, sensor->trig);
+		if (err < 0) {
+			dev_err(hw->dev, "failed to register iio trigger.\n");
+
+			return err;
+		}
+
+		hw->iio_devs[id]->trig = iio_trigger_get(sensor->trig);
 	}
 
-	err = st_ism330dhcx_fifo_init(hw);
-	if (err < 0)
+	err = st_ism330dhcx_config_interrupt(hw);
+	if (err)
 		return err;
 
 #ifdef CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES
-	err = st_ism330dhcx_trigger_setup(hw);
-	if (err < 0)
+	/* init finite state machine */
+	err = st_ism330dhcx_fsm_init(hw);
+	if (err)
 		return err;
 #endif /* CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES */
 
-	return 0;
+	err = st_ism330dhcx_config_timestamp(hw);
+
+	return err < 0 ? err : 0;
 }

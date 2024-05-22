@@ -518,7 +518,6 @@ unlock:
 	return err;
 }
 
-
 /**
  * Initialize Finite State Machine HW block [FSM_FUN]
  *

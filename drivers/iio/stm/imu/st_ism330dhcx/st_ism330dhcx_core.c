@@ -20,8 +20,6 @@
 #include "st_ism330dhcx.h"
 static int __maybe_unused st_ism330dhcx_restore_regs(struct st_ism330dhcx_hw *hw);
 static int __maybe_unused st_ism330dhcx_bk_regs(struct st_ism330dhcx_hw *hw);
-static int st_ism330dhcx_get_int_reg(struct st_ism330dhcx_hw *hw, u8 *drdy_reg,
-				  u8 *ef_irq_reg);
 
 static struct st_ism330dhcx_selftest_table {
 	char *string_mode;
@@ -425,20 +423,10 @@ static const struct iio_chan_spec st_ism330dhcx_pickup_channels[] = {
  * Orientation IIO channels description
  *
  * Orientation exports to IIO framework the following data channels:
- * Orientation (8 bit unsigned in little endian)
- * Timestamp (64 bit signed in little endian)
+ * Orientation event detection
  */
 static const struct iio_chan_spec st_ism330dhcx_orientation_channels[] = {
-	{
-		.type = STM_IIO_GESTURE,
-		.scan_index = 0,
-		.scan_type = {
-			.sign = 'u',
-			.realbits = 8,
-			.storagebits = 8,
-		},
-	},
-	IIO_CHAN_SOFT_TIMESTAMP(1),
+	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_GESTURE, thr),
 };
 
 /**
@@ -1409,11 +1397,13 @@ st_ism330dhcx_sysfs_start_selftest(struct device *dev,
 	if (ret < 0)
 		goto restore_regs;
 
-	ret = st_ism330dhcx_update_bits_locked(hw, drdy_reg,
-				     ST_ISM330DHCX_REG_INT_FIFO_TH_MASK,
-				     0);
-	if (ret < 0)
-		goto restore_regs;
+	/* disable interrupt on FIFO watermak */
+	if (hw->has_hw_fifo) {
+		ret = st_ism330dhcx_update_bits_locked(hw, drdy_reg,
+					ST_ISM330DHCX_REG_INT_FIFO_TH_MASK, 0);
+		if (ret < 0)
+			goto restore_regs;
+	}
 
 	gain = sensor->gain;
 	if (id == ST_ISM330DHCX_ID_ACC) {
@@ -1692,6 +1682,8 @@ static const struct attribute_group st_ism330dhcx_orientation_attribute_group = 
 
 static const struct iio_info st_ism330dhcx_orientation_info = {
 	.attrs = &st_ism330dhcx_orientation_attribute_group,
+	.read_event_config = st_ism330dhcx_read_event_config,
+	.write_event_config = st_ism330dhcx_write_event_config,
 };
 
 static struct attribute *st_ism330dhcx_wrist_attributes[] = {
@@ -1722,8 +1714,8 @@ static int st_ism330dhcx_of_get_pin(struct st_ism330dhcx_hw *hw, int *pin)
 	return of_property_read_u32(np, "st,int-pin", pin);
 }
 
-static int st_ism330dhcx_get_int_reg(struct st_ism330dhcx_hw *hw, u8 *drdy_reg,
-				  u8 *ef_irq_reg)
+int st_ism330dhcx_get_int_reg(struct st_ism330dhcx_hw *hw, u8 *drdy_reg,
+			      u8 *ef_irq_reg)
 {
 	int err = 0, int_pin;
 
@@ -1788,15 +1780,7 @@ static int st_ism330dhcx_reset_device(struct st_ism330dhcx_hw *hw)
 
 static int st_ism330dhcx_init_device(struct st_ism330dhcx_hw *hw)
 {
-	u8 drdy_reg, ef_irq_reg;
 	int err;
-
-	/* configure latch interrupts enabled */
-	err = st_ism330dhcx_write_with_mask(hw,
-					 ST_ISM330DHCX_REG_TAP_CFG0_ADDR,
-					 ST_ISM330DHCX_REG_LIR_MASK, 1);
-	if (err < 0)
-		return err;
 
 	/* enable Block Data Update */
 	err = st_ism330dhcx_write_with_mask(hw,
@@ -1812,42 +1796,10 @@ static int st_ism330dhcx_init_device(struct st_ism330dhcx_hw *hw)
 	if (err < 0)
 		return err;
 
-	/* init timestamp engine */
-	err = st_ism330dhcx_write_with_mask(hw,
-					 ST_ISM330DHCX_REG_CTRL10_C_ADDR,
-					 ST_ISM330DHCX_REG_TIMESTAMP_EN_MASK, 1);
-	if (err < 0)
-		return err;
-
-	/* configure interrupt registers */
-	err = st_ism330dhcx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
-	if (err < 0)
-		return err;
-
 	/* Enable DRDY MASK for filters settling time */
-	err = st_ism330dhcx_write_with_mask(hw, ST_ISM330DHCX_REG_CTRL4_C_ADDR,
-					 ST_ISM330DHCX_REG_DRDY_MASK, 1);
-	if (err < 0)
-		return err;
-
-	/* enable FIFO watermak interrupt */
-	err = st_ism330dhcx_write_with_mask(hw, drdy_reg,
-					 ST_ISM330DHCX_REG_INT_FIFO_TH_MASK, 1);
-	if (err < 0)
-		return err;
-
-	/* enable enbedded function interrupts */
-	err = st_ism330dhcx_write_with_mask(hw, ef_irq_reg,
-					 ST_ISM330DHCX_REG_INT_EMB_FUNC_MASK, 1);
-	if (err < 0)
-		return err;
-
-#ifdef CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES
-	/* init finite state machine */
-	err = st_ism330dhcx_fsm_init(hw);
-#endif /* CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES */
-
-	return err;
+	return st_ism330dhcx_write_with_mask(hw,
+					     ST_ISM330DHCX_REG_CTRL4_C_ADDR,
+					     ST_ISM330DHCX_REG_DRDY_MASK, 1);
 }
 
 /**
@@ -2121,6 +2073,8 @@ int st_ism330dhcx_probe(struct device *dev, int irq,
 	hw->dev = dev;
 	hw->irq = irq;
 	hw->tf = tf_ops;
+	hw->odr_table = st_ism330dhcx_odr_table;
+	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	err = st_ism330dhcx_check_whoami(hw);
 	if (err < 0)
@@ -2140,20 +2094,35 @@ int st_ism330dhcx_probe(struct device *dev, int irq,
 	if (err < 0)
 		return err;
 
-	for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_main_sensor_list); i++) {
-		enum st_ism330dhcx_sensor_id id = st_ism330dhcx_main_sensor_list[i];
+	/* if fifo not supported just few sensors can be enabled */
+	if (hw->has_hw_fifo) {
+		for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_main_sensor_list_irq); i++) {
+			enum st_ism330dhcx_sensor_id id = st_ism330dhcx_main_sensor_list_irq[i];
 
-		hw->iio_devs[id] = st_ism330dhcx_alloc_iiodev(hw, id);
-		if (!hw->iio_devs[id])
-			continue;
+			hw->iio_devs[id] = st_ism330dhcx_alloc_iiodev(hw, id);
+			if (!hw->iio_devs[id])
+				continue;
+		}
+	} else {
+		for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_main_sensor_list); i++) {
+			enum st_ism330dhcx_sensor_id id = st_ism330dhcx_main_sensor_list[i];
+
+			hw->iio_devs[id] = st_ism330dhcx_alloc_iiodev(hw, id);
+			if (!hw->iio_devs[id])
+				continue;
+		}
 	}
 
 	err = st_ism330dhcx_shub_probe(hw);
 	if (err < 0)
 		return err;
 
-	if (hw->irq > 0) {
-		err = st_ism330dhcx_buffers_setup(hw);
+	err = st_ism330dhcx_allocate_sw_trigger(hw);
+	if (err < 0)
+		return err;
+
+	if (hw->has_hw_fifo) {
+		err = st_ism330dhcx_hw_trigger_setup(hw);
 		if (err < 0)
 			return err;
 	}

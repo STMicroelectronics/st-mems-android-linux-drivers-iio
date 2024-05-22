@@ -129,6 +129,8 @@
 #define ST_ISM330DHCX_TEMP_OFFSET			6400
 
 #define ST_ISM330DHCX_SAMPLE_SIZE			6
+#define ST_ISM330DHCX_PT_SAMPLE_SIZE			2
+#define ST_ISM330DHCX_SC_SAMPLE_SIZE			2
 #define ST_ISM330DHCX_TS_SAMPLE_SIZE		4
 #define ST_ISM330DHCX_TAG_SIZE			1
 #define ST_ISM330DHCX_FIFO_SAMPLE_SIZE		(ST_ISM330DHCX_SAMPLE_SIZE + \
@@ -341,11 +343,7 @@ enum st_ism330dhcx_sensor_id {
 	ST_ISM330DHCX_ID_MAX,
 };
 
-/**
- * @enum st_ism330dhcx_sensor_id
- * @brief Sensor Table Identifier
- */
-static const enum st_ism330dhcx_sensor_id st_ism330dhcx_main_sensor_list[] = {
+static const enum st_ism330dhcx_sensor_id st_ism330dhcx_main_sensor_list_irq[] = {
 	 [0] = ST_ISM330DHCX_ID_GYRO,
 	 [1] = ST_ISM330DHCX_ID_ACC,
 	 [2] = ST_ISM330DHCX_ID_TEMP,
@@ -360,6 +358,22 @@ static const enum st_ism330dhcx_sensor_id st_ism330dhcx_main_sensor_list[] = {
 	[11] = ST_ISM330DHCX_ID_ORIENTATION,
 	[12] = ST_ISM330DHCX_ID_WRIST_TILT,
 	[13] = ST_ISM330DHCX_ID_TILT,
+};
+
+static const enum st_ism330dhcx_sensor_id st_ism330dhcx_main_sensor_list[] = {
+	 [0] = ST_ISM330DHCX_ID_GYRO,
+	 [1] = ST_ISM330DHCX_ID_ACC,
+	 [2] = ST_ISM330DHCX_ID_TEMP,
+};
+
+static const enum st_ism330dhcx_sensor_id
+st_ism330dhcx_buffered_sensor_list[] = {
+	[0] = ST_ISM330DHCX_ID_GYRO,
+	[1] = ST_ISM330DHCX_ID_ACC,
+	[2] = ST_ISM330DHCX_ID_TEMP,
+	[3] = ST_ISM330DHCX_ID_EXT0,
+	[4] = ST_ISM330DHCX_ID_EXT1,
+	[5] = ST_ISM330DHCX_ID_STEP_COUNTER,
 };
 
 /**
@@ -457,6 +471,7 @@ struct st_ism330dhcx_sensor {
  * ts: Latest timestamp from irq handler.
  * @i2c_master_pu: I2C master line Pull Up configuration.
  * @module_id: identify iio devices of the same sensor module.
+ * @has_hw_fifo: FIFO hw support flag.
  * iio_devs: Pointers to acc/gyro iio_dev instances.
  * tf: Transfer function structure used by I/O operations.
  * tb: Transfer buffers used by SPI I/O operations.
@@ -493,8 +508,10 @@ struct st_ism330dhcx_hw {
 	s64 ts;
 	u8 i2c_master_pu;
 	u32 module_id;
+	bool has_hw_fifo;
 
 	struct iio_dev *iio_devs[ST_ISM330DHCX_ID_MAX];
+	const struct st_ism330dhcx_odr_table_entry *odr_table;
 
 	const struct st_ism330dhcx_transfer_function *tf;
 	struct st_ism330dhcx_transfer_buffer tb;
@@ -583,11 +600,17 @@ int st_ism330dhcx_probe(struct device *dev, int irq,
 		     const struct st_ism330dhcx_transfer_function *tf_ops);
 int st_ism330dhcx_shub_set_enable(struct st_ism330dhcx_sensor *sensor, bool enable);
 int st_ism330dhcx_shub_probe(struct st_ism330dhcx_hw *hw);
+int st_ism330dhcx_shub_read(struct st_ism330dhcx_sensor *sensor, u8 addr,
+			    u8 *data, int len);
 int st_ism330dhcx_sensor_set_enable(struct st_ism330dhcx_sensor *sensor,
-				 bool enable);
-int st_ism330dhcx_buffers_setup(struct st_ism330dhcx_hw *hw);
-int st_ism330dhcx_get_odr_val(enum st_ism330dhcx_sensor_id id, int odr, int uodr,
-			   int *podr, int *puodr, u8 *val);
+				    bool enable);
+int st_ism330dhcx_get_int_reg(struct st_ism330dhcx_hw *hw, u8 *drdy_reg,
+			      u8 *ef_irq_reg);
+int st_ism330dhcx_allocate_sw_trigger(struct st_ism330dhcx_hw *hw);
+int st_ism330dhcx_hw_trigger_setup(struct st_ism330dhcx_hw *hw);
+int st_ism330dhcx_get_odr_val(enum st_ism330dhcx_sensor_id id,
+			      int odr, int uodr,
+			      int *podr, int *puodr, u8 *val);
 int st_ism330dhcx_update_watermark(struct st_ism330dhcx_sensor *sensor,
 				u16 watermark);
 ssize_t st_ism330dhcx_flush_fifo(struct device *dev,
