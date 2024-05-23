@@ -9,6 +9,7 @@
 
 #include <linux/module.h>
 #include <linux/delay.h>
+#include <linux/i2c.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
 #include <asm/unaligned.h>
@@ -293,23 +294,42 @@ st_asm330lhhx_ext_dev_settings st_asm330lhhx_ext_dev_table[] = {
  * @param  hw: ST IMU MEMS hw instance.
  */
 static inline void
-st_asm330lhhx_shub_wait_complete(struct st_asm330lhhx_hw *hw)
+st_asm330lhhx_shub_wait_complete(struct st_asm330lhhx_hw *hw,
+				 struct st_asm330lhhx_sensor *sensor)
 {
-	struct st_asm330lhhx_sensor *sensor;
-	int odr, uodr;
+	struct st_asm330lhhx_sensor *acc_sensor;
+	int delay, trycount = 3;
+	u16 odr, accel_odr;
+	int data;
 
-	sensor = iio_priv(hw->iio_devs[ST_ASM330LHHX_ID_ACC]);
+	acc_sensor = iio_priv(hw->iio_devs[ST_ASM330LHHX_ID_ACC]);
 
-	/* check if acc is enabled (it should be) */
-	if (hw->enable_mask & BIT_ULL(ST_ASM330LHHX_ID_ACC)) {
-		odr = sensor->odr;
-		uodr = sensor->uodr;
-	} else {
-		odr = 12;
-		uodr = 500000;
-	}
+	/* check if acc is enabled */
+	accel_odr = hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].odr_avl[2].hz;
+	odr = (hw->enable_mask & BIT(ST_ASM330LHHX_ID_ACC)) ?
+	      acc_sensor->odr : max_t(int, sensor->odr, accel_odr);
 
-	msleep((2000000000U / (odr * 1000000 + uodr)) + 1);
+	/*
+	 * wait 20% more than expected ODR because transaction take long time
+	 * due to CLK @100kHz on Master I2C interface
+	 */
+	delay = (1200000U / odr) + 1;
+
+	do {
+		int err;
+
+		usleep_range(delay, delay + 1000);
+		err = st_asm330lhhx_read_locked(hw,
+				  ST_ASM330LHHX_REG_STATUS_MASTER_MAINPAGE_ADDR,
+				  &data, 1);
+		if (err < 0)
+			return;
+
+		if (data & ST_ASM330LHHX_REG_SENS_HUB_ENDOP_MASK)
+			break;
+
+		trycount--;
+	} while (trycount > 0);
 }
 
 /**
@@ -436,7 +456,7 @@ int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
 	u8 config[3];
 	int err;
 
-	config[0] = (ext_info->ext_dev_i2c_addr << 1) | 1;
+	config[0] = (ext_info->ext_dev_i2c_addr << 1) | I2C_M_RD;
 	config[1] = addr;
 	config[2] = len & 0x7;
 
@@ -449,7 +469,7 @@ int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
 	if (err < 0)
 		return err;
 
-	st_asm330lhhx_shub_wait_complete(hw);
+	st_asm330lhhx_shub_wait_complete(hw, sensor);
 
 	err = st_asm330lhhx_shub_read_reg(hw, out_addr, data, len & 0x7);
 
@@ -509,11 +529,12 @@ static int st_asm330lhhx_shub_write(struct st_asm330lhhx_sensor *sensor,
 		if (err < 0)
 			return err;
 
-		st_asm330lhhx_shub_wait_complete(hw);
+		st_asm330lhhx_shub_wait_complete(hw, sensor);
 
 		st_asm330lhhx_shub_master_enable(sensor, false);
 	}
 
+	memset(config, 0, sizeof(config));
 	return st_asm330lhhx_shub_write_reg(hw,
 					    ST_ASM330LHHX_REG_SLV0_ADDR,
 					    config, sizeof(config));
@@ -577,7 +598,7 @@ st_asm330lhhx_shub_config_channels(struct st_asm330lhhx_sensor *sensor,
 			continue;
 
 		ext_info = &cur_sensor->ext_dev_info;
-		config[j] = (ext_info->ext_dev_i2c_addr << 1) | 1;
+		config[j] = (ext_info->ext_dev_i2c_addr << 1) | I2C_M_RD;
 		config[j + 1] =
 		    ext_info->ext_dev_settings->ext_channels[0].address;
 		config[j + 2] = ST_ASM330LHHX_REG_BATCH_EXT_SENS_EN_MASK |
@@ -669,9 +690,12 @@ st_asm330lhhx_shub_set_enable(struct st_asm330lhhx_sensor *sensor,
 	struct st_asm330lhhx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	int err;
 
-	err = st_asm330lhhx_shub_config_channels(sensor, enable);
-	if (err < 0)
-		return err;
+	/* use fifo configuration when available */
+	if (sensor->hw->has_hw_fifo) {
+		err = st_asm330lhhx_shub_config_channels(sensor, enable);
+		if (err < 0)
+			return err;
+	}
 
 	if (enable) {
 		err = st_asm330lhhx_shub_set_odr(sensor, sensor->odr);
@@ -1034,10 +1058,10 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 {
 	const struct st_asm330lhhx_ext_dev_settings *settings;
 	struct st_asm330lhhx_sensor *acc_sensor, *sensor;
+	struct device_node *np = hw->dev->of_node;
 	u8 config[3], data, num_ext_dev = 0;
 	enum st_asm330lhhx_sensor_id id;
-	int err, i = 0, j;
-	struct device_node *np = hw->dev->of_node;
+	int err, i = 0, j, odr_save;
 
 	if (np && of_property_read_bool(np, "drive-pullup-shub")) {
 		dev_info(hw->dev, "enabling pull up on i2c master\n");
@@ -1059,6 +1083,11 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 	}
 
 	acc_sensor = iio_priv(hw->iio_devs[ST_ASM330LHHX_ID_ACC]);
+	odr_save = acc_sensor->odr;
+
+	/* speed up I2C master to max frequency */
+	acc_sensor->odr = hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].odr_avl[5].hz;
+
 	while (i < ARRAY_SIZE(st_asm330lhhx_ext_dev_table) &&
 	       num_ext_dev < ST_ASM330LHHX_MAX_SLV_NUM) {
 		settings = &st_asm330lhhx_ext_dev_table[i];
@@ -1068,7 +1097,7 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 				continue;
 
 			/* read wai slave register */
-			config[0] = (settings->i2c_addr[j] << 1) | 1;
+			config[0] = (settings->i2c_addr[j] << 1) | I2C_M_RD;
 			config[1] = settings->wai_addr;
 			config[2] = 1;
 
@@ -1083,14 +1112,13 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 			if (err < 0)
 				return err;
 
-			st_asm330lhhx_shub_wait_complete(hw);
+			st_asm330lhhx_shub_wait_complete(hw, acc_sensor);
 
 			err = st_asm330lhhx_shub_read_reg(hw,
 					ST_ASM330LHHX_REG_SLV0_OUT_ADDR,
 					&data, sizeof(data));
 
-			st_asm330lhhx_shub_master_enable(acc_sensor,
-							 false);
+			st_asm330lhhx_shub_master_enable(acc_sensor, false);
 
 			if (err < 0)
 				return err;
@@ -1111,12 +1139,18 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 				return err;
 
 			num_ext_dev++;
-			hw->ext_data_len += settings->data_len;
+
+			/* in case of fifo set the SHUB register offset */
+			if (hw->has_hw_fifo)
+				hw->ext_data_len += settings->data_len;
 			break;
 		}
 
 		i++;
 	}
+
+	/* restore I2C master trigger ODR */
+	acc_sensor->odr = odr_save;
 
 	if (!num_ext_dev)
 		return 0;
