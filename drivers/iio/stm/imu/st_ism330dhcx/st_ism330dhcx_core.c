@@ -439,32 +439,6 @@ static const struct iio_chan_spec st_ism330dhcx_wrist_channels[] = {
 	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_GESTURE, thr),
 };
 
-int __st_ism330dhcx_write_with_mask(struct st_ism330dhcx_hw *hw, u8 addr, u8 mask,
-				 u8 val)
-{
-	u8 data;
-	int err;
-
-	mutex_lock(&hw->lock);
-
-	err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to read %02x register\n", addr);
-		goto out;
-	}
-
-	data = (data & ~mask) | ((val << __ffs(mask)) & mask);
-
-	err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
-	if (err < 0)
-		dev_err(hw->dev, "failed to write %02x register\n", addr);
-
-out:
-	mutex_unlock(&hw->lock);
-
-	return err;
-}
-
 /**
  * Detect device ID
  *
@@ -476,10 +450,9 @@ out:
 static int st_ism330dhcx_check_whoami(struct st_ism330dhcx_hw *hw)
 {
 	int err;
-	u8 data;
+	int data;
 
-	err = hw->tf->read(hw->dev, ST_ISM330DHCX_REG_WHOAMI_ADDR, sizeof(data),
-			   &data);
+	err = regmap_read(hw->regmap, ST_ISM330DHCX_REG_WHOAMI_ADDR, &data);
 	if (err < 0) {
 		dev_err(hw->dev, "failed to read whoami register\n");
 		return err;
@@ -503,19 +476,18 @@ static int st_ism330dhcx_check_whoami(struct st_ism330dhcx_hw *hw)
  */
 static int st_ism330dhcx_get_odr_calibration(struct st_ism330dhcx_hw *hw)
 {
-	int err;
-	s8 data;
 	s64 odr_calib;
+	int data;
+	int err;
 
-	err = hw->tf->read(hw->dev, ST_ISM330DHCX_INTERNAL_FREQ_FINE, sizeof(data),
-			   (u8 *)&data);
+	err = regmap_read(hw->regmap, ST_ISM330DHCX_INTERNAL_FREQ_FINE, &data);
 	if (err < 0) {
 		dev_err(hw->dev, "failed to read %d register\n",
 				ST_ISM330DHCX_INTERNAL_FREQ_FINE);
 		return err;
 	}
 
-	odr_calib = (data * 37500) / 1000;
+	odr_calib = ((s8)data * 37500) / 1000;
 	hw->ts_delta_ns = ST_ISM330DHCX_TS_DELTA_NS - odr_calib;
 
 	dev_info(hw->dev, "Freq Fine %lld (ts %lld)\n",
@@ -891,18 +863,18 @@ static int st_ism330dhcx_reg_access(struct iio_dev *iio_dev, unsigned int reg,
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	mutex_lock(&iio_dev->mlock);
-	if (readval == NULL) {
-		ret = sensor->hw->tf->write(sensor->hw->dev, reg, 1,
-					    (u8 *)&writeval);
-	} else {
-		sensor->hw->tf->read(sensor->hw->dev, reg, 1,
-				     (u8 *)readval);
-		ret = 0;
-	}
-	mutex_unlock(&iio_dev->mlock);
+	ret = iio_device_claim_direct_mode(iio_dev);
+	if (ret)
+		return ret;
 
-	return ret;
+	if (readval == NULL)
+		ret = regmap_write(sensor->hw->regmap, reg, writeval);
+	else
+		ret = regmap_read(sensor->hw->regmap, reg, readval);
+
+	iio_device_release_direct_mode(iio_dev);
+
+	return (ret < 0) ? ret : 0;
 }
 #endif /* CONFIG_DEBUG_FS */
 
@@ -1089,9 +1061,9 @@ st_ism330dhcx_set_selftest(struct st_ism330dhcx_sensor *sensor,
 		return -EINVAL;
 	}
 
-	return st_ism330dhcx_update_bits_locked(sensor->hw,
-					 ST_ISM330DHCX_REG_CTRL5_C_ADDR,
-					 mask, mode);
+	return st_ism330dhcx_write_with_mask(sensor->hw,
+					     ST_ISM330DHCX_REG_CTRL5_C_ADDR,
+					     mask, mode);
 }
 
 static ssize_t
@@ -1399,7 +1371,7 @@ st_ism330dhcx_sysfs_start_selftest(struct device *dev,
 
 	/* disable interrupt on FIFO watermak */
 	if (hw->has_hw_fifo) {
-		ret = st_ism330dhcx_update_bits_locked(hw, drdy_reg,
+		ret = st_ism330dhcx_write_with_mask(hw, drdy_reg,
 					ST_ISM330DHCX_REG_INT_FIFO_TH_MASK, 0);
 		if (ret < 0)
 			goto restore_regs;
@@ -2054,8 +2026,7 @@ static void st_ism330dhcx_get_properties(struct st_ism330dhcx_hw *hw)
  * @param  tf_ops: Bus Transfer Function pointer.
  * @retval  struct iio_dev *, NULL if ERROR
  */
-int st_ism330dhcx_probe(struct device *dev, int irq,
-		     const struct st_ism330dhcx_transfer_function *tf_ops)
+int st_ism330dhcx_probe(struct device *dev, int irq, struct regmap *regmap)
 {
 	struct st_ism330dhcx_hw *hw;
 	int i, err;
@@ -2070,9 +2041,9 @@ int st_ism330dhcx_probe(struct device *dev, int irq,
 	mutex_init(&hw->fifo_lock);
 	mutex_init(&hw->page_lock);
 
+	hw->regmap = regmap;
 	hw->dev = dev;
 	hw->irq = irq;
-	hw->tf = tf_ops;
 	hw->odr_table = st_ism330dhcx_odr_table;
 	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
@@ -2147,56 +2118,51 @@ EXPORT_SYMBOL(st_ism330dhcx_probe);
 
 static int __maybe_unused st_ism330dhcx_bk_regs(struct st_ism330dhcx_hw *hw)
 {
-       int i, err = 0;
-       u8 data, addr;
+	unsigned int data;
+	int i, err = 0;
 
-       mutex_lock(&hw->page_lock);
-       for (i = 0; i < ST_ISM330DHCX_SUSPEND_RESUME_REGS; i++) {
-               addr = st_ism330dhcx_suspend_resume[i].addr;
-               err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
-               if (err < 0) {
-                       dev_err(hw->dev, "failed to read whoami register\n");
-                       goto out_lock;
-               }
+	mutex_lock(&hw->page_lock);
+	for (i = 0; i < ST_ISM330DHCX_SUSPEND_RESUME_REGS; i++) {
+		err = regmap_read(hw->regmap,
+				  st_ism330dhcx_suspend_resume[i].addr,
+				  &data);
+		if (err < 0) {
+			dev_err(hw->dev, "failed to read whoami register\n");
 
-               st_ism330dhcx_suspend_resume[i].val = data;
-       }
+			goto out_lock;
+		}
+
+		st_ism330dhcx_suspend_resume[i].val = data;
+	}
 
 out_lock:
-       mutex_unlock(&hw->page_lock);
+	mutex_unlock(&hw->page_lock);
 
-       return err;
+	return err;
 }
 
 static int __maybe_unused st_ism330dhcx_restore_regs(struct st_ism330dhcx_hw *hw)
 {
-       int i, err = 0;
-       u8 data, addr;
+	int i, err = 0;
 
-       mutex_lock(&hw->page_lock);
-       for (i = 0; i < ST_ISM330DHCX_SUSPEND_RESUME_REGS; i++) {
-               addr = st_ism330dhcx_suspend_resume[i].addr;
-               err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
-               if (err < 0) {
-                       dev_err(hw->dev, "failed to read %02x reg\n", addr);
-                       goto out_lock;
-               }
+	mutex_lock(&hw->page_lock);
+	for (i = 0; i < ST_ISM330DHCX_SUSPEND_RESUME_REGS; i++) {
+		err = regmap_update_bits(hw->regmap,
+					 st_ism330dhcx_suspend_resume[i].addr,
+					 st_ism330dhcx_suspend_resume[i].mask,
+					 st_ism330dhcx_suspend_resume[i].val);
+		if (err < 0) {
+			dev_err(hw->dev, "failed to read %02x reg\n",
+				st_ism330dhcx_suspend_resume[i].addr);
 
-               data &= ~st_ism330dhcx_suspend_resume[i].mask;
-               data |= (st_ism330dhcx_suspend_resume[i].val &
-                        st_ism330dhcx_suspend_resume[i].mask);
-
-               err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
-               if (err < 0) {
-                       dev_err(hw->dev, "failed to write %02x reg\n", addr);
-                       goto out_lock;
-               }
-       }
+			goto out_lock;
+		}
+	}
 
 out_lock:
-       mutex_unlock(&hw->page_lock);
+	mutex_unlock(&hw->page_lock);
 
-       return err;
+	return err;
 }
 
 /**

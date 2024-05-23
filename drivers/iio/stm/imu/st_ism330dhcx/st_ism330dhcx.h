@@ -14,6 +14,7 @@
 #include <linux/iio/iio.h>
 #include <linux/of_device.h>
 #include <linux/delay.h>
+#include <linux/regmap.h>
 
 #include "../../common/stm_iio_types.h"
 
@@ -137,6 +138,8 @@
 						 ST_ISM330DHCX_TAG_SIZE)
 #define ST_ISM330DHCX_MAX_FIFO_DEPTH		416
 
+#define ST_ISM330DHCX_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
+
 #define ST_ISM330DHCX_DATA_CHANNEL(chan_type, addr, mod, ch2, scan_idx,	\
 				rb, sb, sg)				\
 {									\
@@ -176,33 +179,6 @@ static const struct iio_event_spec st_ism330dhcx_thr_event = {
 	.event_spec = &st_ism330dhcx_##etype##_event,	\
 	.num_event_specs = 1,				\
 }
-
-#define ST_ISM330DHCX_RX_MAX_LENGTH		64
-#define ST_ISM330DHCX_TX_MAX_LENGTH		16
-
-/**
- * @struct st_ism330dhcx_transfer_buffer
- * @brief Buffer support for data transfer
- *
- * rx_buf: Data receive buffer.
- * tx_buf: Data transmit buffer.
- */
-struct st_ism330dhcx_transfer_buffer {
-	u8 rx_buf[ST_ISM330DHCX_RX_MAX_LENGTH];
-	u8 tx_buf[ST_ISM330DHCX_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
-/**
- * @struct st_ism330dhcx_transfer_function
- * @brief Bus Transfer Function
- *
- * read: Bus read funtion to get register value from sensor.
- * write: Bus write funtion to set register value to sensor.
- */
-struct st_ism330dhcx_transfer_function {
-	int (*read)(struct device *dev, u8 addr, int len, u8 *data);
-	int (*write)(struct device *dev, u8 addr, int len, const u8 *data);
-};
 
 /**
  * @struct st_ism330dhcx_reg
@@ -407,7 +383,6 @@ enum st_ism330dhcx_fifo_status {
  * offset: Sensor data offset
  * decimator: Sensor decimator
  * dec_counter: Sensor decimator counter
- * old_data: Saved sensor data
  * max_watermark: Max supported watermark level
  * watermark: Sensor watermark level
  * batch_reg: Sensor reg/mask for FIFO batching register
@@ -449,6 +424,7 @@ struct st_ism330dhcx_sensor {
  *
  * dev: Pointer to instance of struct device (I2C or SPI).
  * irq: Device interrupt line (I2C or SPI).
+ * regmap: Register map of the device.
  * lock: Mutex to protect read and write operations.
  * fifo_lock: Mutex to prevent concurrent access to the hw FIFO.
  * page_lock: Mutex to prevent concurrent memory page configuration.
@@ -456,29 +432,30 @@ struct st_ism330dhcx_sensor {
  * state: hw operational state.
  * enable_mask: Enabled sensor bitmask.
  * fsm_enable_mask: FSM Enabled sensor bitmask.
- * embfunc_pg0_irq_reg: Embedded function irq configutation register (page 0).
  * embfunc_irq_reg: Embedded function irq configutation register (other).
+ * embfunc_pg0_irq_reg: Embedded function irq configutation register (page 0).
  * ext_data_len: Number of i2c slave devices connected to I2C master.
  * odr: Timestamp sample ODR [Hz]
  * uodr: Timestamp sample ODR [uHz]
  * ts_offset: Hw timestamp offset.
+ * ts_delta_ns: Delta time since irq.
  * hw_ts: Latest hw timestamp from the sensor.
- * hw_ts_high: Manage timestamp rollover
- * tsample:
- * hw_ts_old:
+ * u32 val_ts_old: Manage timestamp rollover.
+ * hw_ts_high: Manage timestamp rollover.
+ * tsample: Estimated sample timestamp.
+ * hw_ts_old: Manage timestamp rollover.
  * delta_ts: Delta time between two consecutive interrupts.
- * delta_hw_ts:
  * ts: Latest timestamp from irq handler.
- * @i2c_master_pu: I2C master line Pull Up configuration.
- * @module_id: identify iio devices of the same sensor module.
- * @has_hw_fifo: FIFO hw support flag.
- * iio_devs: Pointers to acc/gyro iio_dev instances.
- * tf: Transfer function structure used by I/O operations.
- * tb: Transfer buffers used by SPI I/O operations.
+ * i2c_master_pu: I2C master line Pull Up configuration.
+ * module_id: identify iio devices of the same sensor module.
+ * has_hw_fifo: FIFO hw support flag.
+ * iio_devs: Pointers to iio_dev sensor instances.
+ * odr_table: The sensor ODR table.
  */
 struct st_ism330dhcx_hw {
 	struct device *dev;
 	int irq;
+	struct regmap *regmap;
 
 	struct mutex lock;
 	struct mutex fifo_lock;
@@ -487,7 +464,6 @@ struct st_ism330dhcx_hw {
 	enum st_ism330dhcx_fifo_mode fifo_mode;
 	unsigned long state;
 	u32 enable_mask;
-	u32 requested_mask;
 
 	u16 fsm_enable_mask;
 	u8 embfunc_irq_reg;
@@ -512,9 +488,6 @@ struct st_ism330dhcx_hw {
 
 	struct iio_dev *iio_devs[ST_ISM330DHCX_ID_MAX];
 	const struct st_ism330dhcx_odr_table_entry *odr_table;
-
-	const struct st_ism330dhcx_transfer_function *tf;
-	struct st_ism330dhcx_transfer_buffer tb;
 };
 
 /**
@@ -524,46 +497,46 @@ struct st_ism330dhcx_hw {
 extern const struct dev_pm_ops st_ism330dhcx_pm_ops;
 
 static inline int st_ism330dhcx_read_atomic(struct st_ism330dhcx_hw *hw,
-					    u8 addr, int len, u8 *data)
+					    u8 addr, unsigned int len,
+					    void *data)
 {
 	int err;
 
 	mutex_lock(&hw->page_lock);
-	err = hw->tf->read(hw->dev, addr, len, data);
+	err = regmap_bulk_read(hw->regmap, addr, data, len);
 	mutex_unlock(&hw->page_lock);
 
 	return err;
 }
 
-static inline int st_ism330dhcx_write_atomic(struct st_ism330dhcx_hw *hw, u8 addr,
-					  int len, u8 *data)
+static inline int st_ism330dhcx_write_atomic(struct st_ism330dhcx_hw *hw,
+					     u8 addr, unsigned int len,
+					     unsigned int *data)
 {
 	int err;
 
 	mutex_lock(&hw->page_lock);
-	err = hw->tf->write(hw->dev, addr, len, data);
+	err = regmap_bulk_write(hw->regmap, addr, data, len);
 	mutex_unlock(&hw->page_lock);
 
 	return err;
 }
 
-int __st_ism330dhcx_write_with_mask(struct st_ism330dhcx_hw *hw, u8 addr, u8 mask,
-				 u8 val);
-static inline int st_ism330dhcx_write_with_mask(struct st_ism330dhcx_hw *hw, u8 addr,
-					     u8 mask, u8 val)
+static inline int __st_ism330dhcx_write_with_mask(struct st_ism330dhcx_hw *hw,
+						  u8 addr, unsigned int mask,
+						  unsigned int data)
 {
+	unsigned int val = ST_ISM330DHCX_SHIFT_VAL(data, mask);
 	int err;
 
-	mutex_lock(&hw->page_lock);
-	err = __st_ism330dhcx_write_with_mask(hw, addr, mask, val);
-	mutex_unlock(&hw->page_lock);
+	err = regmap_update_bits(hw->regmap, addr, mask, val);
 
 	return err;
 }
 
-static inline int
-st_ism330dhcx_update_bits_locked(struct st_ism330dhcx_hw *hw, unsigned int addr,
-			     unsigned int mask, unsigned int val)
+static inline int st_ism330dhcx_write_with_mask(struct st_ism330dhcx_hw *hw,
+						u8 addr, unsigned int mask,
+						unsigned int val)
 {
 	int err;
 
@@ -575,16 +548,11 @@ st_ism330dhcx_update_bits_locked(struct st_ism330dhcx_hw *hw, unsigned int addr,
 }
 
 static inline int st_ism330dhcx_set_page_access(struct st_ism330dhcx_hw *hw,
-					     u8 mask, u8 data)
+						u8 mask, u8 data)
 {
-	int err;
-
-	err = __st_ism330dhcx_write_with_mask(hw,
-					   ST_ISM330DHCX_REG_FUNC_CFG_ACCESS_ADDR,
-					   mask, data);
-	usleep_range(100, 150);
-
-	return err;
+	return __st_ism330dhcx_write_with_mask(hw,
+					 ST_ISM330DHCX_REG_FUNC_CFG_ACCESS_ADDR,
+					 mask, data);
 }
 
 static inline bool st_ism330dhcx_is_fifo_enabled(struct st_ism330dhcx_hw *hw)
@@ -597,8 +565,9 @@ static inline bool st_ism330dhcx_is_fifo_enabled(struct st_ism330dhcx_hw *hw)
 }
 
 int st_ism330dhcx_probe(struct device *dev, int irq,
-		     const struct st_ism330dhcx_transfer_function *tf_ops);
-int st_ism330dhcx_shub_set_enable(struct st_ism330dhcx_sensor *sensor, bool enable);
+			struct regmap *regmap);
+int st_ism330dhcx_shub_set_enable(struct st_ism330dhcx_sensor *sensor,
+				  bool enable);
 int st_ism330dhcx_shub_probe(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_shub_read(struct st_ism330dhcx_sensor *sensor, u8 addr,
 			    u8 *data, int len);
@@ -612,35 +581,36 @@ int st_ism330dhcx_get_odr_val(enum st_ism330dhcx_sensor_id id,
 			      int odr, int uodr,
 			      int *podr, int *puodr, u8 *val);
 int st_ism330dhcx_update_watermark(struct st_ism330dhcx_sensor *sensor,
-				u16 watermark);
+				   u16 watermark);
 ssize_t st_ism330dhcx_flush_fifo(struct device *dev,
-			      struct device_attribute *attr,
-			      const char *buf, size_t size);
-ssize_t st_ism330dhcx_get_max_watermark(struct device *dev,
-				     struct device_attribute *attr,
-				     char *buf);
-ssize_t st_ism330dhcx_get_watermark(struct device *dev,
-				 struct device_attribute *attr,
-				 char *buf);
-ssize_t st_ism330dhcx_set_watermark(struct device *dev,
 				 struct device_attribute *attr,
 				 const char *buf, size_t size);
+ssize_t st_ism330dhcx_get_max_watermark(struct device *dev,
+					struct device_attribute *attr,
+					char *buf);
+ssize_t st_ism330dhcx_get_watermark(struct device *dev,
+				    struct device_attribute *attr,
+				    char *buf);
+ssize_t st_ism330dhcx_set_watermark(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t size);
 ssize_t st_ism330dhcx_get_module_id(struct device *dev,
 				    struct device_attribute *attr,
 				    char *buf);
 
-int st_ism330dhcx_set_page_access(struct st_ism330dhcx_hw *hw, u8 mask, u8 data);
+int st_ism330dhcx_set_page_access(struct st_ism330dhcx_hw *hw,
+				  u8 mask, u8 data);
 int st_ism330dhcx_suspend_fifo(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_set_fifo_mode(struct st_ism330dhcx_hw *hw,
-			     enum st_ism330dhcx_fifo_mode fifo_mode);
+				enum st_ism330dhcx_fifo_mode fifo_mode);
 int __st_ism330dhcx_set_sensor_batching_odr(struct st_ism330dhcx_sensor *sensor,
-					 bool enable);
+					    bool enable);
 int st_ism330dhcx_fsm_init(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_fsm_get_orientation(struct st_ism330dhcx_hw *hw, u8 *data);
 int st_ism330dhcx_embfunc_sensor_set_enable(struct st_ism330dhcx_sensor *sensor,
-					 bool enable);
+					    bool enable);
 int st_ism330dhcx_step_counter_set_enable(struct st_ism330dhcx_sensor *sensor,
-				       bool enable);
+					  bool enable);
 int st_ism330dhcx_reset_step_counter(struct iio_dev *iio_dev);
 int st_ism330dhcx_update_batching(struct iio_dev *iio_dev, bool enable);
 int st_ism330dhcx_reset_hwts(struct st_ism330dhcx_hw *hw);

@@ -197,34 +197,30 @@ static int st_ism330dhcx_fsm_write(struct st_ism330dhcx_hw *hw, u16 base_addr,
 	msb = (((base_addr >> 8) & 0xf) << 4) | 1;
 	lsb = base_addr & 0xff;
 
-	err = hw->tf->write(hw->dev,
-			    ST_ISM330DHCX_REG_PAGE_ADDRESS,
-			    sizeof(lsb),
-			    &lsb);
+	err = regmap_bulk_write(hw->regmap,
+				ST_ISM330DHCX_REG_PAGE_ADDRESS,
+				&lsb, sizeof(lsb));
 	if (err < 0)
 		return err;
 
-	err = hw->tf->write(hw->dev,
-			    ST_ISM330DHCX_REG_PAGE_SEL_ADDR,
-			    sizeof(msb),
-			    &msb);
+	err = regmap_bulk_write(hw->regmap,
+				ST_ISM330DHCX_REG_PAGE_SEL_ADDR,
+				&msb, sizeof(msb));
 	if (err < 0)
 		return err;
 
 	for (i = 0; i < len; i++) {
-		err = hw->tf->write(hw->dev,
-				    ST_ISM330DHCX_REG_PAGE_VALUE,
-				    sizeof(u8),
-				    &data[i]);
+		err = regmap_bulk_write(hw->regmap,
+					ST_ISM330DHCX_REG_PAGE_VALUE,
+					&data[i], sizeof(u8));
 		if (err < 0)
 			return err;
 
 		if (++lsb == 0) {
 			msb += (1 << 4);
-			err = hw->tf->write(hw->dev,
-					    ST_ISM330DHCX_REG_PAGE_SEL_ADDR,
-					    sizeof(msb),
-					    &msb);
+			err = regmap_bulk_write(hw->regmap,
+						ST_ISM330DHCX_REG_PAGE_SEL_ADDR,
+						&msb, sizeof(msb));
 			if (err < 0)
 				return err;
 		}
@@ -302,8 +298,9 @@ static int st_ism330dhcx_fsm_set_enable(struct st_ism330dhcx_sensor *sensor,
 	else
 		enable_mask &= ~BIT(i);
 
-	err = hw->tf->write(hw->dev, ST_ISM330DHCX_REG_FSM_ENABLE_A_ADDR,
-			    sizeof(enable_mask), (u8 *)&enable_mask);
+	err = regmap_bulk_write(hw->regmap,
+				ST_ISM330DHCX_REG_FSM_ENABLE_A_ADDR,
+				&enable_mask, sizeof(enable_mask));
 	if (err < 0)
 		goto reset_page;
 
@@ -448,9 +445,9 @@ int st_ism330dhcx_reset_step_counter(struct iio_dev *iio_dev)
 
 		msleep(100);
 
-		err = hw->tf->read(hw->dev,
-				   ST_ISM330DHCX_REG_STEP_COUNTER_L_ADDR,
-				   sizeof(data), (u8 *)&data);
+		err = regmap_bulk_write(hw->regmap,
+					ST_ISM330DHCX_REG_STEP_COUNTER_L_ADDR,
+					&data, sizeof(data));
 		if (err < 0)
 			goto reset_page;
 
@@ -487,8 +484,9 @@ int st_ism330dhcx_fsm_get_orientation(struct st_ism330dhcx_hw *hw, u8 *out)
 	if (err < 0)
 		goto unlock;
 
-	err = hw->tf->read(hw->dev, ST_ISM330DHCX_REG_FSM_OUTS6_ADDR,
-			   sizeof(data), &data);
+	err = regmap_bulk_read(hw->regmap,
+			       ST_ISM330DHCX_REG_FSM_OUTS6_ADDR,
+			       &data, sizeof(data));
 	if (err < 0)
 		goto reset_page;
 
@@ -557,16 +555,17 @@ int __maybe_unused st_ism330dhcx_fsm_init(struct st_ism330dhcx_hw *hw)
 		goto reset_page;
 
 	/* disable all fsm sensors */
-	err = hw->tf->write(hw->dev, ST_ISM330DHCX_REG_FSM_ENABLE_A_ADDR,
-			    sizeof(val), val);
+	err = regmap_bulk_write(hw->regmap,
+				ST_ISM330DHCX_REG_FSM_ENABLE_A_ADDR,
+				val, sizeof(val));
 	if (err < 0)
 		goto reset_page;
 
 	/* enable fsm interrupt */
 	irq_mask = (1 << ARRAY_SIZE(st_ism330dhcx_fsm_sensor_list)) - 1;
-	err = hw->tf->write(hw->dev, hw->embfunc_irq_reg + 1,
-			    sizeof(irq_mask),
-			    (u8 *)&irq_mask);
+	err = regmap_bulk_write(hw->regmap,
+				hw->embfunc_irq_reg + 1,
+				&irq_mask, sizeof(irq_mask));
 	if (err < 0)
 		goto reset_page;
 

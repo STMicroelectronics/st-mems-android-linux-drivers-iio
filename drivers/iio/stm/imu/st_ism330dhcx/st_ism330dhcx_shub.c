@@ -260,9 +260,9 @@ st_ism330dhcx_shub_wait_complete(struct st_ism330dhcx_hw *hw,
 
 	do {
 		usleep_range(delay, delay + 1000);
-		hw->tf->read(hw->dev,
-			     ST_ISM330DHCX_REG_STATUS_MASTER_MAINPAGE_ADDR,
-			     1, &data);
+		regmap_bulk_read(hw->regmap,
+				 ST_ISM330DHCX_REG_STATUS_MASTER_MAINPAGE_ADDR,
+				 &data, sizeof(data));
 
 		if (data & ST_ISM330DHCX_REG_SENS_HUB_ENDOP_MASK)
 			break;
@@ -283,7 +283,7 @@ st_ism330dhcx_shub_wait_complete(struct st_ism330dhcx_hw *hw,
  * @return  0 if OK, < 0 if ERROR
  */
 static int st_ism330dhcx_shub_read_reg(struct st_ism330dhcx_hw *hw, u8 addr,
-				    u8 *data, int len)
+				       u8 *data, int len)
 {
 	int err;
 
@@ -293,7 +293,7 @@ static int st_ism330dhcx_shub_read_reg(struct st_ism330dhcx_hw *hw, u8 addr,
 	if (err < 0)
 		goto out;
 
-	err = hw->tf->read(hw->dev, addr, len, data);
+	err = regmap_bulk_read(hw->regmap, addr, data, len);
 
 	st_ism330dhcx_set_page_access(hw, ST_ISM330DHCX_REG_SHUB_REG_MASK, false);
 out:
@@ -324,7 +324,8 @@ static int st_ism330dhcx_shub_write_reg(struct st_ism330dhcx_hw *hw, u8 addr,
 	if (err < 0)
 		goto out;
 
-	err = hw->tf->write(hw->dev, addr, len, data);
+	err = regmap_bulk_write(hw->regmap, (unsigned int)addr,
+				(unsigned int *)data, len);
 
 	st_ism330dhcx_set_page_access(hw, ST_ISM330DHCX_REG_SHUB_REG_MASK, false);
 out:

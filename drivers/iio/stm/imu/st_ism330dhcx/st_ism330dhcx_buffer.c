@@ -94,7 +94,8 @@ inline int st_ism330dhcx_reset_hwts(struct st_ism330dhcx_hw *hw)
 	hw->tsample = 0ull;
 
 	return st_ism330dhcx_write_atomic(hw, ST_ISM330DHCX_REG_TIMESTAMP2_ADDR,
-				       sizeof(data), &data);
+					  sizeof(data),
+					  (unsigned int *)&data);
 }
 
 /**
@@ -238,8 +239,9 @@ int st_ism330dhcx_update_watermark(struct st_ism330dhcx_sensor *sensor,
 	fifo_watermark = ((data << 8) & ~ST_ISM330DHCX_REG_FIFO_WTM_MASK) |
 			 (fifo_watermark & ST_ISM330DHCX_REG_FIFO_WTM_MASK);
 	wdata = cpu_to_le16(fifo_watermark);
-	err = st_ism330dhcx_write_atomic(hw, ST_ISM330DHCX_REG_FIFO_CTRL1_ADDR,
-				      sizeof(wdata), (u8 *)&wdata);
+	err = regmap_bulk_write(hw->regmap,
+				ST_ISM330DHCX_REG_FIFO_CTRL1_ADDR,
+				&wdata, sizeof(wdata));
 out:
 	mutex_unlock(&hw->lock);
 
@@ -762,9 +764,9 @@ static irqreturn_t st_ism330dhcx_handler_thread(int irq, void *private)
 		s64 event;
 		int err;
 
-		err = hw->tf->read(hw->dev,
-				   ST_ISM330DHCX_REG_EMB_FUNC_STATUS_MAINPAGE,
-				   sizeof(status), status);
+		err = regmap_bulk_read(hw->regmap,
+				     ST_ISM330DHCX_REG_EMB_FUNC_STATUS_MAINPAGE,
+				     status, sizeof(status));
 		if (err < 0)
 			return IRQ_HANDLED;
 
