@@ -316,10 +316,17 @@ static int
 st_lsm6dsvx_event_sensor_set_enable(struct st_lsm6dsvx_sensor *sensor,
 				    bool enable)
 {
-	int err, eint = !!enable;
 	struct st_lsm6dsvx_hw *hw = sensor->hw;
-	u8 int_reg = hw->int_pin == 1 ? ST_LSM6DSVX_REG_MD1_CFG_ADDR :
-					ST_LSM6DSVX_REG_MD2_CFG_ADDR;
+	int err, eint = !!enable;
+	u8 drdy_reg, ef_irq_reg;
+
+	err = st_lsm6dsvx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
+	if (err < 0) {
+		dev_err(hw->dev,
+			"invalid event interrupt configuration\n");
+
+		return err;
+	}
 
 	err = st_lsm6dsvx_sensor_set_enable(sensor, enable);
 	if (err < 0)
@@ -327,35 +334,35 @@ st_lsm6dsvx_event_sensor_set_enable(struct st_lsm6dsvx_sensor *sensor,
 
 	switch (sensor->id) {
 	case ST_LSM6DSVX_ID_WK:
-		err = st_lsm6dsvx_write_with_mask(hw, int_reg,
+		err = st_lsm6dsvx_write_with_mask(hw, ef_irq_reg,
 						  ST_LSM6DSVX_INT_WU_MASK,
 						  eint);
 		if (err < 0)
 			return err;
 		break;
 	case ST_LSM6DSVX_ID_FF:
-		err = st_lsm6dsvx_write_with_mask(hw, int_reg,
+		err = st_lsm6dsvx_write_with_mask(hw, ef_irq_reg,
 						  ST_LSM6DSVX_INT_FF_MASK,
 						  eint);
 		if (err < 0)
 			return err;
 		break;
 	case ST_LSM6DSVX_ID_SLPCHG:
-		err = st_lsm6dsvx_write_with_mask(hw, int_reg,
+		err = st_lsm6dsvx_write_with_mask(hw, ef_irq_reg,
 					      ST_LSM6DSVX_INT_SLEEP_CHANGE_MASK,
 					      eint);
 		if (err < 0)
 			return err;
 		break;
 	case ST_LSM6DSVX_ID_6D:
-		err = st_lsm6dsvx_write_with_mask(hw, int_reg,
+		err = st_lsm6dsvx_write_with_mask(hw, ef_irq_reg,
 						  ST_LSM6DSVX_INT_6D_MASK,
 						  eint);
 		if (err < 0)
 			return err;
 		break;
 	case ST_LSM6DSVX_ID_TAP:
-		err = st_lsm6dsvx_write_with_mask(hw, int_reg,
+		err = st_lsm6dsvx_write_with_mask(hw, ef_irq_reg,
 						ST_LSM6DSVX_TAP_IA_MASK,
 						eint);
 		if (err < 0)
@@ -369,7 +376,7 @@ st_lsm6dsvx_event_sensor_set_enable(struct st_lsm6dsvx_sensor *sensor,
 			return err;
 		break;
 	case ST_LSM6DSVX_ID_DTAP:
-		err = st_lsm6dsvx_write_with_mask(hw, int_reg,
+		err = st_lsm6dsvx_write_with_mask(hw, ef_irq_reg,
 						ST_LSM6DSVX_INT_DOUBLE_TAP_MASK,
 						eint);
 		if (err < 0)
@@ -805,14 +812,25 @@ int st_lsm6dsvx_event_handler(struct st_lsm6dsvx_hw *hw)
 
 		/* base function sensors */
 		if (status & ST_LSM6DSVX_TAP_IA_MASK) {
-			if (BIT(ST_LSM6DSVX_ID_TAP)) {
+			u8 tapsrc;
+
+			err = st_lsm6dsvx_read_locked(hw,
+					       ST_LSM6DSVX_REG_TAP_SRC_ADDR,
+					       &tapsrc, sizeof(tapsrc));
+			if (err < 0)
+				return IRQ_HANDLED;
+
+			if ((hw->enable_mask & BIT(ST_LSM6DSVX_ID_TAP)) &&
+			     (tapsrc & ST_LSM6DSVX_SINGLE_TAP_MASK)) {
 				iio_dev = hw->iio_devs[ST_LSM6DSVX_ID_TAP];
 				event = IIO_UNMOD_EVENT_CODE(STM_IIO_TAP, -1,
 							     IIO_EV_TYPE_THRESH,
 							     IIO_EV_DIR_RISING);
+
 				iio_push_event(iio_dev, event,
 					       iio_get_time_ns(iio_dev));
-			} else {
+			} else if ((hw->enable_mask & BIT(ST_LSM6DSVX_ID_DTAP)) &&
+				   (tapsrc & ST_LSM6DSVX_DOUBLE_TAP_MASK)) {
 				iio_dev = hw->iio_devs[ST_LSM6DSVX_ID_DTAP];
 				event = IIO_UNMOD_EVENT_CODE(STM_IIO_TAP_TAP, -1,
 							     IIO_EV_TYPE_THRESH,

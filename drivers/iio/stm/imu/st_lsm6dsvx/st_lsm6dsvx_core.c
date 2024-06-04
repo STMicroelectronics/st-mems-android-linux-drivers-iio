@@ -1015,9 +1015,11 @@ int st_lsm6dsvx_get_int_reg(struct st_lsm6dsvx_hw *hw,
 	switch (int_pin) {
 	case 1:
 		*drdy_reg = ST_LSM6DSVX_REG_INT1_CTRL_ADDR;
+		*ef_irq_reg = ST_LSM6DSVX_REG_MD1_CFG_ADDR;
 		break;
 	case 2:
 		*drdy_reg = ST_LSM6DSVX_REG_INT2_CTRL_ADDR;
+		*ef_irq_reg = ST_LSM6DSVX_REG_MD2_CFG_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -1796,8 +1798,8 @@ int st_lsm6dsvx_probe(struct device *dev, int irq, int hw_id,
 			return err;
 
 		if (hw->settings->st_qvar_probe &&
-		(!dev_fwnode(dev) ||
-		device_property_read_bool(dev, "enable-qvar"))) {
+		    (!dev_fwnode(dev) ||
+		     device_property_read_bool(dev, "enable-qvar"))) {
 			err = st_lsm6dsvx_qvar_probe(hw);
 			if (err)
 				return err;

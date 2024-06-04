@@ -857,11 +857,6 @@ int st_lsm6dsvx_allocate_sw_trigger(struct st_lsm6dsvx_hw *hw)
 int st_lsm6dsvx_hw_trigger_setup(struct st_lsm6dsvx_hw *hw)
 {
 	struct device_node *np = hw->dev->of_node;
-
-#if KERNEL_VERSION(5, 13, 0) > LINUX_VERSION_CODE
-	struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
-
 	unsigned long irq_type;
 	bool irq_active_low;
 	int i, err;
