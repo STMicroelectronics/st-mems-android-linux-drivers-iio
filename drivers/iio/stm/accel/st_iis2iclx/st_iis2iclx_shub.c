@@ -226,7 +226,7 @@ st_iis2iclx_ext_dev_settings st_iis2iclx_ext_dev_table[] = {
 		},
 		.fs_table = {
 			.size = 1,
-			/* hPa miscro scale */
+			/* hPa micro scale */
 			.fs_avl[0] = {
 				.gain = 1000000UL/4096UL,
 				.val = 0x0,
@@ -264,7 +264,7 @@ st_iis2iclx_ext_dev_settings st_iis2iclx_ext_dev_table[] = {
 		},
 		.fs_table = {
 			.size = 1,
-			/* hPa miscro scale */
+			/* hPa micro scale */
 			.fs_avl[0] = {
 				.gain = 1000000UL/4096UL,
 				.val = 0x0,
