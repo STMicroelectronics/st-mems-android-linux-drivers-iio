@@ -1,14 +1,25 @@
 # SPDX-License-Identifier: GPL-2.0-only
-st_lsm6dsox-y := st_lsm6dsox_core.o \
-		 st_lsm6dsox_buffer.o \
-		 st_lsm6dsox_mlc.o \
-		 st_lsm6dsox_shub.o \
-		 st_lsm6dsox_events.o \
-		 st_lsm6dsox_embfunc.o
+#
+# Makefile for industrial I/O LSM6DSOX driver
+#
 
-st_lsm6dsox-$(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP) += st_lsm6dsox_hwtimestamp.o
+include Kbuild
 
-obj-$(CONFIG_IIO_ST_LSM6DSOX) += st_lsm6dsox.o
-obj-$(CONFIG_IIO_ST_LSM6DSOX_I2C) += st_lsm6dsox_i2c.o
-obj-$(CONFIG_IIO_ST_LSM6DSOX_SPI) += st_lsm6dsox_spi.o
-obj-$(CONFIG_IIO_ST_LSM6DSOX_I3C) += st_lsm6dsox_i3c.o
+ifeq ($(KERNELRELEASE),)
+
+KBUILD_OPTIONS += CONFIG_IIO_ST_LSM6DSOX=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_LSM6DSOX_I2C=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_LSM6DSOX_SPI=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP=y
+
+EXTRA_CFLAGS += "-DCONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP -DCONFIG_IIO_ST_LSM6DSOX_MLC_PRELOAD"
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(EXTRA_CFLAGS) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+endif

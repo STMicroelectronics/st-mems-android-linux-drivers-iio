@@ -1,12 +1,28 @@
 # SPDX-License-Identifier: GPL-2.0-only
-st_asm330lhhx-y := st_asm330lhhx_core.o \
-		   st_asm330lhhx_buffer.o \
-		   st_asm330lhhx_shub.o \
-		   st_asm330lhhx_mlc.o \
-		   st_asm330lhhx_events.o
+#
+# Makefile for industrial I/O ASM330LHHX driver
+#
 
-st_asm330lhhx-$(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP) += st_asm330lhhx_hwtimestamp.o
+include Kbuild
 
-obj-$(CONFIG_IIO_ST_ASM330LHHX) += st_asm330lhhx.o
-obj-$(CONFIG_IIO_ST_ASM330LHHX_I2C) += st_asm330lhhx_i2c.o
-obj-$(CONFIG_IIO_ST_ASM330LHHX_SPI) += st_asm330lhhx_spi.o
+ifeq ($(KERNELRELEASE),)
+
+KBUILD_OPTIONS += CONFIG_IIO_ST_ASM330LHHX=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_ASM330LHHX_I2C=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_ASM330LHHX_SPI=m
+
+KBUILD_OPTIONS += CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP=y
+KBUILD_OPTIONS += CONFIG_IIO_ST_ASM330LHHX_MLC_PRELOAD=y
+KBUILD_OPTIONS += CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND=y
+
+EXTRA_CFLAGS += "-DCONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP -DCONFIG_IIO_ST_ASM330LHHX_MLC_PRELOAD -DCONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND"
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(EXTRA_CFLAGS) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+endif

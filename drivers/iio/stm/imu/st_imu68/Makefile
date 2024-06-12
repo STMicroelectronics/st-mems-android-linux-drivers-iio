@@ -1,6 +1,22 @@
 # SPDX-License-Identifier: GPL-2.0-only
-st_imu68-y := st_imu68_core.o st_imu68_buffer.o
+#
+# Makefile for industrial I/O IMU68 driver
+#
 
-obj-$(CONFIG_IIO_ST_IMU68) += st_imu68.o
-obj-$(CONFIG_IIO_ST_IMU68_I2C) += st_imu68_i2c.o
-obj-$(CONFIG_IIO_ST_IMU68_SPI) += st_imu68_spi.o
+include Kbuild
+
+ifeq ($(KERNELRELEASE),)
+
+KBUILD_OPTIONS += CONFIG_IIO_ST_IMU68=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_IMU68_I2C=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_IMU68_SPI=m
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+endif

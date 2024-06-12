@@ -1,11 +1,27 @@
 # SPDX-License-Identifier: GPL-2.0-only
-st_iis2iclx-y := st_iis2iclx_core.o st_iis2iclx_buffer.o \
-		  st_iis2iclx_events.o \
-		  st_iis2iclx_shub.o \
-		  st_iis2iclx_mlc.o
+#
+# Makefile for industrial I/O IIS2ICLX driver
+#
 
-st_iis2iclx-$(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP) += st_iis2iclx_hwtimestamp.o
+include Kbuild
 
-obj-$(CONFIG_IIO_ST_IIS2ICLX) += st_iis2iclx.o
-obj-$(CONFIG_IIO_ST_IIS2ICLX_I2C) += st_iis2iclx_i2c.o
-obj-$(CONFIG_IIO_ST_IIS2ICLX_SPI) += st_iis2iclx_spi.o
+ifeq ($(KERNELRELEASE),)
+
+KBUILD_OPTIONS += CONFIG_IIO_ST_IIS2ICLX=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_IIS2ICLX_I2C=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_IIS2ICLX_SPI=m
+
+KBUILD_OPTIONS += CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP=y
+KBUILD_OPTIONS += CONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD=y
+
+EXTRA_CFLAGS += "-DCONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP -DCONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD"
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(EXTRA_CFLAGS) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+endif

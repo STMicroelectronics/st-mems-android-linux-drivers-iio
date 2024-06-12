@@ -1,8 +1,22 @@
 # SPDX-License-Identifier: GPL-2.0-only
-st_ism330is-y := st_ism330is_core.o \
-		 st_ism330is_shub.o \
-		 st_ism330is_triggers.o
+#
+# Makefile for industrial I/O ISM330IS driver
+#
 
-obj-$(CONFIG_IIO_ST_ISM330IS) += st_ism330is.o
-obj-$(CONFIG_IIO_ST_ISM330IS_I2C) += st_ism330is_i2c.o
-obj-$(CONFIG_IIO_ST_ISM330IS_SPI) += st_ism330is_spi.o
+include Kbuild
+
+ifeq ($(KERNELRELEASE),)
+
+KBUILD_OPTIONS += CONFIG_IIO_ST_ISM330IS=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_ISM330IS_IIO=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_ISM330IS_IIO=m
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+endif

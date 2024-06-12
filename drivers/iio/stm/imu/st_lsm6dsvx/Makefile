@@ -1,12 +1,26 @@
 # SPDX-License-Identifier: GPL-2.0-only
-st_lsm6dsvx-y := st_lsm6dsvx_core.o st_lsm6dsvx_buffer.o \
-		 st_lsm6dsvx_shub.o st_lsm6dsvx_qvar.o \
-		 st_lsm6dsvx_mlc.o st_lsm6dsvx_events.o \
-		 st_lsm6dsvx_embfunc.o
+#
+# Makefile for industrial I/O LSM6DSVX driver
+#
 
-st_lsm6dsvx-$(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP) += st_lsm6dsvx_hwtimestamp.o
+include Kbuild
 
-obj-$(CONFIG_IIO_ST_LSM6DSVX) += st_lsm6dsvx.o
-obj-$(CONFIG_IIO_ST_LSM6DSVX_I2C) += st_lsm6dsvx_i2c.o
-obj-$(CONFIG_IIO_ST_LSM6DSVX_SPI) += st_lsm6dsvx_spi.o
-obj-$(CONFIG_IIO_ST_LSM6DSVX_I3C) += st_lsm6dsvx_i3c.o
+ifeq ($(KERNELRELEASE),)
+
+KBUILD_OPTIONS += CONFIG_IIO_ST_LSM6DSVX=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_LSM6DSVX_I2C=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_LSM6DSVX_SPI=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP=y
+
+EXTRA_CFLAGS += "-DCONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP \
+		 -DCONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD"
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(EXTRA_CFLAGS) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+endif

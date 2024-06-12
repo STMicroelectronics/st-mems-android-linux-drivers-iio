@@ -1,13 +1,27 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
-# Makefile for STMicroelectronics ISM330DLC sensor.
+# Makefile for industrial I/O ISM330DLC driver
 #
 
-obj-$(CONFIG_ST_ISM330DLC_IIO) += st_ism330dlc.o
-st_ism330dlc-objs := st_ism330dlc_core.o
-obj-$(CONFIG_ST_ISM330DLC_I2C_IIO) += st_ism330dlc_i2c.o
-obj-$(CONFIG_ST_ISM330DLC_SPI_IIO) += st_ism330dlc_spi.o
+include Kbuild
 
-st_ism330dlc-$(CONFIG_IIO_BUFFER) += st_ism330dlc_buffer.o
-st_ism330dlc-$(CONFIG_IIO_TRIGGER) += st_ism330dlc_trigger.o
-st_ism330dlc-$(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT) += st_ism330dlc_i2c_master.o
+ifeq ($(KERNELRELEASE),)
+
+KBUILD_OPTIONS += CONFIG_ST_ISM330DLC_IIO=m
+KBUILD_OPTIONS += CONFIG_ST_ISM330DLC_I2C_IIO=m
+KBUILD_OPTIONS += CONFIG_ST_ISM330DLC_SPI_IIO=m
+KBUILD_OPTIONS += CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT=y
+
+EXTRA_CFLAGS += "-DCONFIG_ST_ISM330DLC_IIO_LIMIT_FIFO=0 \
+		 -DCONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT \
+		 -DCONFIG_ST_ISM330DLC_IIO_EXT0_LIS2MDL"
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(EXTRA_CFLAGS) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+endif

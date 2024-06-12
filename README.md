@@ -92,5 +92,39 @@ export CROSS_COMPILE=arm-linux-gnu-
 scripts/kconfig/merge_config.sh -n .config stm_iio_configs/lsm6dsm_defconfig
 ```
 
+## Build Modules
+This repo include Makefile for building in tree and out of tree modules
+
+### In Kernel Tree build
+Set CROSS_COMPILE and ARCH accordingly to your target board. Follow an example for a RPI 4 target board (32 bits):
+```bash
+export ARCH=arm
+export CROSS_COMPILE=arm-linux-gnu-
+make KCFLAGS=-Werror -j $(nproc)
+```
+### Out of Kernel Tree build
+The drivers in this project can also be build as external module. Follow an example for RPI 4 target board (32 bits):
+```bash
+export ARCH=arm
+export CROSS_COMPILE=arm-linux-gnu-
+export KDIR=<the directory where Linux kernel is build>
+
+# Specifying INSTALL_MOD_PATH the modules installation path will be:
+# /INSTALL_MOD_PATH/lib/modules/$(KERNELRELEASE)/kernel/
+# instead of /lib/modules/$(KERNELRELEASE)/extra/
+export INSTALL_MOD_PATH=<modules installation path>
+
+# Specifying INSTALL_MOD_DIR to set analternative name to "extra" path:
+# /lib/modules/$(KERNELRELEASE)/INSTALL_MOD_DIR/ instead of standard
+# /lib/modules/$(KERNELRELEASE)/extra/
+export INSTALL_MOD_DIR=<modules alternate dir>
+
+# Add flags "-Werror" for stop build on warning, then build the driver modules project:
+make KCFLAGS=-Werror -C drivers/iio/stm/ $1 -j$(nproc)
+
+# Install modules
+make -C drivers/iio/stm/ modules_install
+```
+
 ### License
 This software is distributed under the GNU General Public License v2.0

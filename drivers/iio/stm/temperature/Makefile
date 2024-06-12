@@ -3,4 +3,18 @@
 # Makefile for industrial I/O temperature drivers
 #
 
-obj-$(CONFIG_IIO_STTS22H) += stts22h.o
+include Kbuild
+
+ifeq ($(KERNELRELEASE),)
+
+KBUILD_OPTIONS += CONFIG_IIO_STTS22H=m
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+endif

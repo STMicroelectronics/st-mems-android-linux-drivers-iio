@@ -1,13 +1,27 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
-# Makefile for STMicroelectronics LSM6DS3 sensor.
+# Makefile for industrial I/O LSM6DS3 driver
 #
 
-obj-$(CONFIG_ST_LSM6DS3_IIO) += st_lsm6ds3.o
-st_lsm6ds3-objs := st_lsm6ds3_core.o
-obj-$(CONFIG_ST_LSM6DS3_I2C_IIO) += st_lsm6ds3_i2c.o
-obj-$(CONFIG_ST_LSM6DS3_SPI_IIO) += st_lsm6ds3_spi.o
+include Kbuild
 
-st_lsm6ds3-$(CONFIG_IIO_BUFFER) += st_lsm6ds3_buffer.o
-st_lsm6ds3-$(CONFIG_IIO_TRIGGER) += st_lsm6ds3_trigger.o
-st_lsm6ds3-$(CONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT) += st_lsm6ds3_i2c_master.o
+ifeq ($(KERNELRELEASE),)
+
+KBUILD_OPTIONS += CONFIG_ST_LSM6DS3_IIO=m
+KBUILD_OPTIONS += CONFIG_ST_LSM6DS3_I2C_IIO=m
+KBUILD_OPTIONS += CONFIG_ST_LSM6DS3_SPI_IIO=m
+KBUILD_OPTIONS += CONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT=y
+
+EXTRA_CFLAGS += "-DCONFIG_ST_LSM6DS3_IIO_LIMIT_FIFO=0 \
+		 -DCONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT \
+		 -DCONFIG_ST_LSM6DS3_IIO_EXT0_LIS2MDL"
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(EXTRA_CFLAGS) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+endif
