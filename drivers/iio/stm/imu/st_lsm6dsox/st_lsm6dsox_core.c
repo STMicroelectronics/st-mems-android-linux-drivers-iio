@@ -65,7 +65,7 @@ static struct st_lsm6dsox_power_mode_table {
 
 static struct st_lsm6dsox_suspend_resume_entry
 	st_lsm6dsox_suspend_resume[ST_LSM6DSOX_SUSPEND_RESUME_REGS] = {
-    [ST_LSM6DSOX_CTRL1_XL_REG] = {
+	[ST_LSM6DSOX_CTRL1_XL_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
 		.addr = ST_LSM6DSOX_CTRL1_XL_ADDR,
 		.mask = GENMASK(3, 2),
@@ -101,6 +101,57 @@ static struct st_lsm6dsox_suspend_resume_entry
 		.page = FUNC_CFG_ACCESS_0,
 		.addr = ST_LSM6DSOX_REG_TAP_CFG0_ADDR,
 		.mask = ST_LSM6DSOX_REG_LIR_MASK,
+	},
+	[ST_LSM6DSOX_REG_TAP_CFG1_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSOX_REG_TAP_CFG1_ADDR,
+		.mask = ST_LSM6DSOX_TAP_THS_X_MASK |
+			ST_LSM6DSOX_TAP_PRIORITY_MASK,
+	},
+	[ST_LSM6DSOX_REG_TAP_CFG2_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSOX_REG_TAP_CFG2_ADDR,
+		.mask = ST_LSM6DSOX_TAP_THS_Y_MASK |
+			ST_LSM6DSOX_INTERRUPTS_ENABLE_MASK,
+	},
+	[ST_LSM6DSOX_REG_TAP_THS_6D_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSOX_REG_TAP_THS_6D_ADDR,
+		.mask = ST_LSM6DSOX_TAP_THS_Z_MASK |
+			ST_LSM6DSOX_SIXD_THS_MASK,
+	},
+	[ST_LSM6DSOX_REG_INT_DUR2_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSOX_REG_INT_DUR2_ADDR,
+		.mask = ST_LSM6DSOX_SHOCK_MASK |
+			ST_LSM6DSOX_QUIET_MASK |
+			ST_LSM6DSOX_DUR_MASK,
+	},
+	[ST_LSM6DSOX_REG_WAKE_UP_THS_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSOX_REG_WAKE_UP_THS_ADDR,
+		.mask = ST_LSM6DSOX_WAKE_UP_THS_MASK |
+			ST_LSM6DSOX_SINGLE_DOUBLE_TAP_MASK,
+	},
+	[ST_LSM6DSOX_REG_WAKE_UP_DUR_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSOX_REG_WAKE_UP_DUR_ADDR,
+		.mask = ST_LSM6DSOX_WAKE_UP_DUR_MASK,
+	},
+	[ST_LSM6DSOX_REG_FREE_FALL_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSOX_REG_FREE_FALL_ADDR,
+		.mask = ST_LSM6DSOX_FF_THS_MASK,
+	},
+	[ST_LSM6DSOX_REG_MD1_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSOX_REG_MD1_CFG_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+	[ST_LSM6DSOX_REG_MD2_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSOX_REG_MD2_CFG_ADDR,
+		.mask = GENMASK(7, 0),
 	},
 	[ST_LSM6DSOX_REG_INT1_CTRL_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
@@ -240,10 +291,8 @@ static const struct st_lsm6dsox_odr_table_entry st_lsm6dsox_odr_table[] = {
 static const struct st_lsm6dsox_settings st_lsm6dsox_sensor_settings[] = {
 	{
 		.id = {
-			{
-				.hw_id = ST_LSM6DSO_ID,
-				.name = ST_LSM6DSO_DEV_NAME,
-			},
+			.hw_id = ST_LSM6DSO_ID,
+			.name = ST_LSM6DSO_DEV_NAME,
 		},
 		.st_fsm_probe = true,
 		.fs_table = {
@@ -273,10 +322,8 @@ static const struct st_lsm6dsox_settings st_lsm6dsox_sensor_settings[] = {
 	},
 	{
 		.id = {
-			{
-				.hw_id = ST_LSM6DSOX_ID,
-				.name = ST_LSM6DSOX_DEV_NAME,
-			},
+			.hw_id = ST_LSM6DSOX_ID,
+			.name = ST_LSM6DSOX_DEV_NAME,
 		},
 		.st_mlc_probe = true,
 		.st_fsm_probe = true,
@@ -307,10 +354,8 @@ static const struct st_lsm6dsox_settings st_lsm6dsox_sensor_settings[] = {
 	},
 	{
 		.id = {
-			{
-				.hw_id = ST_LSM6DSO32_ID,
-				.name = ST_LSM6DSO32_DEV_NAME,
-			},
+			.hw_id = ST_LSM6DSO32_ID,
+			.name = ST_LSM6DSO32_DEV_NAME,
 		},
 		.st_fsm_probe = true,
 		.fs_table = {
@@ -340,10 +385,8 @@ static const struct st_lsm6dsox_settings st_lsm6dsox_sensor_settings[] = {
 	},
 	{
 		.id = {
-			{
-				.hw_id = ST_LSM6DSO32X_ID,
-				.name = ST_LSM6DSO32X_DEV_NAME,
-			},
+			.hw_id = ST_LSM6DSO32X_ID,
+			.name = ST_LSM6DSO32X_DEV_NAME,
 		},
 		.st_mlc_probe = true,
 		.st_fsm_probe = true,
@@ -412,6 +455,15 @@ static const struct iio_chan_spec st_lsm6dsox_acc_channels[] = {
 				1, IIO_MOD_Z, 2, 16, 16, 's',
 				st_lsm6dsox_chan_spec_ext_info),
 	ST_LSM6DSOX_EVENT_CHANNEL(IIO_ACCEL, flush),
+	ST_LSM6DSOX_EVENT_CHANNEL(IIO_ACCEL, freefall),
+	ST_LSM6DSOX_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_LSM6DSOX_EVENT_CHANNEL(IIO_ACCEL, 6D),
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LSM6DSOX_EVENT_CHANNEL(IIO_ACCEL, tap),
+	ST_LSM6DSOX_EVENT_CHANNEL(IIO_ACCEL, dtap),
+#endif /* LINUX_VERSION_CODE */
+
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
 };
@@ -493,16 +545,11 @@ static int st_lsm6dsox_set_page_0(struct st_lsm6dsox_hw *hw)
 static int st_lsm6dsox_check_whoami(struct st_lsm6dsox_hw *hw, int id,
 				  const char **name)
 {
-	int err, i, j, data;
+	int err, i, data;
 
 	for (i = 0; i < ARRAY_SIZE(st_lsm6dsox_sensor_settings); i++) {
-		for (j = 0; j < ST_LSM6DSOX_MAX_ID; j++) {
-			if (st_lsm6dsox_sensor_settings[i].id[j].name &&
-			    st_lsm6dsox_sensor_settings[i].id[j].hw_id == id)
-				break;
-		}
-
-		if (j < ST_LSM6DSOX_MAX_ID)
+		if (st_lsm6dsox_sensor_settings[i].id.name &&
+		    st_lsm6dsox_sensor_settings[i].id.hw_id == id)
 			break;
 	}
 
@@ -526,7 +573,7 @@ static int st_lsm6dsox_check_whoami(struct st_lsm6dsox_hw *hw, int id,
 		return -ENODEV;
 	}
 
-	*name = st_lsm6dsox_sensor_settings[i].id[j].name;
+	*name = st_lsm6dsox_sensor_settings[i].id.name;
 	hw->settings = &st_lsm6dsox_sensor_settings[i];
 	hw->st_lsm6dsox_odr_table = st_lsm6dsox_odr_table;
 
@@ -654,8 +701,8 @@ static u16 st_lsm6dsox_check_odr_dependency(struct st_lsm6dsox_hw *hw,
 	return ret;
 }
 
-static int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, int req_odr,
-			       int req_uodr)
+int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, int req_odr,
+			int req_uodr)
 {
 	enum st_lsm6dsox_sensor_id id = sensor->id;
 	struct st_lsm6dsox_hw *hw = sensor->hw;
@@ -879,6 +926,10 @@ static int st_lsm6dsox_write_raw(struct iio_dev *iio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		err = st_lsm6dsox_set_full_scale(sensor, val2);
+
+		/* some events depends on xl full scale */
+		if (chan->type == IIO_ACCEL)
+			err = st_lsm6dsox_update_threshold_events(sensor->hw);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		struct st_lsm6dsox_odr oe = { 0 };
@@ -904,6 +955,10 @@ static int st_lsm6dsox_write_raw(struct iio_dev *iio_dev,
 						break;
 
 					st_lsm6dsox_update_batching(iio_dev, 1);
+
+					/* some events depends on xl odr */
+					if (chan->type == IIO_ACCEL)
+						st_lsm6dsox_update_duration_events(sensor->hw);
 					}
 					break;
 				default:
@@ -1035,9 +1090,9 @@ static int st_lsm6dsox_set_selftest(
 		return -EINVAL;
 	}
 
-	return st_lsm6dsox_update_bits_locked(sensor->hw,
-					   ST_LSM6DSOX_REG_CTRL5_C_ADDR,
-					   mask, mode);
+	return st_lsm6dsox_write_with_mask_locked(sensor->hw,
+						  ST_LSM6DSOX_REG_CTRL5_C_ADDR,
+						  mask, mode);
 }
 
 static ssize_t st_lsm6dsox_sysfs_get_selftest_available(struct device *dev,
@@ -1483,8 +1538,9 @@ static ssize_t st_lsm6dsox_sysfs_start_selftest(struct device *dev,
 	if (ret < 0)
 		goto restore_regs;
 
-	ret = st_lsm6dsox_update_bits_locked(hw, drdy_reg,
-					     ST_LSM6DSOX_REG_FIFO_TH_MASK, 0);
+	ret = st_lsm6dsox_write_with_mask_locked(hw, drdy_reg,
+						 ST_LSM6DSOX_REG_FIFO_TH_MASK,
+						 0);
 	if (ret < 0)
 		goto restore_regs;
 
@@ -1600,9 +1656,15 @@ static const struct iio_info st_lsm6dsox_acc_info = {
 	.read_raw = st_lsm6dsox_read_raw,
 	.write_raw = st_lsm6dsox_write_raw,
 	.write_raw_get_fmt = st_lsm6dsox_write_raw_get_fmt,
+	.read_event_config = st_lsm6dsox_read_event_config,
+	.write_event_config = st_lsm6dsox_write_event_config,
+	.write_event_value = st_lsm6dsox_write_event_value,
+	.read_event_value = st_lsm6dsox_read_event_value,
+
 #ifdef CONFIG_DEBUG_FS
 	.debugfs_reg_access = &st_lsm6dsox_reg_access,
 #endif /* CONFIG_DEBUG_FS */
+
 };
 
 static struct attribute *st_lsm6dsox_gyro_attributes[] = {
@@ -1741,14 +1803,6 @@ static int st_lsm6dsox_init_device(struct st_lsm6dsox_hw *hw)
 				 ST_LSM6DSOX_REG_DRDY_MASK,
 				 FIELD_PREP(ST_LSM6DSOX_REG_DRDY_MASK, 1));
 
-	if (err < 0)
-		return err;
-
-	/* enable enbedded function interrupts enable */
-	err = regmap_update_bits(hw->regmap, hw->embfunc_pg0_irq_reg,
-				 ST_LSM6DSOX_REG_INT_EMB_FUNC_MASK,
-				 FIELD_PREP(ST_LSM6DSOX_REG_INT_EMB_FUNC_MASK,
-					    1));
 	if (err < 0)
 		return err;
 
@@ -1986,14 +2040,18 @@ int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 	if (err < 0)
 		return err;
 
-#ifdef CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES
-	err = st_lsm6dsox_probe_embfunc(hw);
-	if (err)
-		return err;
-#endif /* CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES */
-
 	if (hw->irq > 0) {
 		err = st_lsm6dsox_buffers_setup(hw);
+		if (err < 0)
+			return err;
+
+#ifdef CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES
+		err = st_lsm6dsox_probe_embfunc(hw);
+		if (err)
+			return err;
+#endif /* CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES */
+
+		err = st_lsm6dsox_event_init(hw);
 		if (err < 0)
 			return err;
 	}

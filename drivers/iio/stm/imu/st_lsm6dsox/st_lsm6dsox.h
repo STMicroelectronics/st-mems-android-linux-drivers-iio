@@ -97,6 +97,41 @@
 #define ST_LSM6DSOX_REG_CTRL10_C_ADDR		0x19
 #define ST_LSM6DSOX_REG_TIMESTAMP_EN_MASK	BIT(5)
 
+#define ST_LSM6DSOX_REG_ALL_INT_SRC_ADDR	0x1a
+#define ST_LSM6DSOX_FF_IA_MASK			BIT(0)
+#define ST_LSM6DSOX_WU_IA_MASK			BIT(1)
+#define ST_LSM6DSOX_SINGLE_TAP_MASK		BIT(2)
+#define ST_LSM6DSOX_DOUBLE_TAP_MASK		BIT(3)
+#define ST_LSM6DSOX_D6D_IA_MASK			BIT(4)
+#define ST_LSM6DSOX_SLEEP_CHANGE_MASK		BIT(5)
+
+#define ST_LSM6DSOX_REG_WAKE_UP_SRC_ADDR	0x1b
+#define ST_LSM6DSOX_WAKE_UP_EVENT_MASK		GENMASK(3, 0)
+#define ST_LSM6DSOX_WAKE_UP_SRC_FF_IA_MASK	BIT(5)
+#define ST_LSM6DSOX_WAKE_UP_SRC_WU_IA_MASK	BIT(3)
+#define ST_LSM6DSOX_X_WU_MASK			BIT(2)
+#define ST_LSM6DSOX_Y_WU_MASK			BIT(1)
+#define ST_LSM6DSOX_Z_WU_MASK			BIT(0)
+
+#define ST_LSM6DSOX_REG_TAP_SRC_ADDR		0x1c
+#define ST_LSM6DSOX_Z_TAP_MASK			BIT(0)
+#define ST_LSM6DSOX_Y_TAP_MASK			BIT(1)
+#define ST_LSM6DSOX_X_TAP_MASK			BIT(2)
+#define ST_LSM6DSOX_TAP_SIGN_MASK		BIT(3)
+#define ST_LSM6DSOX_DOUBLE_TAP_IA_MASK		BIT(4)
+#define ST_LSM6DSOX_SINGLE_TAP_IA_MASK		BIT(5)
+#define ST_LSM6DSOX_TAP_IA_MASK			GENMASK(2, 0)
+
+#define ST_LSM6DSOX_REG_D6D_SRC_ADDR		0x1d
+#define ST_LSM6DSOX_D6D_EVENT_MASK		GENMASK(5, 0)
+#define ST_LSM6DSOX_D6D_SRC_D6D_IA_MASK		BIT(6)
+#define ST_LSM6DSOX_ZH_MASK			BIT(5)
+#define ST_LSM6DSOX_ZL_MASK			BIT(4)
+#define ST_LSM6DSOX_YH_MASK			BIT(3)
+#define ST_LSM6DSOX_YL_MASK			BIT(2)
+#define ST_LSM6DSOX_XH_MASK			BIT(1)
+#define ST_LSM6DSOX_XL_MASK			BIT(0)
+
 #define ST_LSM6DSOX_REG_STATUS_ADDR		0x1e
 #define ST_LSM6DSOX_REG_STATUS_XLDA		BIT(0)
 #define ST_LSM6DSOX_REG_STATUS_GDA		BIT(1)
@@ -127,11 +162,50 @@
 
 #define ST_LSM6DSOX_REG_TAP_CFG0_ADDR		0x56
 #define ST_LSM6DSOX_REG_LIR_MASK		BIT(0)
+#define ST_LSM6DSOX_TAP_X_EN_MASK		BIT(1)
+#define ST_LSM6DSOX_TAP_Y_EN_MASK		BIT(2)
+#define ST_LSM6DSOX_TAP_Z_EN_MASK		BIT(3)
+#define ST_LSM6DSOX_TAP_EN_MASK			GENMASK(3, 1)
+#define ST_LSM6DSOX_TAP_SLOPE_FDS_MASK		BIT(4)
+#define ST_LSM6DSOX_REG_INT_CLR_ON_READ_MASK	BIT(6)
+
+#define ST_LSM6DSOX_REG_TAP_CFG1_ADDR		0x57
+#define ST_LSM6DSOX_TAP_THS_X_MASK		GENMASK(4, 0)
+#define ST_LSM6DSOX_TAP_PRIORITY_MASK		GENMASK(7, 5)
+
+#define ST_LSM6DSOX_REG_TAP_CFG2_ADDR		0x58
+#define ST_LSM6DSOX_TAP_THS_Y_MASK		GENMASK(4, 0)
+#define ST_LSM6DSOX_INTERRUPTS_ENABLE_MASK	BIT(7)
+
+#define ST_LSM6DSOX_REG_TAP_THS_6D_ADDR		0x59
+#define ST_LSM6DSOX_TAP_THS_Z_MASK		GENMASK(4, 0)
+#define ST_LSM6DSOX_SIXD_THS_MASK		GENMASK(6, 5)
+
+#define ST_LSM6DSOX_REG_INT_DUR2_ADDR		0x5a
+#define ST_LSM6DSOX_SHOCK_MASK			GENMASK(1, 0)
+#define ST_LSM6DSOX_QUIET_MASK			GENMASK(3, 2)
+#define ST_LSM6DSOX_DUR_MASK			GENMASK(7, 4)
+
+#define ST_LSM6DSOX_REG_WAKE_UP_THS_ADDR	0x5b
+#define ST_LSM6DSOX_WAKE_UP_THS_MASK		GENMASK(5, 0)
+#define ST_LSM6DSOX_SINGLE_DOUBLE_TAP_MASK	BIT(7)
+
+#define ST_LSM6DSOX_REG_WAKE_UP_DUR_ADDR	0x5c
+#define ST_LSM6DSOX_WAKE_UP_DUR_MASK		GENMASK(6, 5)
+
+#define ST_LSM6DSOX_REG_FREE_FALL_ADDR		0x5d
+#define ST_LSM6DSOX_FF_THS_MASK			GENMASK(2, 0)
 
 #define ST_LSM6DSOX_REG_MD1_CFG_ADDR		0x5e
 #define ST_LSM6DSOX_REG_MD2_CFG_ADDR		0x5f
 #define ST_LSM6DSOX_REG_INT2_TIMESTAMP_MASK	BIT(0)
 #define ST_LSM6DSOX_REG_INT_EMB_FUNC_MASK	BIT(1)
+#define ST_LSM6DSOX_INT_6D_MASK			BIT(2)
+#define ST_LSM6DSOX_INT_DOUBLE_TAP_MASK		BIT(3)
+#define ST_LSM6DSOX_INT_FF_MASK			BIT(4)
+#define ST_LSM6DSOX_INT_WU_MASK			BIT(5)
+#define ST_LSM6DSOX_INT_SINGLE_TAP_MASK		BIT(6)
+#define ST_LSM6DSOX_INT_SLEEP_CHANGE_MASK	BIT(7)
 
 #define ST_LSM6DSOX_INTERNAL_FREQ_FINE		0x63
 
@@ -215,6 +289,9 @@
 						 ST_LSM6DSOX_TAG_SIZE)
 #define ST_LSM6DSOX_MAX_FIFO_DEPTH		416
 
+#define ST_LSM6DSOX_MIN_ODR_IN_WAKEUP		26
+#define ST_LSM6DSOX_MIN_ODR_IN_EMB_FUNC		26
+
 enum st_lsm6dsox_hw_id {
 	ST_LSM6DSO_ID,
 	ST_LSM6DSOX_ID,
@@ -255,6 +332,60 @@ static const struct iio_event_spec st_lsm6dsox_thr_event = {
 	.type = IIO_EV_TYPE_THRESH,
 	.dir = IIO_EV_DIR_RISING,
 	.mask_separate = BIT(IIO_EV_INFO_ENABLE),
+};
+
+static const struct iio_event_spec st_lsm6dsox_wakeup_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_RISING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE) |
+			 BIT(IIO_EV_INFO_PERIOD),
+};
+
+static const struct iio_event_spec st_lsm6dsox_freefall_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_FALLING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+static const struct iio_event_spec st_lsm6dsox_6D_event = {
+	.type = IIO_EV_TYPE_CHANGE,
+	.dir = IIO_EV_DIR_EITHER,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+static const struct iio_event_spec st_lsm6dsox_tap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_SINGLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT),
+};
+
+static const struct iio_event_spec st_lsm6dsox_dtap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_DOUBLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT) |
+			       BIT(IIO_EV_INFO_TAP2_MIN_DELAY),
+};
+#endif /* LINUX_VERSION_CODE */
+
+enum st_lsm6dsox_event_id {
+	ST_LSM6DSOX_EVENT_FF,
+	ST_LSM6DSOX_EVENT_WAKEUP,
+	ST_LSM6DSOX_EVENT_6D,
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LSM6DSOX_EVENT_TAP,
+	ST_LSM6DSOX_EVENT_DTAP,
+#endif /* LINUX_VERSION_CODE */
+
+	ST_LSM6DSOX_EVENT_MAX
 };
 
 #define ST_LSM6DSOX_EVENT_CHANNEL(ctype, etype)	\
@@ -325,6 +456,15 @@ enum st_lsm6dsox_suspend_resume_register {
 	ST_LSM6DSOX_REG_CTRL5_C_REG,
 	ST_LSM6DSOX_REG_CTRL10_C_REG,
 	ST_LSM6DSOX_REG_TAP_CFG0_REG,
+	ST_LSM6DSOX_REG_TAP_CFG1_REG,
+	ST_LSM6DSOX_REG_TAP_CFG2_REG,
+	ST_LSM6DSOX_REG_TAP_THS_6D_REG,
+	ST_LSM6DSOX_REG_INT_DUR2_REG,
+	ST_LSM6DSOX_REG_WAKE_UP_THS_REG,
+	ST_LSM6DSOX_REG_WAKE_UP_DUR_REG,
+	ST_LSM6DSOX_REG_FREE_FALL_REG,
+	ST_LSM6DSOX_REG_MD1_CFG_REG,
+	ST_LSM6DSOX_REG_MD2_CFG_REG,
 	ST_LSM6DSOX_REG_INT1_CTRL_REG,
 	ST_LSM6DSOX_REG_INT2_CTRL_REG,
 	ST_LSM6DSOX_REG_FIFO_CTRL1_REG,
@@ -542,9 +682,6 @@ static const enum st_lsm6dsox_sensor_id st_lsm6dsox_embfunc_sensor_list[] = {
 #define ST_LSM6DSOX_WAKE_UP_SENSORS (BIT(ST_LSM6DSOX_ID_GYRO) | \
 				     BIT(ST_LSM6DSOX_ID_ACC))
 
-/* this is the minimal ODR for wake-up sensors and dependencies */
-#define ST_LSM6DSOX_MIN_ODR_IN_WAKEUP	26
-
 enum st_lsm6dsox_fifo_mode {
 	ST_LSM6DSOX_FIFO_BYPASS = 0x0,
 	ST_LSM6DSOX_FIFO_CONT = 0x6,
@@ -566,6 +703,7 @@ struct st_lsm6dsox_ext_dev_info {
  * @id: Sensor identifier.
  * @hw: Pointer to instance of struct st_lsm6dsox_hw.
  * @ext_dev_info: For sensor hub indicate device info struct.
+ * @trig: Trigger used by IIO event sensors.
  * @odr: Output data rate of the sensor [Hz].
  * @uodr: Output data rate of the sensor [uHz].
  * @gain: Configured sensor sensitivity.
@@ -589,6 +727,7 @@ struct st_lsm6dsox_sensor {
 	enum st_lsm6dsox_sensor_id id;
 	struct st_lsm6dsox_hw *hw;
 	struct st_lsm6dsox_ext_dev_info ext_dev_info;
+	struct iio_trigger *trig;
 
 	int odr;
 	int uodr;
@@ -629,6 +768,7 @@ struct st_lsm6dsox_sensor {
  * @fifo_mode: FIFO operating mode supported by the device.
  * @state: hw operational state.
  * @enable_mask: Enabled sensor bitmask.
+ * @enable_ev_mask: Enabled event bitmask.
  * @hw_timestamp_global: hw timestamp value always monotonic where the most
  *                       significant 8byte are incremented at every disable/enable.
  * @timesync_workqueue: runs the async task in private workqueue.
@@ -656,6 +796,14 @@ struct st_lsm6dsox_sensor {
  * @iio_devs: Pointers to acc/gyro iio_dev instances.
  * @embfunc_irq_reg: Embedded function irq configuration register (other).
  * @embfunc_pg0_irq_reg: Embedded function irq configuration register (page 0).
+ * @freefall_threshold: Accelerometer threshold for free fall algorithm.
+ * @wk_th_ug: Wake-up threshold in mg.
+ * @wk_dur_ms: Wake-up duration in ms.
+ * @sixD_threshold: 6D threshold in mg.
+ * @tap_threshold: tap/dtap treshold in mg.
+ * @tap_quiet_time: tap quiet time in ms.
+ * @tap_shock_time: tap shock time in ms.
+ * @dtap_duration: double tap duration time (min time) in ms.
  */
 struct st_lsm6dsox_hw {
 	char dev_name[16];
@@ -667,6 +815,7 @@ struct st_lsm6dsox_hw {
 	enum st_lsm6dsox_fifo_mode fifo_mode;
 	unsigned long state;
 	u64 enable_mask;
+	u64 enable_ev_mask;
 	s64 hw_timestamp_global;
 
 #if defined(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
@@ -701,7 +850,37 @@ struct st_lsm6dsox_hw {
 
 	u8 embfunc_irq_reg;
 	u8 embfunc_pg0_irq_reg;
+
+	u32 freefall_threshold;
+	u32 wk_th_mg;
+	u32 wk_dur_ms;
+	u32 sixD_threshold;
+	u32 tap_threshold;
+	u32 tap_quiet_time;
+	u32 tap_shock_time;
+	u32 dtap_duration;
 };
+
+/**
+ * struct st_lsm6dsox_ff_th - Free Fall threshold table
+ * @mg: Threshold in mg.
+ * @val: Register value.
+ */
+struct st_lsm6dsox_ff_th {
+	u32 mg;
+	u8 val;
+};
+
+/**
+ * struct st_lsm6dsox_6D_th - 6D threshold table
+ * @deg: Threshold in degrees.
+ * @val: Register value.
+ */
+struct st_lsm6dsox_6D_th {
+	u8 deg;
+	u8 val;
+};
+
 
 extern const struct dev_pm_ops st_lsm6dsox_pm_ops;
 
@@ -718,7 +897,7 @@ struct st_lsm6dsox_settings {
 	struct {
 		enum st_lsm6dsox_hw_id hw_id;
 		const char *name;
-	} id[ST_LSM6DSOX_MAX_ID];
+	} id;
 	struct st_lsm6dsox_fs_table_entry fs_table[ST_LSM6DSOX_ID_MAX];
 	bool st_mlc_probe;
 	bool st_fsm_probe;
@@ -738,6 +917,17 @@ static inline bool st_lsm6dsox_run_mlc_task(struct st_lsm6dsox_hw *hw)
 	return hw->settings->st_mlc_probe || hw->settings->st_fsm_probe;
 }
 
+static inline int st_lsm6dsox_manipulate_bit(int int_reg, int irq_mask, int en)
+{
+	int bit_position = __ffs(irq_mask);
+	int bit_mask = 1 << bit_position;
+
+	int_reg &= ~bit_mask;
+	int_reg |= (en << bit_position);
+
+	return int_reg;
+}
+
 static inline int __st_lsm6dsox_write_with_mask(struct st_lsm6dsox_hw *hw,
 						unsigned int addr,
 						unsigned int mask,
@@ -752,29 +942,33 @@ static inline int __st_lsm6dsox_write_with_mask(struct st_lsm6dsox_hw *hw,
 }
 
 static inline int
-st_lsm6dsox_update_bits_locked(struct st_lsm6dsox_hw *hw, unsigned int addr,
+__maybe_unused st_lsm6dsox_read_with_mask(struct st_lsm6dsox_hw *hw,
+					  u8 addr, u8 mask, u8 *val)
+{
+	u8 data;
+	int err;
+
+	err = regmap_bulk_read(hw->regmap, addr, &data, sizeof(data));
+	if (err < 0) {
+		dev_err(hw->dev, "failed to read %02x register\n", addr);
+
+		goto out;
+	}
+
+	*val = (data & mask) >> __ffs(mask);
+
+out:
+	return (err < 0) ? err : 0;
+}
+
+static inline int
+st_lsm6dsox_write_with_mask_locked(struct st_lsm6dsox_hw *hw, unsigned int addr,
 			       unsigned int mask, unsigned int val)
 {
 	int err;
 
 	mutex_lock(&hw->page_lock);
 	err = __st_lsm6dsox_write_with_mask(hw, addr, mask, val);
-	mutex_unlock(&hw->page_lock);
-
-	return err;
-}
-
-/* use when mask is constant */
-static inline int
-st_lsm6dsox_write_with_mask_locked(struct st_lsm6dsox_hw *hw,
-				   unsigned int addr, unsigned int mask,
-				   unsigned int data)
-{
-	int err;
-	unsigned int val = FIELD_PREP(mask, data);
-
-	mutex_lock(&hw->page_lock);
-	err = regmap_update_bits(hw->regmap, addr, mask, val);
 	mutex_unlock(&hw->page_lock);
 
 	return err;
@@ -816,6 +1010,7 @@ static inline int st_lsm6dsox_set_page_access(struct st_lsm6dsox_hw *hw,
 				  ST_LSM6DSOX_SHIFT_VAL(val, mask));
 }
 
+/* common */
 int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 		      struct regmap *regmap);
 int st_lsm6dsox_sensor_set_enable(struct st_lsm6dsox_sensor *sensor,
@@ -840,7 +1035,8 @@ ssize_t st_lsm6dsox_set_watermark(struct device *dev,
 ssize_t st_lsm6dsox_get_module_id(struct device *dev,
 				  struct device_attribute *attr,
 				  char *buf);
-
+int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, int req_odr,
+			int req_uodr);
 int st_lsm6dsox_suspend_fifo(struct st_lsm6dsox_hw *hw);
 int st_lsm6dsox_set_fifo_mode(struct st_lsm6dsox_hw *hw,
 			      enum st_lsm6dsox_fifo_mode fifo_mode);
@@ -850,6 +1046,34 @@ int st_lsm6dsox_shub_probe(struct st_lsm6dsox_hw *hw);
 int st_lsm6dsox_shub_set_enable(struct st_lsm6dsox_sensor *sensor,
 				bool enable);
 
+/* xl events */
+int st_lsm6dsox_read_event_config(struct iio_dev *iio_dev,
+				  const struct iio_chan_spec *chan,
+				  enum iio_event_type type,
+				  enum iio_event_direction dir);
+int st_lsm6dsox_write_event_config(struct iio_dev *iio_dev,
+				   const struct iio_chan_spec *chan,
+				   enum iio_event_type type,
+				   enum iio_event_direction dir,
+				   int enable);
+int st_lsm6dsox_read_event_value(struct iio_dev *iio_dev,
+				 const struct iio_chan_spec *chan,
+				 enum iio_event_type type,
+				 enum iio_event_direction dir,
+				 enum iio_event_info info,
+				 int *val, int *val2);
+int st_lsm6dsox_write_event_value(struct iio_dev *iio_dev,
+				  const struct iio_chan_spec *chan,
+				  enum iio_event_type type,
+				  enum iio_event_direction dir,
+				  enum iio_event_info info,
+				  int val, int val2);
+int st_lsm6dsox_event_init(struct st_lsm6dsox_hw *hw);
+int st_lsm6dsox_event_handler(struct st_lsm6dsox_hw *hw);
+int st_lsm6dsox_update_threshold_events(struct st_lsm6dsox_hw *hw);
+int st_lsm6dsox_update_duration_events(struct st_lsm6dsox_hw *hw);
+
+/* timestamp */
 #if defined(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
 int st_lsm6dsox_hwtimesync_init(struct st_lsm6dsox_hw *hw);
 #else /* CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP */

@@ -282,10 +282,10 @@ static ssize_t st_lsm6dsox_sysfs_reset_step_counter(struct device *dev,
  * @param  dir: Event Direction.
  * @return  1 if Enabled, 0 Disabled
  */
-static int st_lsm6dsox_read_event_config(struct iio_dev *iio_dev,
-					 const struct iio_chan_spec *chan,
-					 enum iio_event_type type,
-					 enum iio_event_direction dir)
+static int st_lsm6dsox_read_embfunc_config(struct iio_dev *iio_dev,
+					   const struct iio_chan_spec *chan,
+					   enum iio_event_type type,
+					   enum iio_event_direction dir)
 {
 	struct st_lsm6dsox_sensor *sensor = iio_priv(iio_dev);
 	struct st_lsm6dsox_hw *hw = sensor->hw;
@@ -303,11 +303,11 @@ static int st_lsm6dsox_read_event_config(struct iio_dev *iio_dev,
  * @param  state: New event state.
  * @return  0 if OK, negative for ERROR
  */
-static int st_lsm6dsox_write_event_config(struct iio_dev *iio_dev,
-					 const struct iio_chan_spec *chan,
-					 enum iio_event_type type,
-					 enum iio_event_direction dir,
-					 int state)
+static int st_lsm6dsox_write_embfunc_config(struct iio_dev *iio_dev,
+					    const struct iio_chan_spec *chan,
+					    enum iio_event_type type,
+					    enum iio_event_direction dir,
+					    int state)
 {
 	struct st_lsm6dsox_sensor *sensor = iio_priv(iio_dev);
 	int err;
@@ -359,8 +359,8 @@ static const struct attribute_group st_lsm6dsox_step_detector_attribute_group = 
 
 static const struct iio_info st_lsm6dsox_step_detector_info = {
 	.attrs = &st_lsm6dsox_step_detector_attribute_group,
-	.read_event_config = st_lsm6dsox_read_event_config,
-	.write_event_config = st_lsm6dsox_write_event_config,
+	.read_event_config = st_lsm6dsox_read_embfunc_config,
+	.write_event_config = st_lsm6dsox_write_embfunc_config,
 };
 
 static struct attribute *st_lsm6dsox_sign_motion_attributes[] = {
@@ -374,8 +374,8 @@ static const struct attribute_group st_lsm6dsox_sign_motion_attribute_group = {
 
 static const struct iio_info st_lsm6dsox_sign_motion_info = {
 	.attrs = &st_lsm6dsox_sign_motion_attribute_group,
-	.read_event_config = st_lsm6dsox_read_event_config,
-	.write_event_config = st_lsm6dsox_write_event_config,
+	.read_event_config = st_lsm6dsox_read_embfunc_config,
+	.write_event_config = st_lsm6dsox_write_embfunc_config,
 };
 
 static struct attribute *st_lsm6dsox_tilt_attributes[] = {
@@ -389,8 +389,8 @@ static const struct attribute_group st_lsm6dsox_tilt_attribute_group = {
 
 static const struct iio_info st_lsm6dsox_tilt_info = {
 	.attrs = &st_lsm6dsox_tilt_attribute_group,
-	.read_event_config = st_lsm6dsox_read_event_config,
-	.write_event_config = st_lsm6dsox_write_event_config,
+	.read_event_config = st_lsm6dsox_read_embfunc_config,
+	.write_event_config = st_lsm6dsox_write_embfunc_config,
 };
 
 static const unsigned long st_lsm6dsox_emb_available_scan_masks[] = {
@@ -514,6 +514,15 @@ static int st_lsm6dsox_embedded_function_init(struct st_lsm6dsox_hw *hw)
 	st_lsm6dsox_set_page_access(hw, false, ST_LSM6DSOX_REG_FUNC_CFG_MASK);
 unlock:
 	mutex_unlock(&hw->page_lock);
+
+	/* enable embedded function interrupts enable */
+	err = regmap_update_bits(hw->regmap, hw->embfunc_pg0_irq_reg,
+				 ST_LSM6DSOX_REG_INT_EMB_FUNC_MASK,
+				 FIELD_PREP(ST_LSM6DSOX_REG_INT_EMB_FUNC_MASK,
+					    1));
+	if (err < 0)
+		return err;
+
 
 	return err;
 }

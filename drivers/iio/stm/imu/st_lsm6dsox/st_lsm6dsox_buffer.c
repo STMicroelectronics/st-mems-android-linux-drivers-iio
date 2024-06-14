@@ -121,7 +121,7 @@ st_lsm6dsox_set_sensor_batching_odr(struct st_lsm6dsox_sensor *sensor,
 			return err;
 	}
 
-	return st_lsm6dsox_update_bits_locked(hw,
+	return st_lsm6dsox_write_with_mask_locked(hw,
 				hw->st_lsm6dsox_odr_table[id].batching_reg.addr,
 				hw->st_lsm6dsox_odr_table[id].batching_reg.mask,
 				data);
@@ -497,7 +497,7 @@ static int st_lsm6dsox_update_fifo(struct iio_dev *iio_dev, bool enable)
 					goto out;
 			}
 
-			err = st_lsm6dsox_update_bits_locked(hw,
+			err = st_lsm6dsox_write_with_mask_locked(hw,
 				hw->st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].batching_reg.addr,
 				hw->st_lsm6dsox_odr_table[ST_LSM6DSOX_ID_ACC].batching_reg.mask,
 				data);
@@ -563,6 +563,8 @@ static irqreturn_t st_lsm6dsox_handler_thread(int irq, void *private)
 	st_lsm6dsox_read_fifo(hw);
 	clear_bit(ST_LSM6DSOX_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
+
+	st_lsm6dsox_event_handler(hw);
 
 #ifdef CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES
 	st_lsm6dsox_embfunc_handler_thread(hw);
