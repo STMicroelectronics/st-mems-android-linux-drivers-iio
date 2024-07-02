@@ -5,6 +5,7 @@
  * MEMS Software Solutions Team
  *
  * Copyright 2023 STMicroelectronics Inc.
+ * Copyright 2018 Lorenzo Bianconi
  */
 
 #include <linux/kernel.h>

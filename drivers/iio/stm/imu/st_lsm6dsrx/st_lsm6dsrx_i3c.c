@@ -5,6 +5,7 @@
  * MEMS Software Solutions Team
  *
  * Copyright 2020 STMicroelectronics Inc.
+ * Copyright 2018 Synopsys, Inc.
  */
 
 #include <linux/kernel.h>
