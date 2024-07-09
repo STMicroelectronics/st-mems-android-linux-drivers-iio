@@ -577,8 +577,14 @@ static const struct iio_chan_spec st_asm330lhhx_acc_channels[] = {
 	ST_ASM330LHHX_DATA_CHANNEL(IIO_ACCEL, ST_ASM330LHHX_REG_OUTZ_L_A_ADDR,
 				1, IIO_MOD_Z, 2, 16, 16, 's', st_asm330lhhx_ext_info),
 	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ACCEL, flush),
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
+#else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+	IIO_CHAN_SOFT_TIMESTAMP(3),
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+
 };
 
 static const struct iio_chan_spec st_asm330lhhx_gyro_channels[] = {
@@ -589,8 +595,14 @@ static const struct iio_chan_spec st_asm330lhhx_gyro_channels[] = {
 	ST_ASM330LHHX_DATA_CHANNEL(IIO_ANGL_VEL, ST_ASM330LHHX_REG_OUTZ_L_G_ADDR,
 				1, IIO_MOD_Z, 2, 16, 16, 's', st_asm330lhhx_ext_info),
 	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ANGL_VEL, flush),
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
+#else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+	IIO_CHAN_SOFT_TIMESTAMP(3),
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+
 };
 
 static
@@ -611,8 +623,14 @@ __maybe_unused const struct iio_chan_spec st_asm330lhhx_temp_channels[] = {
 		}
 	},
 	ST_ASM330LHHX_EVENT_CHANNEL(IIO_TEMP, flush),
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(1),
 	IIO_CHAN_SOFT_TIMESTAMP(2),
+#else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+	IIO_CHAN_SOFT_TIMESTAMP(1),
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+
 };
 
 static inline int st_asm330lhhx_get_odr_index(int odr)
@@ -2233,11 +2251,23 @@ static const struct iio_info st_asm330lhhx_temp_info = {
 };
 
 static const unsigned long st_asm330lhhx_available_scan_masks[] = {
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	GENMASK(3, 0), 0x0
+#else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+	GENMASK(2, 0), 0x0
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+
 };
 
 static const unsigned long st_asm330lhhx_temp_available_scan_masks[] = {
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	GENMASK(1, 0), 0x0
+#else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+	BIT(0), 0x0
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+
 };
 
 static int st_asm330lhhx_init_xl_filters(struct st_asm330lhhx_hw *hw)

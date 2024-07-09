@@ -16,6 +16,12 @@
 #include "st_asm330lhhx.h"
 
 #define ST_ASM330LHHX_TSYNC_OFFSET_NS		(300 * 1000LL)
+#define ST_ASM330LHHX_TSYNC_DECREMENT(_id)	do { \
+							if ((hw->enable_mask & BIT_ULL(_id)) && \
+							    (hw->timesync_c[_id] > 0)) { \
+								hw->timesync_c[_id]--; \
+							} \
+						} while (0)
 
 static void st_asm330lhhx_read_hw_timestamp(struct st_asm330lhhx_hw *hw)
 {
@@ -44,20 +50,9 @@ static void st_asm330lhhx_read_hw_timestamp(struct st_asm330lhhx_hw *hw)
 	timestamp_hw_global = (hw->hw_timestamp_global & GENMASK_ULL(63, 32)) |
 			      (u32)le32_to_cpu(timestamp_hw);
 
-	if ((hw->enable_mask & BIT_ULL(ST_ASM330LHHX_ID_GYRO)) &&
-	    (hw->timesync_c[ST_ASM330LHHX_ID_GYRO] > 0)) {
-		hw->timesync_c[ST_ASM330LHHX_ID_GYRO]--;
-	}
-
-	if ((hw->enable_mask & BIT_ULL(ST_ASM330LHHX_ID_ACC)) &&
-	    (hw->timesync_c[ST_ASM330LHHX_ID_ACC] > 0)) {
-		hw->timesync_c[ST_ASM330LHHX_ID_ACC]--;
-	}
-
-	if ((hw->enable_mask & BIT_ULL(ST_ASM330LHHX_ID_TEMP)) &&
-	    (hw->timesync_c[ST_ASM330LHHX_ID_TEMP] > 0)) {
-		hw->timesync_c[ST_ASM330LHHX_ID_TEMP]--;
-	}
+	ST_ASM330LHHX_TSYNC_DECREMENT(ST_ASM330LHHX_ID_GYRO);
+	ST_ASM330LHHX_TSYNC_DECREMENT(ST_ASM330LHHX_ID_ACC);
+	ST_ASM330LHHX_TSYNC_DECREMENT(ST_ASM330LHHX_ID_TEMP);
 
 	if (hw->timesync_c[ST_ASM330LHHX_ID_GYRO] == 0 &&
 	    hw->timesync_c[ST_ASM330LHHX_ID_ACC] == 0 &&
@@ -94,8 +89,9 @@ static void st_asm330lhhx_read_hw_timestamp(struct st_asm330lhhx_hw *hw)
 
 static void st_asm330lhhx_timesync_fn(struct work_struct *work)
 {
-	struct st_asm330lhhx_hw *hw = container_of(work, struct st_asm330lhhx_hw,
-						  timesync_work);
+	struct st_asm330lhhx_hw *hw = container_of(work,
+						   struct st_asm330lhhx_hw,
+						   timesync_work);
 
 	st_asm330lhhx_read_hw_timestamp(hw);
 }

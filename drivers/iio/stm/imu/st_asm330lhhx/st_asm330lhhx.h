@@ -770,7 +770,7 @@ struct st_asm330lhhx_hw {
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
-	int timesync_c[3];
+	int timesync_c[ST_ASM330LHHX_ID_HW + 1];
 #endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	s64 ts_offset;
