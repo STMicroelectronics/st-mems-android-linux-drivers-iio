@@ -133,12 +133,12 @@ st_asm330lhhx_ext_dev_settings st_asm330lhhx_ext_dev_table[] = {
 		.wai_addr = 0x0f,
 		.wai_val = 0x3d,
 		.odr_table = {
-			.size = 5,
+			.size = 6,
 			.reg = {
 				.addr = 0x20,
 				.mask = GENMASK(4, 2),
 			},
-			.odr_avl[0] = {   5,  0,  0x3,  0 },
+			.odr_avl[0] = {   5,  1,  0x3,  0 },
 			.odr_avl[1] = {  10,  0,  0x3,  0 },
 			.odr_avl[2] = {  20,  0,  0x4,  0 },
 			.odr_avl[3] = {  40,  0,  0x5,  0 },
