@@ -249,7 +249,7 @@ out:
 }
 
 /**
- * Timestamp correlation finction
+ * Timestamp correlation function
  *
  * @param  hw: ST IMU MEMS hw instance
  * @param  ts: New timestamp
@@ -1026,9 +1026,6 @@ int st_ism330dhcx_allocate_sw_trigger(struct st_ism330dhcx_hw *hw)
 int st_ism330dhcx_hw_trigger_setup(struct st_ism330dhcx_hw *hw)
 {
 	struct device_node *np = hw->dev->of_node;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
-	struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
 	unsigned long irq_type;
 	bool irq_active_low;
 	int i, err;
