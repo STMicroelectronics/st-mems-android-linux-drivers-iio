@@ -691,13 +691,13 @@ static const struct iio_info st_asm330lhhx_mlc_event_info = {
 	.write_event_config = st_asm330lhhx_mlc_write_event_config,
 };
 
-static struct attribute *st_lsm6dsvx_mlc_x_event_attributes[] = {
+static struct attribute *st_asm330lhhx_mlc_x_event_attributes[] = {
 	&iio_dev_attr_module_id.dev_attr.attr,
 	NULL,
 };
 
 static const struct attribute_group st_asm330lhhx_mlc_x_attribute_group = {
-	.attrs = st_lsm6dsvx_mlc_x_event_attributes,
+	.attrs = st_asm330lhhx_mlc_x_event_attributes,
 };
 
 static const struct iio_info st_asm330lhhx_mlc_x_event_info = {
