@@ -302,6 +302,7 @@ enum st_lsm6dsox_hw_id {
 
 #define ST_LSM6DSOX_DEFAULT_KTIME		(200000000)
 #define ST_LSM6DSOX_FAST_KTIME			(5000000)
+#define ST_LSM6DSOX_FAST_TO_DEFAULT		(10)
 
 #define ST_LSM6DSOX_DATA_CHANNEL(chan_type, addr, mod, ch2, scan_idx,	\
 				rb, sb, sg, ext_inf)			\
@@ -572,6 +573,7 @@ enum st_lsm6dsox_sensor_id {
 	ST_LSM6DSOX_ID_GYRO = 0,
 	ST_LSM6DSOX_ID_ACC,
 	ST_LSM6DSOX_ID_TEMP,
+	ST_LSM6DSOX_ID_HW = ST_LSM6DSOX_ID_TEMP,
 	ST_LSM6DSOX_ID_EXT0,
 	ST_LSM6DSOX_ID_EXT1,
 	ST_LSM6DSOX_ID_STEP_COUNTER,
@@ -814,7 +816,7 @@ struct st_lsm6dsox_hw {
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
-	int timesync_c;
+	int timesync_c[ST_LSM6DSOX_ID_HW + 1];
 #endif /* CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP */
 
 	u8 ext_data_len;
