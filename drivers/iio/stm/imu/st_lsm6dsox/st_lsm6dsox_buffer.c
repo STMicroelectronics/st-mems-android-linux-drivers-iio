@@ -473,7 +473,7 @@ static int st_lsm6dsox_update_fifo(struct iio_dev *iio_dev, bool enable)
 			goto out;
 		break;
 	case ST_LSM6DSOX_ID_STEP_COUNTER:
-		err = st_lsm6dsox_step_counter_set_enable(sensor, enable);
+		err = st_lsm6dsox_step_enable(sensor, enable);
 		if (err < 0)
 			goto out;
 		break;
@@ -565,10 +565,7 @@ static irqreturn_t st_lsm6dsox_handler_thread(int irq, void *private)
 	mutex_unlock(&hw->fifo_lock);
 
 	st_lsm6dsox_event_handler(hw);
-
-#ifdef CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES
 	st_lsm6dsox_embfunc_handler_thread(hw);
-#endif /* CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES */
 
 	return IRQ_HANDLED;
 }

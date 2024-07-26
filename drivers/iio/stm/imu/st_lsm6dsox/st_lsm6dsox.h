@@ -385,6 +385,9 @@ enum st_lsm6dsox_event_id {
 	ST_LSM6DSOX_EVENT_DTAP,
 #endif /* LINUX_VERSION_CODE */
 
+	ST_LSM6DSOX_EVENT_STEPC,
+	ST_LSM6DSOX_EVENT_SIGNMOT,
+
 	ST_LSM6DSOX_EVENT_MAX
 };
 
@@ -572,9 +575,6 @@ enum st_lsm6dsox_sensor_id {
 	ST_LSM6DSOX_ID_EXT0,
 	ST_LSM6DSOX_ID_EXT1,
 	ST_LSM6DSOX_ID_STEP_COUNTER,
-	ST_LSM6DSOX_ID_STEP_DETECTOR,
-	ST_LSM6DSOX_ID_SIGN_MOTION,
-	ST_LSM6DSOX_ID_TILT,
 	ST_LSM6DSOX_ID_MLC,
 	ST_LSM6DSOX_ID_MLC_0,
 	ST_LSM6DSOX_ID_MLC_1,
@@ -641,16 +641,6 @@ static const enum st_lsm6dsox_sensor_id st_lsm6dsox_fsm_sensor_list[] = {
 	 [13] = ST_LSM6DSOX_ID_FSM_13,
 	 [14] = ST_LSM6DSOX_ID_FSM_14,
 	 [15] = ST_LSM6DSOX_ID_FSM_15,
-};
-
-/**
- * The low power embedded function only sensor list
- */
-static const enum st_lsm6dsox_sensor_id st_lsm6dsox_embfunc_sensor_list[] = {
-	 [0] = ST_LSM6DSOX_ID_STEP_COUNTER,
-	 [1] = ST_LSM6DSOX_ID_STEP_DETECTOR,
-	 [2] = ST_LSM6DSOX_ID_SIGN_MOTION,
-	 [3] = ST_LSM6DSOX_ID_TILT,
 };
 
 #define ST_LSM6DSOX_ID_ALL_FSM_MLC (BIT(ST_LSM6DSOX_ID_MLC_0)  | \
@@ -1089,18 +1079,9 @@ int st_lsm6dsox_mlc_remove(struct device *dev);
 int st_lsm6dsox_mlc_check_status(struct st_lsm6dsox_hw *hw);
 int st_lsm6dsox_mlc_init_preload(struct st_lsm6dsox_hw *hw);
 
-#ifdef CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES
-int st_lsm6dsox_step_counter_set_enable(struct st_lsm6dsox_sensor *sensor,
-					bool enable);
-int st_lsm6dsox_probe_embfunc(struct st_lsm6dsox_hw *hw);
+/* embedded functions: step counter / event detector / significant motion */
+int st_lsm6dsox_embfunc_probe(struct st_lsm6dsox_hw *hw);
 int st_lsm6dsox_embfunc_handler_thread(struct st_lsm6dsox_hw *hw);
-#else /* CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES */
-static inline int
-st_lsm6dsox_step_counter_set_enable(struct st_lsm6dsox_sensor *sensor,
-				    bool enable)
-{
-	return 0;
-}
-#endif /* CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES */
+int st_lsm6dsox_step_enable(struct st_lsm6dsox_sensor *sensor, bool enable);
 
 #endif /* ST_LSM6DSOX_H */

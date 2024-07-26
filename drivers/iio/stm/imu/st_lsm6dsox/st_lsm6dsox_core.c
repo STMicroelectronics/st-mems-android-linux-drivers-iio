@@ -504,7 +504,6 @@ static const struct iio_chan_spec st_lsm6dsox_temp_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(2),
 };
 
-
 static __maybe_unused int st_lsm6dsox_reg_access(struct iio_dev *iio_dev,
 				 unsigned int reg, unsigned int writeval,
 				 unsigned int *readval)
@@ -713,9 +712,6 @@ int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, int req_odr,
 	case ST_LSM6DSOX_ID_EXT1:
 	case ST_LSM6DSOX_ID_TEMP:
 	case ST_LSM6DSOX_ID_STEP_COUNTER:
-	case ST_LSM6DSOX_ID_STEP_DETECTOR:
-	case ST_LSM6DSOX_ID_SIGN_MOTION:
-	case ST_LSM6DSOX_ID_TILT:
 	case ST_LSM6DSOX_ID_FSM_0:
 	case ST_LSM6DSOX_ID_FSM_1:
 	case ST_LSM6DSOX_ID_FSM_2:
@@ -2041,15 +2037,13 @@ int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 		return err;
 
 	if (hw->irq > 0) {
+		err = st_lsm6dsox_embfunc_probe(hw);
+		if (err)
+			return err;
+
 		err = st_lsm6dsox_buffers_setup(hw);
 		if (err < 0)
 			return err;
-
-#ifdef CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES
-		err = st_lsm6dsox_probe_embfunc(hw);
-		if (err)
-			return err;
-#endif /* CONFIG_IIO_ST_LSM6DSOX_EN_BASIC_FEATURES */
 
 		err = st_lsm6dsox_event_init(hw);
 		if (err < 0)
