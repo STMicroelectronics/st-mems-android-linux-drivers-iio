@@ -299,6 +299,15 @@ static const struct iio_chan_spec st_lsm6dsvx_acc_channels[] = {
 				 st_lsm6dsvx_chan_spec_ext_info),
 	ST_LSM6DSVX_EVENT_CHANNEL(IIO_ACCEL, flush),
 
+	ST_LSM6DSVX_EVENT_CHANNEL(IIO_ACCEL, freefall),
+	ST_LSM6DSVX_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_LSM6DSVX_EVENT_CHANNEL(IIO_ACCEL, 6D),
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LSM6DSVX_EVENT_CHANNEL(IIO_ACCEL, tap),
+	ST_LSM6DSVX_EVENT_CHANNEL(IIO_ACCEL, dtap),
+#endif /* LINUX_VERSION_CODE */
+
 #if defined(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
@@ -612,8 +621,8 @@ st_lsm6dsvx_check_gyro_odr_dependency(struct st_lsm6dsvx_sensor *sensor,
 	return (count > 0) ? odr : req_odr;
 }
 
-static int st_lsm6dsvx_set_odr(struct st_lsm6dsvx_sensor *sensor,
-			       int req_odr, int req_uodr)
+int st_lsm6dsvx_set_odr(struct st_lsm6dsvx_sensor *sensor,
+			int req_odr, int req_uodr)
 {
 	enum st_lsm6dsvx_sensor_id id = sensor->id;
 	struct st_lsm6dsvx_hw *hw = sensor->hw;
@@ -640,12 +649,6 @@ static int st_lsm6dsvx_set_odr(struct st_lsm6dsvx_sensor *sensor,
 	case ST_LSM6DSVX_ID_STEP_DETECTOR:
 	case ST_LSM6DSVX_ID_SIGN_MOTION:
 	case ST_LSM6DSVX_ID_TILT:
-	case ST_LSM6DSVX_ID_TAP:
-	case ST_LSM6DSVX_ID_DTAP:
-	case ST_LSM6DSVX_ID_WK:
-	case ST_LSM6DSVX_ID_FF:
-	case ST_LSM6DSVX_ID_SLPCHG:
-	case ST_LSM6DSVX_ID_6D:
 	case ST_LSM6DSVX_ID_ACC:
 		odr = st_lsm6dsvx_check_acc_odr_dependency(sensor, req_odr,
 							   req_uodr);
@@ -900,6 +903,12 @@ static int st_lsm6dsvx_write_raw(struct iio_dev *iio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		err = st_lsm6dsvx_set_full_scale(sensor, val2);
+		if (err < 0)
+			break;
+
+		/* some events depends on xl full scale */
+		if (chan->type == IIO_ACCEL)
+			err = st_lsm6dsvx_update_threshold_events(sensor->hw);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		int todr, tuodr;
@@ -921,12 +930,18 @@ static int st_lsm6dsvx_write_raw(struct iio_dev *iio_dev,
 				case ST_LSM6DSVX_ID_GYRO:
 				case ST_LSM6DSVX_ID_ACC:
 					err = st_lsm6dsvx_set_odr(sensor,
-							  sensor->odr,
-							  sensor->uodr);
+								  sensor->odr,
+								  sensor->uodr);
 					if (err < 0)
 						break;
 
 					err = st_lsm6dsvx_update_batching(iio_dev, 1);
+					if (err < 0)
+						break;
+
+					/* some events depends on xl odr */
+					if (chan->type == IIO_ACCEL)
+						err = st_lsm6dsvx_update_duration_events(sensor->hw);
 					break;
 				default:
 					break;
@@ -1017,8 +1032,7 @@ static int st_lsm6dsvx_of_get_pin(struct st_lsm6dsvx_hw *hw, int *pin)
 	return of_property_read_u32(np, "st,int-pin", pin);
 }
 
-int st_lsm6dsvx_get_int_reg(struct st_lsm6dsvx_hw *hw,
-			    u8 *drdy_reg, u8 *ef_irq_reg)
+int st_lsm6dsvx_get_int_reg(struct st_lsm6dsvx_hw *hw, u8 *drdy_reg)
 {
 	int int_pin;
 
@@ -1032,12 +1046,14 @@ int st_lsm6dsvx_get_int_reg(struct st_lsm6dsvx_hw *hw,
 
 	switch (int_pin) {
 	case 1:
+		hw->embfunc_pg0_irq_reg = ST_LSM6DSVX_REG_MD1_CFG_ADDR;
+		hw->embfunc_irq_reg = ST_LSM6DSVX_REG_EMB_FUNC_INT1_ADDR;
 		*drdy_reg = ST_LSM6DSVX_REG_INT1_CTRL_ADDR;
-		*ef_irq_reg = ST_LSM6DSVX_REG_MD1_CFG_ADDR;
 		break;
 	case 2:
+		hw->embfunc_pg0_irq_reg = ST_LSM6DSVX_REG_MD2_CFG_ADDR;
+		hw->embfunc_irq_reg = ST_LSM6DSVX_REG_EMB_FUNC_INT2_ADDR;
 		*drdy_reg = ST_LSM6DSVX_REG_INT2_CTRL_ADDR;
-		*ef_irq_reg = ST_LSM6DSVX_REG_MD2_CFG_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -1319,9 +1335,9 @@ static ssize_t st_lsm6dsvx_sysfs_start_selftest(struct device *dev,
 	struct st_lsm6dsvx_sensor *sensor = iio_priv(iio_dev);
 	enum st_lsm6dsvx_sensor_id id = sensor->id;
 	struct st_lsm6dsvx_hw *hw = sensor->hw;
-	u8 drdy_reg, ef_irq_reg;
 	int ret, test;
 	int odr, uodr;
+	u8 drdy_reg;
 	u32 gain;
 
 	if (id != ST_LSM6DSVX_ID_ACC &&
@@ -1348,7 +1364,7 @@ static ssize_t st_lsm6dsvx_sysfs_start_selftest(struct device *dev,
 		goto out_claim;
 	}
 
-	ret = st_lsm6dsvx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
+	ret = st_lsm6dsvx_get_int_reg(hw, &drdy_reg);
 	if (ret < 0)
 		goto out_claim;
 
@@ -1446,6 +1462,10 @@ static const struct iio_info st_lsm6dsvx_acc_info = {
 	.read_raw = st_lsm6dsvx_read_raw,
 	.write_raw_get_fmt = st_lsm6dsvx_write_raw_get_fmt,
 	.write_raw = st_lsm6dsvx_write_raw,
+	.read_event_config = st_lsm6dsvx_read_event_config,
+	.write_event_config = st_lsm6dsvx_write_event_config,
+	.write_event_value = st_lsm6dsvx_write_event_value,
+	.read_event_value = st_lsm6dsvx_read_event_value,
 	.debugfs_reg_access = st_lsm6dsvx_reg_access,
 };
 
@@ -1825,11 +1845,11 @@ int st_lsm6dsvx_probe(struct device *dev, int irq, int hw_id,
 			err = st_lsm6dsvx_probe_embfunc(hw);
 			if (err < 0)
 				return err;
-
-			err = st_lsm6dsvx_probe_event(hw);
-			if (err < 0)
-				return err;
 		}
+
+		err = st_lsm6dsvx_event_init(hw);
+		if (err < 0)
+			return err;
 
 		if (hw->settings->st_qvar_probe &&
 		    (!dev_fwnode(dev) ||

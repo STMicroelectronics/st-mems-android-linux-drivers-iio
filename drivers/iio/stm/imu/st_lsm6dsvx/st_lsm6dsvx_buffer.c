@@ -708,8 +708,9 @@ static irqreturn_t st_lsm6dsvx_handler_thread(int irq, void *private)
 	clear_bit(ST_LSM6DSVX_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
+	st_lsm6dsvx_event_handler(hw);
+
 	if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_EN_EVENTS)) {
-		st_lsm6dsvx_event_handler(hw);
 		st_lsm6dsvx_embfunc_handler_thread(hw);
 	}
 
@@ -793,10 +794,10 @@ static const struct iio_trigger_ops st_lsm6dsvx_trigger_ops = {
 
 static int st_lsm6dsvx_config_interrupt(struct st_lsm6dsvx_hw *hw, bool enable)
 {
-	u8 drdy_reg, ef_irq_reg;
+	u8 drdy_reg;
 	int err;
 
-	err = st_lsm6dsvx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
+	err = st_lsm6dsvx_get_int_reg(hw, &drdy_reg);
 	if (err < 0)
 		return err;
 

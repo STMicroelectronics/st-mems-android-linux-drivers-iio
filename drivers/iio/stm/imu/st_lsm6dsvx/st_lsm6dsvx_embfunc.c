@@ -349,16 +349,7 @@ static const struct iio_info st_lsm6dsvx_tilt_info = {
 
 static int st_lsm6dsvx_embfunc_init(struct st_lsm6dsvx_hw *hw)
 {
-	u8 drdy_reg, ef_irq_reg;
 	int err;
-
-	err = st_lsm6dsvx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
-	if (err < 0) {
-		dev_err(hw->dev,
-			"invalid embedded function interrupt configuration\n");
-
-		return err;
-	}
 
 	mutex_lock(&hw->page_lock);
 	err = st_lsm6dsvx_set_page_access(hw,
@@ -377,7 +368,7 @@ static int st_lsm6dsvx_embfunc_init(struct st_lsm6dsvx_hw *hw)
 	st_lsm6dsvx_set_page_access(hw, ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK, 0);
 
 	/* enable embedded function interrupt by default */
-	err = __st_lsm6dsvx_write_with_mask(hw, ef_irq_reg,
+	err = __st_lsm6dsvx_write_with_mask(hw, hw->embfunc_pg0_irq_reg,
 					    ST_LSM6DSVX_REG_INT_EMB_FUNC_MASK,
 					    1);
 unlock_page:
