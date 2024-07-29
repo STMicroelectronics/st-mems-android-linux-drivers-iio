@@ -30,7 +30,7 @@ config IIO_ST_LSM6DSVX_I3C
 
 config IIO_ST_LSM6DSVX_EN_EVENTS
 	bool "Enable internal event detection features"
-	depends on IIO_ST_ASM330LHHX
+	depends on IIO_ST_LSM6DSVX
 	help
 	  Enable internal event detection features like: step counter, step detection,
 	  significant motion, tap, double tap, free fall, wake-up, 6D orientation,
