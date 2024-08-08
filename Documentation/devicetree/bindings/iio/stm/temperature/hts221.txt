@@ -5,11 +5,12 @@ Required properties for all bus drivers:
               "st,hts221"
 
 Required properties for the i2c bindings:
-- reg: i2c slave address
+- reg:        i2c slave address
 
 Required properties for the spi bindings:
 - reg:               the chipselect index
-- spi-max-frequency: maximal bus speed, should be set to 1000000 unless
+
+- spi-max-frequency: maximal bus speed, should be set to 10000000 unless
                      constrained by external circuitry
 
 Optional properties for all bus drivers:
@@ -22,9 +23,18 @@ Optional properties for all bus drivers:
 Example for an spi device node:
 
 hts221-temperature@0 {
-	compatible = "st,hts221";
-	reg = <0x0>;
-	spi-max-frequency = <1000000>;
-	interrupt-parent = <&gpio0>;
-	interrupts = <0 IRQ_TYPE_LEVEL_HIGH>;
+        compatible = "st,hts221";
+        reg = <0x0>;
+        spi-max-frequency = <10000000>;
+        interrupt-parent = <&gpio0>;
+        interrupts = <0 IRQ_TYPE_LEVEL_HIGH>;
+};
+
+Example for an i2c device node:
+
+hts221-temperature@5f {
+        compatible = "st,hts221";
+        reg = <0x5f>;
+        interrupt-parent = <&gpio0>;
+        interrupts = <0 IRQ_TYPE_LEVEL_HIGH>;
 };

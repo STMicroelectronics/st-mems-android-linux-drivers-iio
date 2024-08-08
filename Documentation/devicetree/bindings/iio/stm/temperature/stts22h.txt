@@ -4,9 +4,12 @@ Required properties for the i2c bindings:
 - compatible: must be one of:
               "st,stts22h"
 
+Required properties for the i2c bindings:
+- reg: i2c slave address.
+
 Example for an i2c device node:
 
 stts22h-temperature@38 {
-	compatible = "st,stts22h";
-	reg = <0x38>;
+        compatible = "st,stts22h";
+        reg = <0x38>;
 };
