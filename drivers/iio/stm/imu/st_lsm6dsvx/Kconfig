@@ -28,22 +28,6 @@ config IIO_ST_LSM6DSVX_I3C
 	depends on IIO_ST_LSM6DSVX
 	select REGMAP_I3C
 
-config IIO_ST_LSM6DSVX_EN_EVENTS
-	bool "Enable internal event detection features"
-	depends on IIO_ST_LSM6DSVX
-	help
-	  Enable internal event detection features like: step counter, step detection,
-	  significant motion and tilt.
-
-	  WARNING If this feature is enabled, it is necessary to extend the
-	  iio_chan_type_name_spec array in industrialio-core.c by adding the
-	  custom sensor-types used by this driver; otherwise, during the
-	  registration phase of the custom sensors on the iio core, a crash
-	  could occur due to access to unallocated memory.
-
-comment "WARNING ! If you don't know what you're doing, leave this flag in the default state."
-	depends on IIO_ST_LSM6DSVX_EN_EVENTS
-
 config IIO_ST_LSM6DSVX_QVAR_IN_FIFO
 	bool "use FIFO for QVAR"
 	depends on IIO_ST_LSM6DSVX

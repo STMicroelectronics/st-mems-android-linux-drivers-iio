@@ -646,9 +646,6 @@ int st_lsm6dsvx_set_odr(struct st_lsm6dsvx_sensor *sensor,
 	case ST_LSM6DSVX_ID_MLC_3:
 	case ST_LSM6DSVX_ID_TEMP:
 	case ST_LSM6DSVX_ID_STEP_COUNTER:
-	case ST_LSM6DSVX_ID_STEP_DETECTOR:
-	case ST_LSM6DSVX_ID_SIGN_MOTION:
-	case ST_LSM6DSVX_ID_TILT:
 	case ST_LSM6DSVX_ID_ACC:
 		odr = st_lsm6dsvx_check_acc_odr_dependency(sensor, req_odr,
 							   req_uodr);
@@ -1572,7 +1569,12 @@ static int st_lsm6dsvx_reset_device(struct st_lsm6dsvx_hw *hw)
 
 static int st_lsm6dsvx_init_device(struct st_lsm6dsvx_hw *hw)
 {
+	u8 drdy_reg;
 	int err;
+
+	err = st_lsm6dsvx_get_int_reg(hw, &drdy_reg);
+	if (err < 0)
+		return err;
 
 	/* enable Block Data Update */
 	err = st_lsm6dsvx_write_with_mask(hw, ST_LSM6DSVX_REG_CTRL3_ADDR,
@@ -1834,18 +1836,9 @@ int st_lsm6dsvx_probe(struct device *dev, int irq, int hw_id,
 	}
 
 	if (hw->has_hw_fifo) {
-		if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_EN_EVENTS)) {
-			/*
-			 * allocate step counter before buffer setup
-			 * because use FIFO.
-			 * Please note that embfunc and events requires valid
-			 * interrupt configuration. If interrupts are not
-			 * configured disable CONFIG_IIO_ST_LSM6DSVX_EN_EVENTS
-			 */
-			err = st_lsm6dsvx_probe_embfunc(hw);
-			if (err < 0)
-				return err;
-		}
+		err = st_lsm6dsvx_embfunc_probe(hw);
+		if (err < 0)
+			return err;
 
 		err = st_lsm6dsvx_event_init(hw);
 		if (err < 0)

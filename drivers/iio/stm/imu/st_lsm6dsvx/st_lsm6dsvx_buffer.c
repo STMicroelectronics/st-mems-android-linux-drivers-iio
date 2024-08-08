@@ -573,8 +573,7 @@ int st_lsm6dsvx_update_fifo(struct st_lsm6dsvx_sensor *sensor, bool enable)
 			goto out;
 		break;
 	case ST_LSM6DSVX_ID_STEP_COUNTER:
-		err = st_lsm6dsvx_step_counter_set_enable(sensor,
-							  enable);
+		err = st_lsm6dsvx_step_enable(sensor, enable);
 		if (err < 0)
 			goto out;
 		break;
@@ -709,10 +708,7 @@ static irqreturn_t st_lsm6dsvx_handler_thread(int irq, void *private)
 	mutex_unlock(&hw->fifo_lock);
 
 	st_lsm6dsvx_event_handler(hw);
-
-	if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_EN_EVENTS)) {
-		st_lsm6dsvx_embfunc_handler_thread(hw);
-	}
+	st_lsm6dsvx_embfunc_handler_thread(hw);
 
 	return IRQ_HANDLED;
 }

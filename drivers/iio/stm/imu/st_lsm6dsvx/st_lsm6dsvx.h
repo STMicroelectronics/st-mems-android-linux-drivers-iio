@@ -420,6 +420,9 @@ enum st_lsm6dsvx_event_id {
 	ST_LSM6DSVX_EVENT_DTAP,
 #endif /* LINUX_VERSION_CODE */
 
+	ST_LSM6DSVX_EVENT_STEPC,
+	ST_LSM6DSVX_EVENT_SIGNMOT,
+
 	ST_LSM6DSVX_EVENT_MAX
 };
 
@@ -577,9 +580,6 @@ enum st_lsm6dsvx_sensor_id {
 	ST_LSM6DSVX_ID_FSM_6,
 	ST_LSM6DSVX_ID_FSM_7,
 	ST_LSM6DSVX_ID_STEP_COUNTER,
-	ST_LSM6DSVX_ID_STEP_DETECTOR,
-	ST_LSM6DSVX_ID_SIGN_MOTION,
-	ST_LSM6DSVX_ID_TILT,
 	ST_LSM6DSVX_ID_MAX,
 };
 
@@ -631,9 +631,6 @@ static const enum st_lsm6dsvx_sensor_id st_lsm6dsvx_acc_dep_sensor_list[] = {
 	[17] = ST_LSM6DSVX_ID_FSM_6,
 	[18] = ST_LSM6DSVX_ID_FSM_7,
 	[19] = ST_LSM6DSVX_ID_STEP_COUNTER,
-	[20] = ST_LSM6DSVX_ID_STEP_DETECTOR,
-	[21] = ST_LSM6DSVX_ID_SIGN_MOTION,
-	[22] = ST_LSM6DSVX_ID_TILT,
 };
 
 static const enum st_lsm6dsvx_sensor_id st_lsm6dsvx_buffered_sensor_list[] = {
@@ -669,16 +666,6 @@ static const enum st_lsm6dsvx_sensor_id st_lsm6dsvx_fsm_sensor_list[] = {
 	[5] = ST_LSM6DSVX_ID_FSM_5,
 	[6] = ST_LSM6DSVX_ID_FSM_6,
 	[7] = ST_LSM6DSVX_ID_FSM_7,
-};
-
-/**
- * The low power embedded function only sensor list
- */
-static const enum st_lsm6dsvx_sensor_id st_lsm6dsvx_embfunc_sensor_list[] = {
-	[0] = ST_LSM6DSVX_ID_STEP_COUNTER,
-	[1] = ST_LSM6DSVX_ID_STEP_DETECTOR,
-	[2] = ST_LSM6DSVX_ID_SIGN_MOTION,
-	[3] = ST_LSM6DSVX_ID_TILT,
 };
 
 #define ST_LSM6DSVX_ID_ALL_FSM_MLC (BIT(ST_LSM6DSVX_ID_MLC_0)  | \
@@ -1153,8 +1140,7 @@ int st_lsm6dsvx_event_handler(struct st_lsm6dsvx_hw *hw);
 int st_lsm6dsvx_update_threshold_events(struct st_lsm6dsvx_hw *hw);
 int st_lsm6dsvx_update_duration_events(struct st_lsm6dsvx_hw *hw);
 
-int st_lsm6dsvx_probe_embfunc(struct st_lsm6dsvx_hw *hw);
+int st_lsm6dsvx_embfunc_probe(struct st_lsm6dsvx_hw *hw);
 int st_lsm6dsvx_embfunc_handler_thread(struct st_lsm6dsvx_hw *hw);
-int st_lsm6dsvx_step_counter_set_enable(struct st_lsm6dsvx_sensor *sensor,
-					bool enable);
+int st_lsm6dsvx_step_enable(struct st_lsm6dsvx_sensor *sensor, bool enable);
 #endif /* ST_LSM6DSVX_H */
