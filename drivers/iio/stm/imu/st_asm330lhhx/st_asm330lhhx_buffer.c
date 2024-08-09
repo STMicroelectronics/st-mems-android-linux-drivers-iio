@@ -639,11 +639,7 @@ static irqreturn_t st_asm330lhhx_handler_thread(int irq, void *private)
 	clear_bit(ST_ASM330LHHX_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
-#ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
-	return st_asm330lhhx_event_handler(hw);
-#endif /* CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES */
-
-	return IRQ_HANDLED;
+	return st_asm330lhhx_event_handler(hw);;
 }
 
 static int st_asm330lhhx_fifo_preenable(struct iio_dev *iio_dev)
@@ -721,27 +717,26 @@ static const struct iio_trigger_ops st_asm330lhhx_trigger_ops = {
 static int st_asm330lhhx_config_interrupt(struct st_asm330lhhx_hw *hw,
 					  bool enable)
 {
-	u8 drdy_reg;
 	int err;
 
-	err = st_asm330lhhx_get_int_reg(hw, &drdy_reg);
+	err = st_asm330lhhx_get_int_reg(hw);
 	if (err < 0)
 		return err;
 
 	/* latch interrupts */
 	err = regmap_update_bits(hw->regmap,
-				 ST_ASM330LHHX_REG_TAP_CFG0_ADDR,
-				 ST_ASM330LHHX_REG_LIR_MASK,
-				 FIELD_PREP(ST_ASM330LHHX_REG_LIR_MASK,
+				 ST_ASM330LHHX_REG_INT_CFG0_ADDR,
+				 ST_ASM330LHHX_LIR_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_LIR_MASK,
 					    enable ? 1 : 0));
 	if (err < 0)
 	return err;
 
 	/* enable FIFO watermak interrupt */
-	return regmap_update_bits(hw->regmap, drdy_reg,
-			  ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
-			  FIELD_PREP(ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
-				     enable ? 1 : 0));
+	return regmap_update_bits(hw->regmap, hw->drdy_reg,
+				  ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
+				  FIELD_PREP(ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
+					     enable ? 1 : 0));
 }
 
 static int st_asm330lhhx_config_timestamp(struct st_asm330lhhx_hw *hw)

@@ -116,6 +116,30 @@
 #define ST_ASM330LHHX_REG_CTRL10_C_ADDR		0x19
 #define ST_ASM330LHHX_REG_TIMESTAMP_EN_MASK	BIT(5)
 
+#define ST_ASM330LHHX_REG_ALL_INT_SRC_ADDR	0x1a
+#define ST_ASM330LHHX_FF_IA_MASK		BIT(0)
+#define ST_ASM330LHHX_WU_IA_MASK		BIT(1)
+#define ST_ASM330LHHX_D6D_IA_MASK		BIT(4)
+#define ST_ASM330LHHX_SLEEP_CHANGE_MASK		BIT(5)
+
+#define ST_ASM330LHHX_REG_WAKE_UP_SRC_ADDR	0x1b
+#define ST_ASM330LHHX_WAKE_UP_EVENT_MASK	GENMASK(3, 0)
+#define ST_ASM330LHHX_WAKE_UP_SRC_FF_IA_MASK	BIT(5)
+#define ST_ASM330LHHX_WAKE_UP_SRC_WU_IA_MASK	BIT(3)
+#define ST_ASM330LHHX_X_WU_MASK			BIT(2)
+#define ST_ASM330LHHX_Y_WU_MASK			BIT(1)
+#define ST_ASM330LHHX_Z_WU_MASK			BIT(0)
+
+#define ST_ASM330LHHX_REG_D6D_SRC_ADDR		0x1d
+#define ST_ASM330LHHX_D6D_EVENT_MASK		GENMASK(5, 0)
+#define ST_ASM330LHHX_D6D_SRC_D6D_IA_MASK	BIT(6)
+#define ST_ASM330LHHX_ZH_MASK			BIT(5)
+#define ST_ASM330LHHX_ZL_MASK			BIT(4)
+#define ST_ASM330LHHX_YH_MASK			BIT(3)
+#define ST_ASM330LHHX_YL_MASK			BIT(2)
+#define ST_ASM330LHHX_XH_MASK			BIT(1)
+#define ST_ASM330LHHX_XL_MASK			BIT(0)
+
 #define ST_ASM330LHHX_REG_STATUS_ADDR		0x1e
 #define ST_ASM330LHHX_REG_STATUS_XLDA		BIT(0)
 #define ST_ASM330LHHX_REG_STATUS_GDA		BIT(1)
@@ -140,8 +164,13 @@
 
 #define ST_ASM330LHHX_REG_TIMESTAMP0_ADDR	0x40
 
-#define ST_ASM330LHHX_REG_TAP_CFG0_ADDR		0x56
-#define ST_ASM330LHHX_REG_LIR_MASK		BIT(0)
+#define ST_ASM330LHHX_REG_INT_CFG0_ADDR		0x56
+#define ST_ASM330LHHX_LIR_MASK			BIT(0)
+#define ST_ASM330LHHX_SLOPE_FDS_MASK		BIT(4)
+#define ST_ASM330LHHX_INT_CLR_ON_READ_MASK	BIT(6)
+
+#define ST_ASM330LHHX_REG_INT_CFG1_ADDR		0x58
+#define ST_ASM330LHHX_INTERRUPTS_ENABLE_MASK	BIT(7)
 
 #define ST_ASM330LHHX_REG_THS_6D_ADDR		0x59
 #define ST_ASM330LHHX_SIXD_THS_MASK		GENMASK(6, 5)
@@ -157,8 +186,12 @@
 
 #define ST_ASM330LHHX_REG_MD1_CFG_ADDR		0x5e
 #define ST_ASM330LHHX_REG_MD2_CFG_ADDR		0x5f
-#define ST_ASM330LHHX_REG_INT2_TIMESTAMP_MASK	BIT(0)
-#define ST_ASM330LHHX_REG_INT_EMB_FUNC_MASK		BIT(1)
+#define ST_ASM330LHHX_INT2_TIMESTAMP_MASK	BIT(0)
+#define ST_ASM330LHHX_INT_EMB_FUNC_MASK		BIT(1)
+#define ST_ASM330LHHX_INT_6D_MASK		BIT(2)
+#define ST_ASM330LHHX_INT_FF_MASK		BIT(4)
+#define ST_ASM330LHHX_INT_WU_MASK		BIT(5)
+#define ST_ASM330LHHX_INT_SLEEP_CHANGE_MASK	BIT(7)
 
 #define ST_ASM330LHHX_INTERNAL_FREQ_FINE	0x63
 
@@ -268,6 +301,32 @@ static const struct iio_event_spec st_asm330lhhx_thr_event = {
 	.mask_separate = BIT(IIO_EV_INFO_ENABLE),
 };
 
+static const struct iio_event_spec st_asm330lhhx_wakeup_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_RISING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) | BIT(IIO_EV_INFO_ENABLE) |
+			 BIT(IIO_EV_INFO_PERIOD),
+};
+
+static const struct iio_event_spec st_asm330lhhx_freefall_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_FALLING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) | BIT(IIO_EV_INFO_ENABLE),
+};
+
+static const struct iio_event_spec st_asm330lhhx_6D_event = {
+	.type = IIO_EV_TYPE_CHANGE,
+	.dir = IIO_EV_DIR_EITHER,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) | BIT(IIO_EV_INFO_ENABLE),
+};
+
+enum st_asm330lhhx_event_id {
+       ST_ASM330LHHX_EVENT_FF,
+       ST_ASM330LHHX_EVENT_WAKEUP,
+       ST_ASM330LHHX_EVENT_6D,
+       ST_ASM330LHHX_EVENT_MAX
+};
+
 #define ST_ASM330LHHX_EVENT_CHANNEL(ctype, etype)	\
 {							\
 	.type = ctype,					\
@@ -333,7 +392,10 @@ enum st_asm330lhhx_suspend_resume_register {
 	ST_ASM330LHHX_REG_CTRL6_C_REG,
 	ST_ASM330LHHX_REG_CTRL8_XL_REG,
 	ST_ASM330LHHX_REG_CTRL10_C_REG,
-	ST_ASM330LHHX_REG_TAP_CFG0_REG,
+	ST_ASM330LHHX_REG_INT_CFG0_REG,
+	ST_ASM330LHHX_REG_INT_CFG1_REG,
+	ST_ASM330LHHX_REG_MD1_CFG_REG,
+	ST_ASM330LHHX_REG_MD2_CFG_REG,
 	ST_ASM330LHHX_REG_INT1_CTRL_REG,
 	ST_ASM330LHHX_REG_INT2_CTRL_REG,
 	ST_ASM330LHHX_REG_FIFO_CTRL1_REG,
@@ -482,12 +544,6 @@ enum st_asm330lhhx_sensor_id {
 	ST_ASM330LHHX_ID_FSM_13,
 	ST_ASM330LHHX_ID_FSM_14,
 	ST_ASM330LHHX_ID_FSM_15,
-	ST_ASM330LHHX_ID_EVENT,
-	ST_ASM330LHHX_ID_FF = ST_ASM330LHHX_ID_EVENT,
-	ST_ASM330LHHX_ID_SC,
-	ST_ASM330LHHX_ID_TRIGGER,
-	ST_ASM330LHHX_ID_WK = ST_ASM330LHHX_ID_TRIGGER,
-	ST_ASM330LHHX_ID_6D,
 	ST_ASM330LHHX_ID_MAX,
 };
 
@@ -563,7 +619,9 @@ static const enum st_asm330lhhx_sensor_id st_asm330lhhx_fsm_sensor_list[] = {
 				       ST_ASM330LHHX_ID_ALL_FSM_MLC)
 
 /* this is the minimal ODR for wake-up sensors and dependencies */
-#define ST_ASM330LHHX_MIN_ODR_IN_WAKEUP	26
+#define ST_ASM330LHHX_MIN_ODR_IN_WAKEUP		26
+#define ST_ASM330LHHX_MIN_ODR_IN_FREEFALL	26
+#define ST_ASM330LHHX_MIN_ODR_IN_6D		26
 
 enum st_asm330lhhx_fifo_mode {
 	ST_ASM330LHHX_FIFO_BYPASS = 0x0,
@@ -659,48 +717,33 @@ struct st_asm330lhhx_sensor {
 	struct st_asm330lhhx_ext_dev_info ext_dev_info;
 	struct iio_trigger *trig;
 
-	union {
-		/* sensor with odrs, gain and offset */
-		struct {
-			u32 gain;
-			u32 offset;
-			u32 decimator;
-			u32 dec_counter;
-			u32 discard_samples;
-			int odr;
-			int uodr;
+	/* sensor with odrs, gain and offset */
+	u32 gain;
+	u32 offset;
+	u32 decimator;
+	u32 dec_counter;
+	u32 discard_samples;
+	int odr;
+	int uodr;
 
 #ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
-			u32 discharged_samples;
+	u32 discharged_samples;
 #endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
 
-			u16 max_watermark;
-			u16 watermark;
-			enum st_asm330lhhx_pm_t pm;
-			s64 last_fifo_timestamp;
+	u16 max_watermark;
+	u16 watermark;
+	enum st_asm330lhhx_pm_t pm;
+	s64 last_fifo_timestamp;
 
-			/* self test */
-			int8_t selftest_status;
-			int min_st;
-			int max_st;
+	/* self test */
+	int8_t selftest_status;
+	int min_st;
+	int max_st;
 
-			/* mlc / fsm registers */
-			u8 status_reg;
-			u8 outreg_addr;
-			enum st_asm330lhhx_fsm_mlc_enable_id status;
-		};
-
-		/* sensor specific data configuration */
-		struct {
-			u32 conf[6];
-
-			/* ensure natural alignment of timestamp */
-			struct {
-				u8 event;
-				s64 ts __aligned(8);
-			} scan;
-		};
-	};
+	/* mlc / fsm registers */
+	u8 status_reg;
+	u8 outreg_addr;
+	enum st_asm330lhhx_fsm_mlc_enable_id status;
 };
 
 /**
@@ -715,6 +758,7 @@ struct st_asm330lhhx_sensor {
  * @fifo_mode: FIFO operating mode supported by the device.
  * @state: hw operational state.
  * @enable_mask: Enabled sensor bitmask.
+ * @enable_ev_mask: Enabled event bitmask.
  * @ext_data_len: SHUB external sensor data len.
  * @hw_timestamp_global: hw timestamp value always monotonic where the most
  *                       significant 8byte are incremented at every disable/enable.
@@ -746,6 +790,13 @@ struct st_asm330lhhx_sensor {
  * @xl_odr_div: Configured accel odr bandwidth.
  * @g_ftype:  Configured gyro odr ftype.
  * @has_hw_fifo: Indicate if the hw fifo configuration was done.
+ * @fs_table: Full scale table pointer.
+ * @drdy_reg: Interrupt configuration register.
+ * @embfunc_pg0_irq_reg: Embedded function irq configuration register (page 0).
+ * @freefall_threshold: Accelerometer threshold for free fall algorithm.
+ * @wk_th_mg: Wake-up threshold in mg.
+ * @wk_dur_ms: Wake-up duration in ms.
+ * @sixD_threshold: 6D threshold in mg.
  */
 struct st_asm330lhhx_hw {
 	struct device *dev;
@@ -760,6 +811,7 @@ struct st_asm330lhhx_hw {
 	enum st_asm330lhhx_fifo_mode fifo_mode;
 	unsigned long state;
 	u64 enable_mask;
+	u64 enable_ev_mask;
 	u64 requested_mask;
 	u8 ext_data_len;
 	s64 hw_timestamp_global;
@@ -800,6 +852,15 @@ struct st_asm330lhhx_hw {
 	int xl_odr_div;
 	int g_ftype;
 	bool has_hw_fifo;
+
+	const struct st_asm330lhhx_fs_table_entry *fs_table;
+
+	u8 drdy_reg;
+	u8 embfunc_pg0_irq_reg;
+	u32 freefall_threshold;
+	u32 wk_th_mg;
+	u32 wk_dur_ms;
+	u32 sixD_threshold;
 };
 
 /**
@@ -867,6 +928,18 @@ struct st_asm330lhhx_g_lpf_bw_config_t {
 
 extern const struct dev_pm_ops st_asm330lhhx_pm_ops;
 
+static inline int st_asm330lhhx_manipulate_bit(int int_reg, int irq_mask,
+					       int en)
+{
+	int bit_position = __ffs(irq_mask);
+	int bit_mask = 1 << bit_position;
+
+	int_reg &= ~bit_mask;
+	int_reg |= (en << bit_position);
+
+	return int_reg;
+}
+
 static inline int __st_asm330lhhx_write_with_mask(struct st_asm330lhhx_hw *hw,
 					      unsigned int addr,
 					      unsigned int mask,
@@ -920,6 +993,26 @@ st_asm330lhhx_read_locked(struct st_asm330lhhx_hw *hw, unsigned int addr,
 	mutex_unlock(&hw->page_lock);
 
 	return err;
+}
+
+static inline int
+__maybe_unused st_asm330lhhx_read_with_mask(struct st_asm330lhhx_hw *hw,
+					    u8 addr, u8 mask, u8 *val)
+{
+	u8 data;
+	int err;
+
+	err = regmap_bulk_read(hw->regmap, addr, &data, sizeof(data));
+	if (err < 0) {
+		dev_err(hw->dev, "failed to read %02x register\n", addr);
+
+		goto out;
+	}
+
+	*val = (data & mask) >> __ffs(mask);
+
+out:
+	return (err < 0) ? err : 0;
 }
 
 static inline int
@@ -1055,6 +1148,8 @@ int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 void st_asm330lhhx_remove(struct device *dev);
 int st_asm330lhhx_sensor_set_enable(struct st_asm330lhhx_sensor *sensor,
 				    bool enable);
+int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
+			  int req_odr, int req_uodr);
 int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_allocate_buffers(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_get_odr_from_reg(enum st_asm330lhhx_sensor_id id,
@@ -1092,23 +1187,7 @@ int st_asm330lhhx_shub_set_enable(struct st_asm330lhhx_sensor *sensor,
 int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
 			    u8 addr, u8 *data, int len);
 int st_asm330lhhx_of_get_pin(struct st_asm330lhhx_hw *hw, int *pin);
-int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw,
-			      u8 *drdy_reg);
-
-#ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
-int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw);
-int st_asm330lhhx_probe_event(struct st_asm330lhhx_hw *hw);
-int st_asm330lhhx_set_wake_up_thershold(struct st_asm330lhhx_hw *hw,
-					int th_ug);
-int st_asm330lhhx_set_wake_up_duration(struct st_asm330lhhx_hw *hw,
-				       int dur_ms);
-int st_asm330lhhx_set_freefall_threshold(struct st_asm330lhhx_hw *hw,
-					 int th_mg);
-int st_asm330lhhx_set_6D_threshold(struct st_asm330lhhx_hw *hw,
-				   int deg);
-int st_asm330lhhx_read_with_mask(struct st_asm330lhhx_hw *hw, u8 addr,
-				 u8 mask, u8 *val);
-#endif /* CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES */
+int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw);
 
 #if defined (CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 int st_asm330lhhx_hwtimesync_init(struct st_asm330lhhx_hw *hw);
@@ -1125,4 +1204,30 @@ int st_asm330lhhx_mlc_remove(struct device *dev);
 int st_asm330lhhx_mlc_check_status(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_mlc_init_preload(struct st_asm330lhhx_hw *hw);
 
+/* xl events */
+int st_asm330lhhx_read_event_config(struct iio_dev *iio_dev,
+				    const struct iio_chan_spec *chan,
+				    enum iio_event_type type,
+				    enum iio_event_direction dir);
+int st_asm330lhhx_write_event_config(struct iio_dev *iio_dev,
+				     const struct iio_chan_spec *chan,
+				     enum iio_event_type type,
+				     enum iio_event_direction dir,
+				     int enable);
+int st_asm330lhhx_read_event_value(struct iio_dev *iio_dev,
+				   const struct iio_chan_spec *chan,
+				   enum iio_event_type type,
+				   enum iio_event_direction dir,
+				   enum iio_event_info info,
+				   int *val, int *val2);
+int st_asm330lhhx_write_event_value(struct iio_dev *iio_dev,
+				    const struct iio_chan_spec *chan,
+				    enum iio_event_type type,
+				    enum iio_event_direction dir,
+				    enum iio_event_info info,
+				    int val, int val2);
+int st_asm330lhhx_event_init(struct st_asm330lhhx_hw *hw);
+int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw);
+int st_asm330lhhx_update_threshold_events(struct st_asm330lhhx_hw *hw);
+int st_asm330lhhx_update_duration_events(struct st_asm330lhhx_hw *hw);
 #endif /* ST_ASM330LHHX_H */

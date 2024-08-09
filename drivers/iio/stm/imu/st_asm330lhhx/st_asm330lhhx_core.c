@@ -154,10 +154,25 @@ static struct st_asm330lhhx_suspend_resume_entry
 		.addr = ST_ASM330LHHX_REG_CTRL10_C_ADDR,
 		.mask = ST_ASM330LHHX_REG_TIMESTAMP_EN_MASK,
 	},
-	[ST_ASM330LHHX_REG_TAP_CFG0_REG] = {
+	[ST_ASM330LHHX_REG_INT_CFG0_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
-		.addr = ST_ASM330LHHX_REG_TAP_CFG0_ADDR,
-		.mask = ST_ASM330LHHX_REG_LIR_MASK,
+		.addr = ST_ASM330LHHX_REG_INT_CFG0_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+	[ST_ASM330LHHX_REG_INT_CFG1_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_ASM330LHHX_REG_INT_CFG1_ADDR,
+		.mask = ST_ASM330LHHX_INTERRUPTS_ENABLE_MASK,
+	},
+	[ST_ASM330LHHX_REG_MD1_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_ASM330LHHX_REG_MD1_CFG_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+	[ST_ASM330LHHX_REG_MD2_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_ASM330LHHX_REG_MD2_CFG_ADDR,
+		.mask = GENMASK(7, 0),
 	},
 	[ST_ASM330LHHX_REG_INT1_CTRL_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
@@ -363,62 +378,6 @@ static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 	},
 };
 
-#ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
-static const struct st_asm330lhhx_ff_th st_asm330lhhx_free_fall_threshold[] = {
-	[0] = {
-		.val = 0x00,
-		.mg = 156,
-	},
-	[1] = {
-		.val = 0x01,
-		.mg = 219,
-	},
-	[2] = {
-		.val = 0x02,
-		.mg = 250,
-	},
-	[3] = {
-		.val = 0x03,
-		.mg = 312,
-	},
-	[4] = {
-		.val = 0x04,
-		.mg = 344,
-	},
-	[5] = {
-		.val = 0x05,
-		.mg = 406,
-	},
-	[6] = {
-		.val = 0x06,
-		.mg = 469,
-	},
-	[7] = {
-		.val = 0x07,
-		.mg = 500,
-	},
-};
-
-static const struct st_asm330lhhx_6D_th st_asm330lhhx_6D_threshold[] = {
-	[0] = {
-		.val = 0x00,
-		.deg = 80,
-	},
-	[1] = {
-		.val = 0x01,
-		.deg = 70,
-	},
-	[2] = {
-		.val = 0x02,
-		.deg = 60,
-	},
-	[3] = {
-		.val = 0x03,
-		.deg = 50,
-	},
-};
-#endif /* CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES */
-
 static const struct st_asm330lhhx_xl_lpf_bw_config_t st_asm330lhhx_xl_bw = {
 	.reg = ST_ASM330LHHX_REG_CTRL8_XL_ADDR,
 	.mask = ST_ASM330LHHX_REG_HPCF_XL_MASK,
@@ -513,6 +472,10 @@ static const struct iio_chan_spec st_asm330lhhx_acc_channels[] = {
 				1, IIO_MOD_Z, 2, 16, 16, 's', st_asm330lhhx_ext_info),
 	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ACCEL, flush),
 
+	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ACCEL, freefall),
+	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ACCEL, 6D),
+
 #if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
@@ -596,25 +559,6 @@ static inline int st_asm330lhhx_get_odr_divider_index(int odr_div)
 	return i;
 }
 
-int __maybe_unused st_asm330lhhx_read_with_mask(struct st_asm330lhhx_hw *hw, u8 addr, u8 mask,
-				u8 *val)
-{
-	u8 data;
-	int err;
-
-	err = regmap_bulk_read(hw->regmap, addr, &data, sizeof(data));
-	if (err < 0) {
-		dev_err(hw->dev, "failed to read %02x register\n", addr);
-
-		goto out;
-	}
-
-	*val = (data & mask) >> __ffs(mask);
-
-out:
-	return (err < 0) ? err : 0;
-}
-
 int st_asm330lhhx_of_get_pin(struct st_asm330lhhx_hw *hw, int *pin)
 {
 	if (!dev_fwnode(hw->dev))
@@ -623,7 +567,7 @@ int st_asm330lhhx_of_get_pin(struct st_asm330lhhx_hw *hw, int *pin)
 	return device_property_read_u32(hw->dev, "st,int-pin", pin);
 }
 
-int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw, u8 *drdy_reg)
+int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw)
 {
 	int err = 0, int_pin;
 
@@ -637,10 +581,12 @@ int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw, u8 *drdy_reg)
 
 	switch (int_pin) {
 	case 1:
-		*drdy_reg = ST_ASM330LHHX_REG_INT1_CTRL_ADDR;
+		hw->drdy_reg = ST_ASM330LHHX_REG_INT1_CTRL_ADDR;
+		hw->embfunc_pg0_irq_reg = ST_ASM330LHHX_REG_MD1_CFG_ADDR;
 		break;
 	case 2:
-		*drdy_reg = ST_ASM330LHHX_REG_INT2_CTRL_ADDR;
+		hw->drdy_reg = ST_ASM330LHHX_REG_INT2_CTRL_ADDR;
+		hw->embfunc_pg0_irq_reg = ST_ASM330LHHX_REG_MD2_CFG_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -832,176 +778,6 @@ static ssize_t st_asm330lhhx_sysfs_get_selftest_status(struct device *dev,
 	return sysfs_emit(buf, "%s\n", message);
 }
 
-#ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
-/*
- * st_asm330lhhx_set_wake_up_thershold - set wake-up threshold in ug
- * @hw - ST IMU MEMS hw instance
- * @th_ug - wake-up threshold in ug (micro g)
- *
- * wake-up thershold register val = (th_ug * 2 ^ 6) / (1000000 * FS_XL)
- */
-int st_asm330lhhx_set_wake_up_thershold(struct st_asm330lhhx_hw *hw, int th_ug)
-{
-	struct st_asm330lhhx_sensor *sensor;
-	struct iio_dev *iio_dev;
-	u8 val, fs_xl, max_th;
-	int tmp, err;
-
-	err = st_asm330lhhx_read_with_mask(hw,
-			st_asm330lhhx_fs_table[ST_ASM330LHHX_ID_ACC].reg.addr,
-			st_asm330lhhx_fs_table[ST_ASM330LHHX_ID_ACC].reg.mask,
-			&fs_xl);
-	if (err < 0)
-		return err;
-
-	tmp = (th_ug * 64) / (fs_xl * 1000000);
-	val = (u8)tmp;
-	max_th = ST_ASM330LHHX_WAKE_UP_THS_MASK >>
-		  __ffs(ST_ASM330LHHX_WAKE_UP_THS_MASK);
-	if (val > max_th)
-		val = max_th;
-
-	err = st_asm330lhhx_write_with_mask_locked(hw,
-					   ST_ASM330LHHX_REG_WAKE_UP_THS_ADDR,
-					   ST_ASM330LHHX_WAKE_UP_THS_MASK, val);
-	if (err < 0)
-		return err;
-
-	iio_dev = hw->iio_devs[ST_ASM330LHHX_ID_WK];
-	sensor = iio_priv(iio_dev);
-	sensor->conf[0] = th_ug;
-
-	return 0;
-}
-
-/*
- * st_asm330lhhx_set_wake_up_duration - set wake-up duration in ms
- * @hw - ST IMU MEMS hw instance
- * @dur_ms - wake-up duration in ms
- *
- * wake-up duration register val is related to XL ODR
- */
-int st_asm330lhhx_set_wake_up_duration(struct st_asm330lhhx_hw *hw, int dur_ms)
-{
-	struct st_asm330lhhx_sensor *sensor;
-	struct iio_dev *iio_dev;
-	int i, tmp, sensor_odr, err;
-	u8 val, odr_xl, max_dur;
-
-	err = st_asm330lhhx_read_with_mask(hw,
-		st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.addr,
-		st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.mask,
-		&odr_xl);
-	if (err < 0)
-		return err;
-
-	if (odr_xl == 0) {
-		dev_info(hw->dev, "use default ODR\n");
-		odr_xl = st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].odr_avl[ST_ASM330LHHX_DEFAULT_XL_ODR_INDEX].val;
-	}
-
-	for (i = 0; i < st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].size; i++) {
-		if (odr_xl ==
-		     st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].odr_avl[i].val)
-			break;
-	}
-
-	if (i == st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].size)
-		return -EINVAL;
-
-
-	sensor_odr = ST_ASM330LHHX_ODR_EXPAND(
-		st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].odr_avl[i].hz,
-		st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].odr_avl[i].uhz);
-
-	tmp = dur_ms / (1000000 / (sensor_odr / 1000));
-	val = (u8)tmp;
-	max_dur = ST_ASM330LHHX_WAKE_UP_DUR_MASK >>
-		  __ffs(ST_ASM330LHHX_WAKE_UP_DUR_MASK);
-	if (val > max_dur)
-		val = max_dur;
-
-	err = st_asm330lhhx_write_with_mask_locked(hw,
-				     ST_ASM330LHHX_REG_WAKE_UP_DUR_ADDR,
-				     ST_ASM330LHHX_WAKE_UP_DUR_MASK,
-				     val);
-	if (err < 0)
-		return err;
-
-	iio_dev = hw->iio_devs[ST_ASM330LHHX_ID_WK];
-	sensor = iio_priv(iio_dev);
-	sensor->conf[1] = dur_ms;
-
-	return 0;
-}
-
-/*
- * st_asm330lhhx_set_freefall_threshold - set free fall threshold detection mg
- * @hw - ST IMU MEMS hw instance
- * @th_mg - free fall threshold in mg
- */
-int st_asm330lhhx_set_freefall_threshold(struct st_asm330lhhx_hw *hw, int th_mg)
-{
-	struct st_asm330lhhx_sensor *sensor;
-	struct iio_dev *iio_dev;
-	int i, err;
-
-	for (i = 0; i < ARRAY_SIZE(st_asm330lhhx_free_fall_threshold); i++) {
-		if (th_mg >= st_asm330lhhx_free_fall_threshold[i].mg)
-			break;
-	}
-
-	if (i == ARRAY_SIZE(st_asm330lhhx_free_fall_threshold))
-		return -EINVAL;
-
-	err = st_asm330lhhx_write_with_mask_locked(hw,
-			      ST_ASM330LHHX_REG_FREE_FALL_ADDR,
-			      ST_ASM330LHHX_FF_THS_MASK,
-			      st_asm330lhhx_free_fall_threshold[i].val);
-	if (err < 0)
-		return err;
-
-	iio_dev = hw->iio_devs[ST_ASM330LHHX_ID_FF];
-	sensor = iio_priv(iio_dev);
-	sensor->conf[2] = th_mg;
-
-	return 0;
-}
-
-/*
- * st_asm330lhhx_set_6D_threshold - set 6D threshold detection in degrees
- * @hw - ST IMU MEMS hw instance
- * @deg - 6D threshold in degrees
- */
-int st_asm330lhhx_set_6D_threshold(struct st_asm330lhhx_hw *hw, int deg)
-{
-	struct st_asm330lhhx_sensor *sensor;
-	struct iio_dev *iio_dev;
-	int i, err;
-
-	for (i = 0; i < ARRAY_SIZE(st_asm330lhhx_6D_threshold); i++) {
-		if (deg >= st_asm330lhhx_6D_threshold[i].deg)
-			break;
-	}
-
-	if (i == ARRAY_SIZE(st_asm330lhhx_6D_threshold))
-		return -EINVAL;
-
-	err = st_asm330lhhx_write_with_mask_locked(hw,
-				     ST_ASM330LHHX_REG_THS_6D_ADDR,
-				     ST_ASM330LHHX_SIXD_THS_MASK,
-				     st_asm330lhhx_6D_threshold[i].val);
-	if (err < 0)
-		return err;
-
-	iio_dev = hw->iio_devs[ST_ASM330LHHX_ID_6D];
-	sensor = iio_priv(iio_dev);
-	sensor->conf[3] = deg;
-
-	return 0;
-}
-#endif /* CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES */
-
 static __maybe_unused int st_asm330lhhx_reg_access(struct iio_dev *iio_dev,
 				 unsigned int reg, unsigned int writeval,
 				 unsigned int *readval)
@@ -1059,6 +835,7 @@ static int st_asm330lhhx_check_whoami(struct st_asm330lhhx_hw *hw,
 	}
 
 	hw->settings = &st_asm330lhhx_sensor_settings[i];
+	hw->fs_table = &st_asm330lhhx_fs_table[0];
 
 	return 0;
 }
@@ -1349,8 +1126,8 @@ unlock:
 	return ret;
 }
 
-static int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
-				 int req_odr, int req_uodr)
+int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
+			  int req_odr, int req_uodr)
 {
 	enum st_asm330lhhx_sensor_id id_req = sensor->id;
 	enum st_asm330lhhx_sensor_id id = sensor->id;
@@ -1385,10 +1162,6 @@ static int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
 	case ST_ASM330LHHX_ID_FSM_13:
 	case ST_ASM330LHHX_ID_FSM_14:
 	case ST_ASM330LHHX_ID_FSM_15:
-	case ST_ASM330LHHX_ID_WK:
-	case ST_ASM330LHHX_ID_FF:
-	case ST_ASM330LHHX_ID_SC:
-	case ST_ASM330LHHX_ID_6D:
 	case ST_ASM330LHHX_ID_TEMP:
 	case ST_ASM330LHHX_ID_ACC: {
 		int odr;
@@ -1561,6 +1334,14 @@ static int st_asm330lhhx_write_raw(struct iio_dev *iio_dev,
 			return err;
 
 		err = st_asm330lhhx_set_full_scale(s, val2);
+		if (err) {
+			iio_device_release_direct_mode(iio_dev);
+			return err;
+		}
+
+		/* some events depends on xl full scale */
+		if (chan->type == IIO_ACCEL)
+			err = st_asm330lhhx_update_threshold_events(s->hw);
 		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
@@ -1587,6 +1368,10 @@ static int st_asm330lhhx_write_raw(struct iio_dev *iio_dev,
 						break;
 
 					st_asm330lhhx_update_batching(iio_dev, 1);
+
+					/* some events depends on xl odr */
+					if (chan->type == IIO_ACCEL)
+						st_asm330lhhx_update_duration_events(s->hw);
 					break;
 				default:
 					break;
@@ -1947,7 +1732,6 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 	enum st_asm330lhhx_sensor_id id = sensor->id;
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	int ret, test;
-	u8 drdy_reg;
 	u32 gain;
 
 	if (id != ST_ASM330LHHX_ID_ACC &&
@@ -1979,13 +1763,13 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 	/* disable FIFO watermak interrupt */
 	if (hw->irq > 0) {
 		/* disable FIFO watermak interrupt */
-		ret = st_asm330lhhx_get_int_reg(hw, &drdy_reg);
+		ret = st_asm330lhhx_get_int_reg(hw);
 		if (ret < 0)
 			goto restore_regs;
 
-		ret = st_asm330lhhx_update_bits_locked(hw, drdy_reg,
-				     ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
-				     0);
+		ret = st_asm330lhhx_update_bits_locked(hw, hw->drdy_reg,
+					     ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
+					     0);
 		if (ret < 0)
 			goto restore_regs;
 	}
@@ -2129,9 +1913,15 @@ static const struct iio_info st_asm330lhhx_acc_info = {
 	.read_raw = st_asm330lhhx_read_raw,
 	.write_raw = st_asm330lhhx_write_raw,
 	.write_raw_get_fmt = st_asm330lhhx_write_raw_get_fmt,
+	.read_event_config = st_asm330lhhx_read_event_config,
+	.write_event_config = st_asm330lhhx_write_event_config,
+	.write_event_value = st_asm330lhhx_write_event_value,
+	.read_event_value = st_asm330lhhx_read_event_value,
+
 #ifdef CONFIG_DEBUG_FS
 	.debugfs_reg_access = &st_asm330lhhx_reg_access,
 #endif /* CONFIG_DEBUG_FS */
+
 };
 
 static struct attribute *st_asm330lhhx_gyro_attributes[] = {
@@ -2368,31 +2158,6 @@ static int st_asm330lhhx_init_device(struct st_asm330lhhx_hw *hw)
 					    hw->enable_drdy_mask ? 1 : 0));
 }
 
-#ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
-static int st_asm330lhhx_post_init_device(struct st_asm330lhhx_hw *hw)
-{
-	int err;
-
-	/* Set default wake-up thershold to 93750 ug */
-	err = st_asm330lhhx_set_wake_up_thershold(hw, 93750);
-	if (err < 0)
-		return err;
-
-	/* Set default wake-up duration to 0 */
-	err = st_asm330lhhx_set_wake_up_duration(hw, 0);
-	if (err < 0)
-		return err;
-
-	/* setting default FF threshold to 312 mg */
-	err = st_asm330lhhx_set_freefall_threshold(hw, 312);
-	if (err < 0)
-		return err;
-
-	/* setting default 6D threshold to 60 degrees */
-	return st_asm330lhhx_set_6D_threshold(hw, 60);
-}
-#endif /* CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES */
-
 static struct iio_dev *st_asm330lhhx_alloc_iiodev(struct st_asm330lhhx_hw *hw,
 					       enum st_asm330lhhx_sensor_id id)
 {
@@ -2622,12 +2387,16 @@ int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 			return err;
 	}
 
-	err = st_asm330lhhx_allocate_buffers(hw);;
+	err = st_asm330lhhx_allocate_buffers(hw);
 	if (err < 0)
 		return err;
 
 	if (hw->has_hw_fifo) {
 		err = st_asm330lhhx_trigger_setup(hw);
+		if (err < 0)
+			return err;
+
+		err = st_asm330lhhx_event_init(hw);
 		if (err < 0)
 			return err;
 
@@ -2652,16 +2421,6 @@ int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 		if (err)
 			return err;
 	}
-
-#ifdef CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES
-	err = st_asm330lhhx_probe_event(hw);
-	if (err < 0)
-		return err;
-
-	err = st_asm330lhhx_post_init_device(hw);
-	if (err < 0)
-		return err;
-#endif /* CONFIG_IIO_ST_ASM330LHHX_EN_BASIC_FEATURES */
 
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev, "wakeup-source"));
