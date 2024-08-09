@@ -90,10 +90,7 @@ st_asm330lhhx_ext_dev_settings st_asm330lhhx_ext_dev_table[] = {
 		},
 		.fs_table = {
 			.size = 1,
-			.fs_avl[0] = {
-				.gain = 1500,
-				.val = 0x0,
-			}, /* 1500 uG/LSB */
+			.fs_avl[0] = { 1500, 0x0 }, /* 1500 uG/LSB */
 		},
 		.temp_comp_reg = {
 			.addr = 0x60,
@@ -146,39 +143,15 @@ st_asm330lhhx_ext_dev_settings st_asm330lhhx_ext_dev_table[] = {
 			.odr_avl[5] = { 100,  0,  0x7,  0 },
 		},
 		.fs_table = {
+			.reg = {
+				.addr = 0x21,
+				.mask = GENMASK(6, 5),
+			},
+			.fs_avl[0] = { 6842, 0x00 },
+			.fs_avl[1] = { 3421, 0x01 },
+			.fs_avl[2] = { 2281, 0x02 },
+			.fs_avl[3] = { 1711, 0x03 },
 			.size = 4,
-			.fs_avl[0] = {
-				.reg = {
-					.addr = 0x21,
-					.mask = GENMASK(6, 5),
-				},
-				.gain = 6842,
-				.val = 0x0,
-			},
-			.fs_avl[1] = {
-				.reg = {
-					.addr = 0x21,
-					.mask = GENMASK(6, 5),
-				},
-				.gain = 3421,
-				.val = 0x1,
-			},
-			.fs_avl[2] = {
-				.reg = {
-					.addr = 0x21,
-					.mask = GENMASK(6, 5),
-				},
-				.gain = 2281,
-				.val = 0x2,
-			},
-			.fs_avl[3] = {
-				.reg = {
-					.addr = 0x21,
-					.mask = GENMASK(6, 5),
-				},
-				.gain = 1711,
-				.val = 0x3,
-			},
 		},
 		.temp_comp_reg = {
 			.addr = 0x20,
@@ -225,12 +198,9 @@ st_asm330lhhx_ext_dev_settings st_asm330lhhx_ext_dev_table[] = {
 			.odr_avl[3] = { 50,  0,  0x4,  0 },
 		},
 		.fs_table = {
-			.size = 1,
 			/* hPa micro scale */
-			.fs_avl[0] = {
-				.gain = 1000000UL/4096UL,
-				.val = 0x0,
-			},
+			.fs_avl[0] = { 1000000UL/4096UL, 0x00 },
+			.size = 1,
 		},
 		.bdu_reg = {
 			.addr = 0x10,
@@ -262,12 +232,9 @@ st_asm330lhhx_ext_dev_settings st_asm330lhhx_ext_dev_table[] = {
 			.odr_avl[4] = { 100,  0,  0x6,  0 },
 		},
 		.fs_table = {
-			.size = 1,
 			/* hPa micro scale */
-			.fs_avl[0] = {
-				.gain = 1000000UL/4096UL,
-				.val = 0x0,
-			},
+			.fs_avl[0] = { 1000000UL/4096UL, 0x0 },
+			.size = 1,
 		},
 		.bdu_reg = {
 			.addr = 0x10,

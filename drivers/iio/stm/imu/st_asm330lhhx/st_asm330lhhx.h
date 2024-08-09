@@ -413,12 +413,10 @@ struct st_asm330lhhx_odr_table_entry {
 
 /**
  * struct st_asm330lhhx_fs - Full Scale sensor table entry
- * @reg: Register description for FS settings.
  * @gain: Sensor sensitivity (mdps/LSB, mg/LSB and uC/LSB).
  * @val: FS register value.
  */
 struct st_asm330lhhx_fs {
-	struct st_asm330lhhx_reg reg;
 	u32 gain;
 	u8 val;
 };
@@ -430,12 +428,14 @@ struct st_asm330lhhx_fs {
 
 /**
  * struct st_asm330lhhx_fs_table_entry - Full Scale sensor table
+ * @reg: Register description for FS settings.
  * @size: Full Scale sensor table size.
  * @fs_avl: Full Scale list entries.
  */
 struct st_asm330lhhx_fs_table_entry {
-	u8 size;
+	struct st_asm330lhhx_reg reg;
 	struct st_asm330lhhx_fs fs_avl[ST_ASM330LHHX_FS_LIST_SIZE];
+	u8 size;
 };
 
 #define ST_ASM330LHHX_ACC_FS_2G_GAIN	IIO_G_TO_M_S_2(61000)

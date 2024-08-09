@@ -334,97 +334,32 @@ static const struct st_asm330lhhx_settings st_asm330lhhx_sensor_settings[] = {
 
 static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
 	[ST_ASM330LHHX_ID_ACC] = {
+		.reg = {
+			.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
+			.mask = ST_ASM330LHHX_REG_FS_XL_MASK,
+		},
+		.fs_avl[0] = { ST_ASM330LHHX_ACC_FS_2G_GAIN,  0x00 },
+		.fs_avl[1] = { ST_ASM330LHHX_ACC_FS_4G_GAIN,  0x02 },
+		.fs_avl[2] = { ST_ASM330LHHX_ACC_FS_8G_GAIN,  0x03 },
+		.fs_avl[3] = { ST_ASM330LHHX_ACC_FS_16G_GAIN, 0x01 },
 		.size = ST_ASM330LHHX_FS_ACC_LIST_SIZE,
-		.fs_avl[0] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_XL_MASK,
-			},
-			.gain = ST_ASM330LHHX_ACC_FS_2G_GAIN,
-			.val = 0x0,
-		},
-		.fs_avl[1] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_XL_MASK,
-			},
-			.gain = ST_ASM330LHHX_ACC_FS_4G_GAIN,
-			.val = 0x2,
-		},
-		.fs_avl[2] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_XL_MASK,
-			},
-			.gain = ST_ASM330LHHX_ACC_FS_8G_GAIN,
-			.val = 0x3,
-		},
-		.fs_avl[3] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL1_XL_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_XL_MASK,
-			},
-			.gain = ST_ASM330LHHX_ACC_FS_16G_GAIN,
-			.val = 0x1,
-		},
 	},
 	[ST_ASM330LHHX_ID_GYRO] = {
+		.reg = {
+			.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
+			.mask = ST_ASM330LHHX_REG_FS_G_MASK,
+		},
+		.fs_avl[0] = { ST_ASM330LHHX_GYRO_FS_125_GAIN,  0x02 },
+		.fs_avl[1] = { ST_ASM330LHHX_GYRO_FS_250_GAIN,  0x00 },
+		.fs_avl[2] = { ST_ASM330LHHX_GYRO_FS_500_GAIN,  0x04 },
+		.fs_avl[3] = { ST_ASM330LHHX_GYRO_FS_1000_GAIN, 0x08 },
+		.fs_avl[4] = { ST_ASM330LHHX_GYRO_FS_2000_GAIN, 0x0C },
+		.fs_avl[5] = { ST_ASM330LHHX_GYRO_FS_4000_GAIN, 0x01 },
 		.size = ST_ASM330LHHX_FS_GYRO_LIST_SIZE,
-		.fs_avl[0] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
-			},
-			.gain = ST_ASM330LHHX_GYRO_FS_125_GAIN,
-			.val = 0x02,
-		},
-		.fs_avl[1] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
-			},
-			.gain = ST_ASM330LHHX_GYRO_FS_250_GAIN,
-			.val = 0x0,
-		},
-		.fs_avl[2] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
-			},
-			.gain = ST_ASM330LHHX_GYRO_FS_500_GAIN,
-			.val = 0x4,
-		},
-		.fs_avl[3] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
-			},
-			.gain = ST_ASM330LHHX_GYRO_FS_1000_GAIN,
-			.val = 0x8,
-		},
-		.fs_avl[4] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
-			},
-			.gain = ST_ASM330LHHX_GYRO_FS_2000_GAIN,
-			.val = 0x0C,
-		},
-		.fs_avl[5] = {
-			.reg = {
-				.addr = ST_ASM330LHHX_CTRL2_G_ADDR,
-				.mask = ST_ASM330LHHX_REG_FS_G_MASK,
-			},
-			.gain = ST_ASM330LHHX_GYRO_FS_4000_GAIN,
-			.val = 0x1,
-		},
 	},
 	[ST_ASM330LHHX_ID_TEMP] = {
 		.size = ST_ASM330LHHX_FS_TEMP_LIST_SIZE,
-		.fs_avl[0] = {
-			.gain = ST_ASM330LHHX_TEMP_FS_GAIN,
-			.val = 0x0
-		},
+		.fs_avl[0] = { ST_ASM330LHHX_TEMP_FS_GAIN, 0x0 },
 	},
 };
 
@@ -913,9 +848,9 @@ int st_asm330lhhx_set_wake_up_thershold(struct st_asm330lhhx_hw *hw, int th_ug)
 	int tmp, err;
 
 	err = st_asm330lhhx_read_with_mask(hw,
-		st_asm330lhhx_fs_table[ST_ASM330LHHX_ID_ACC].fs_avl[0].reg.addr,
-		st_asm330lhhx_fs_table[ST_ASM330LHHX_ID_ACC].fs_avl[0].reg.mask,
-		&fs_xl);
+			st_asm330lhhx_fs_table[ST_ASM330LHHX_ID_ACC].reg.addr,
+			st_asm330lhhx_fs_table[ST_ASM330LHHX_ID_ACC].reg.mask,
+			&fs_xl);
 	if (err < 0)
 		return err;
 
@@ -1171,10 +1106,10 @@ static int st_asm330lhhx_set_full_scale(struct st_asm330lhhx_sensor *sensor,
 
 	val = st_asm330lhhx_fs_table[id].fs_avl[i].val;
 	err = regmap_update_bits(hw->regmap,
-			st_asm330lhhx_fs_table[id].fs_avl[i].reg.addr,
-			st_asm330lhhx_fs_table[id].fs_avl[i].reg.mask,
-			ST_ASM330LHHX_SHIFT_VAL(val,
-			    st_asm330lhhx_fs_table[id].fs_avl[i].reg.mask));
+				 st_asm330lhhx_fs_table[id].reg.addr,
+				 st_asm330lhhx_fs_table[id].reg.mask,
+				 ST_ASM330LHHX_SHIFT_VAL(val,
+					  st_asm330lhhx_fs_table[id].reg.mask));
 	if (err < 0)
 		return err;
 
@@ -1704,7 +1639,7 @@ static ssize_t st_asm330lhhx_sysfs_scale_avail(struct device *dev,
 	for (i = 0; i < st_asm330lhhx_fs_table[id].size; i++) {
 		if (sensor->id != ST_ASM330LHHX_ID_TEMP) {
 			len += scnprintf(buf + len, PAGE_SIZE - len, "0.%09u ",
-						     st_asm330lhhx_fs_table[id].fs_avl[i].gain);
+					 st_asm330lhhx_fs_table[id].fs_avl[i].gain);
 		} else {
 			int hi, low;
 
