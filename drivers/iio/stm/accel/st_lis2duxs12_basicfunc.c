@@ -447,9 +447,12 @@ st_lis2duxs12_write_event_config(struct iio_dev *iio_dev,
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
+
 	err = st_lis2duxs12_event_sensor_enable(sensor, state);
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }
@@ -850,7 +853,13 @@ int st_lis2duxs12_event_handler(struct st_lis2duxs12_hw *hw)
 
 			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_WK];
 			sensor = iio_priv(iio_dev);
+
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+			iio_trigger_poll_nested(sensor->trig);
+#else /* LINUX_VERSION_CODE */
 			iio_trigger_poll_chained(sensor->trig);
+#endif /* LINUX_VERSION_CODE */
+
 		}
 		if (status & ST_LIS2DUXS12_SLEEP_CHANGE_ALL_MASK) {
 			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_SC];
@@ -865,7 +874,13 @@ int st_lis2duxs12_event_handler(struct st_lis2duxs12_hw *hw)
 
 			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_6D];
 			sensor = iio_priv(iio_dev);
+
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+			iio_trigger_poll_nested(sensor->trig);
+#else /* LINUX_VERSION_CODE */
 			iio_trigger_poll_chained(sensor->trig);
+#endif /* LINUX_VERSION_CODE */
+
 		}
 		if (status & ST_LIS2DUXS12_SINGLE_TAP_ALL_MASK) {
 			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_TAP];

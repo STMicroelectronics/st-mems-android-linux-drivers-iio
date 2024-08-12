@@ -740,14 +740,12 @@ static int st_ism330dhcx_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&iio_dev->mlock);
-		if (iio_buffer_enabled(iio_dev)) {
-			ret = -EBUSY;
-			mutex_unlock(&iio_dev->mlock);
-			break;
-		}
+		ret = iio_device_claim_direct_mode(iio_dev);
+		if (ret)
+			return ret;
+
 		ret = st_ism330dhcx_read_oneshot(sensor, ch->address, val);
-		mutex_unlock(&iio_dev->mlock);
+		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_OFFSET:
 		switch (ch->type) {
@@ -807,7 +805,9 @@ static int st_ism330dhcx_write_raw(struct iio_dev *iio_dev,
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
@@ -851,7 +851,7 @@ static int st_ism330dhcx_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }
@@ -917,9 +917,12 @@ static int st_ism330dhcx_write_event_config(struct iio_dev *iio_dev,
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
+
 	err = st_ism330dhcx_embfunc_sensor_set_enable(sensor, state);
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }

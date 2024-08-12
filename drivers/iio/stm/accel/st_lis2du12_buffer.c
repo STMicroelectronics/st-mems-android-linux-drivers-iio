@@ -144,7 +144,10 @@ ssize_t st_lis2du12_set_hwfifo_watermark(struct device *dev,
 	struct st_lis2du12_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
+
 	if (iio_buffer_enabled(iio_dev)) {
 		err = -EBUSY;
 		goto unlock;
@@ -166,7 +169,7 @@ ssize_t st_lis2du12_set_hwfifo_watermark(struct device *dev,
 	sensor->watermark = val;
 
 unlock:
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err < 0 ? err : size;
 }

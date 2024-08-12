@@ -427,9 +427,12 @@ st_lsm6dsv16bx_write_event_config(struct iio_dev *iio_dev,
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
+
 	err = st_lsm6dsv16bx_event_sensor_set_enable(sensor, state);
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }
@@ -840,7 +843,13 @@ int st_lsm6dsv16bx_event_handler(struct st_lsm6dsv16bx_hw *hw)
 
 			iio_dev = hw->iio_devs[ST_LSM6DSV16BX_ID_WK];
 			sensor = iio_priv(iio_dev);
+
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+			iio_trigger_poll_nested(sensor->trig);
+#else /* LINUX_VERSION_CODE */
 			iio_trigger_poll_chained(sensor->trig);
+#endif /* LINUX_VERSION_CODE */
+
 		}
 
 		if (status & ST_LSM6DSV16BX_SLEEP_CHANGE_MASK) {
@@ -857,7 +866,13 @@ int st_lsm6dsv16bx_event_handler(struct st_lsm6dsv16bx_hw *hw)
 
 			iio_dev = hw->iio_devs[ST_LSM6DSV16BX_ID_6D];
 			sensor = iio_priv(iio_dev);
+
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+			iio_trigger_poll_nested(sensor->trig);
+#else /* LINUX_VERSION_CODE */
 			iio_trigger_poll_chained(sensor->trig);
+#endif /* LINUX_VERSION_CODE */
+
 		}
 	}
 

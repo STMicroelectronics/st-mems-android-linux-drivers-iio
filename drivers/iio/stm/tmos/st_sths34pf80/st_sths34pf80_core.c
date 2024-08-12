@@ -855,7 +855,9 @@ static int st_sths34pf80_write_raw(struct iio_dev *iio_dev,
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SAMP_FREQ: {
@@ -873,7 +875,7 @@ static int st_sths34pf80_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }
@@ -950,9 +952,12 @@ st_sths34pf80_read_event_config(struct iio_dev *iio_dev,
 	struct st_sths34pf80_hw *hw = sensor->hw;
 	int ret;
 
-	mutex_lock(&iio_dev->mlock);
+	ret = iio_device_claim_direct_mode(iio_dev);
+	if (ret)
+		return ret;
+
 	ret = !!(hw->event_mask & BIT(sensor->id));
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return ret;
 }
@@ -977,9 +982,12 @@ st_sths34pf80_write_event_config(struct iio_dev *iio_dev,
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
+
 	err = st_sths34pf80_event_sensor_enable(sensor, state);
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }

@@ -144,12 +144,11 @@ ssize_t st_lps22hb_sysfs_flush_fifo(struct device *dev,
 	struct st_lps22hb_hw *hw = sensor->hw;
 	u64 type, event;
 	int len;
+	int ret;
 
-	mutex_lock(&indio_dev->mlock);
-	if (!iio_buffer_enabled(indio_dev)) {
-		mutex_unlock(&indio_dev->mlock);
-		return -EINVAL;
-	}
+	ret = iio_device_claim_direct_mode(indio_dev);
+	if (ret)
+		return ret;
 
 	mutex_lock(&hw->fifo_lock);
 	len = st_lps22hb_read_fifo(hw);
@@ -163,7 +162,7 @@ ssize_t st_lps22hb_sysfs_flush_fifo(struct device *dev,
 		event = IIO_UNMOD_EVENT_CODE(IIO_TEMP, -1,
 					     STM_IIO_EV_TYPE_FIFO_FLUSH, type);
 	iio_push_event(indio_dev, event, st_lps22hb_get_time_ns(indio_dev));
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	return size;
 }

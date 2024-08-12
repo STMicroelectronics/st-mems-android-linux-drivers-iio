@@ -7,6 +7,7 @@
  * Copyright 2017 STMicroelectronics Inc.
  */
 
+#include <linux/of.h>
 #include <linux/spi/spi.h>
 
 #include "st_lps33hw.h"

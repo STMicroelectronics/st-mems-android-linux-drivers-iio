@@ -251,12 +251,9 @@ static int st_mag40_read_raw(struct iio_dev *iio_dev,
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
 	int ret;
 
-	mutex_lock(&iio_dev->mlock);
-
-	if (iio_buffer_enabled(iio_dev)) {
-		mutex_unlock(&iio_dev->mlock);
-		return -EBUSY;
-	}
+	ret = iio_device_claim_direct_mode(iio_dev);
+	if (ret)
+		return ret;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
@@ -272,7 +269,7 @@ static int st_mag40_read_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return ret;
 }
@@ -327,21 +324,15 @@ static ssize_t st_mag40_perform_selftest(struct device *dev,
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
-
 	int i, err, try_count = 0;
 	u8 val, status, data[ST_MAG40_OUT_LEN];
 	u16 previous_odr;
 	s16 avg_acc_x = 0, avg_acc_y = 0, avg_acc_z = 0;
 	s16 avg_st_acc_x = 0, avg_st_acc_y = 0, avg_st_acc_z = 0;
 
-	mutex_lock(&iio_dev->mlock);
-
-	if (iio_buffer_enabled(iio_dev)) {
-		cdata->st_status = ST_MAG40_ST_ERROR;
-		err = -EBUSY;
-		goto unlock;
-	}
-
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	for (i = 0; i < ARRAY_SIZE(st_mag40_selftest_table); i++)
 		if (!strncmp(buf, st_mag40_selftest_table[i].mode,
@@ -411,7 +402,7 @@ static ssize_t st_mag40_perform_selftest(struct device *dev,
 		}
 	}
 
-/* enable self test */
+	/* enable self test */
 	err = st_mag40_write_register(cdata, ST_MAG40_CFG_REG_C_ADDR,
 					ST_MAG40_CFG_REG_C_SELFTEST_MASK, val);
 	if (err) {
@@ -464,7 +455,7 @@ static ssize_t st_mag40_perform_selftest(struct device *dev,
 		}
 	}
 
-/* perform check */
+	/* perform check */
 	if (abs(avg_st_acc_x - avg_acc_x) >= ST_MAG40_SELFTEST_MIN &&
 	    abs(avg_st_acc_x - avg_acc_x) <= ST_MAG40_SELFTEST_MAX &&
 	    abs(avg_st_acc_y - avg_acc_y) >= ST_MAG40_SELFTEST_MIN &&
@@ -490,7 +481,7 @@ restore_odr:
 	err = st_mag40_write_odr(cdata, previous_odr);
 
 unlock:
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err < 0 ? err : size;
 }

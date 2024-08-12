@@ -863,9 +863,11 @@ ssize_t lis2ds12_set_sampling_frequency(struct device * dev,
 	if (i == LIS2DS12_ODR_LP_LIST_NUM)
 		return -EINVAL;
 
-	mutex_lock(&indio_dev->mlock);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
 	sdata->odr = lis2ds12_odr_table.odr_avl[power_mode][i].hz;
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	err = lis2ds12_write_max_odr(sdata);
 
@@ -917,16 +919,18 @@ static int lis2ds12_read_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&indio_dev->mlock);
-		if (lis2ds12_iio_dev_currentmode(indio_dev) ==
-						       INDIO_BUFFER_TRIGGERED) {
-			mutex_unlock(&indio_dev->mlock);
+		err = iio_device_claim_direct_mode(indio_dev);
+		if (err)
+			return err;
+
+		if (lis2ds12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
+			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
 		err = lis2ds12_set_enable(sdata, true);
 		if (err < 0) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
@@ -935,7 +939,7 @@ static int lis2ds12_read_raw(struct iio_dev *indio_dev,
 		err = lis2ds12_read_register(sdata->cdata, ch->address, 2,
 					     outdata, true);
 		if (err < 0) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return err;
 		}
 
@@ -943,7 +947,7 @@ static int lis2ds12_read_raw(struct iio_dev *indio_dev,
 		*val = *val >> ch->scan_type.shift;
 
 		err = lis2ds12_set_enable(sdata, false);
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 
 		if (err < 0)
 			return err;
@@ -972,11 +976,12 @@ static int lis2ds12_write_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
-		mutex_lock(&indio_dev->mlock);
+		err = iio_device_claim_direct_mode(indio_dev);
+		if (err)
+			return err;
 
-		if (lis2ds12_iio_dev_currentmode(indio_dev) ==
-						       INDIO_BUFFER_TRIGGERED) {
-			mutex_unlock(&indio_dev->mlock);
+		if (lis2ds12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
+			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
@@ -986,7 +991,7 @@ static int lis2ds12_write_raw(struct iio_dev *indio_dev,
 		}
 
 		err = lis2ds12_set_fs(sdata, lis2ds12_fs_table.fs_avl[i].urv);
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 
 		break;
 
@@ -1094,13 +1099,16 @@ ssize_t lis2ds12_sysfs_flush_fifo(struct device *dev,
 	int64_t sensor_last_timestamp;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lis2ds12_sensor_data *sdata = iio_priv(indio_dev);
+	int err;
 
-	mutex_lock(&indio_dev->mlock);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
 
 	if (lis2ds12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
 		disable_irq(sdata->cdata->irq);
 	} else {
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 		return -EINVAL;
 	}
 
@@ -1122,7 +1130,7 @@ ssize_t lis2ds12_sysfs_flush_fifo(struct device *dev,
 		       sensor_last_timestamp);
 
 	enable_irq(sdata->cdata->irq);
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	return size;
 }

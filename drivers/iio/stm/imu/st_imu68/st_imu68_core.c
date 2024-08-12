@@ -160,22 +160,6 @@ static const struct iio_chan_spec st_imu68_gyro_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
-static inline int st_imu68_claim_direct_mode(struct iio_dev *iio_dev)
-{
-	mutex_lock(&iio_dev->mlock);
-
-	if (iio_buffer_enabled(iio_dev)) {
-		mutex_unlock(&iio_dev->mlock);
-		return -EBUSY;
-	}
-	return 0;
-}
-
-static inline void st_imu68_release_direct_mode(struct iio_dev *iio_dev)
-{
-	mutex_unlock(&iio_dev->mlock);
-}
-
 int st_imu68_write_with_mask(struct st_imu68_hw *hw, u8 addr, u8 mask, u8 val)
 {
 	u8 data;
@@ -339,12 +323,12 @@ static int st_imu68_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = st_imu68_claim_direct_mode(iio_dev);
+		ret = iio_device_claim_direct_mode(iio_dev);
 		if (ret)
 			break;
 
 		ret = st_imu68_read_oneshot(sensor, ch->address, val);
-		st_imu68_release_direct_mode(iio_dev);
+		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SCALE:
 		*val = 0;
@@ -379,7 +363,7 @@ static int st_imu68_write_raw(struct iio_dev *iio_dev,
 	struct st_imu68_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = st_imu68_claim_direct_mode(iio_dev);
+	err = iio_device_claim_direct_mode(iio_dev);
 	if (err)
 		return err;
 
@@ -392,7 +376,7 @@ static int st_imu68_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	st_imu68_release_direct_mode(iio_dev);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }

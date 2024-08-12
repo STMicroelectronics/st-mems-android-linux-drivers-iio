@@ -74,7 +74,11 @@ static irqreturn_t st_mag3d_trigger_handler_thread(int irq, void *p)
 	if (err < 0)
 		goto out;
 
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+	iio_trigger_poll_nested(hw->trig);
+#else /* LINUX_VERSION_CODE */
 	iio_trigger_poll_chained(hw->trig);
+#endif /* LINUX_VERSION_CODE */
 
 out:
 	return IRQ_HANDLED;

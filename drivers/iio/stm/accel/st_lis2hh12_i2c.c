@@ -11,6 +11,7 @@
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/types.h>
+#include <linux/version.h>
 
 #include "st_lis2hh12.h"
 
@@ -60,8 +61,12 @@ static const struct lis2hh12_transfer_function lis2hh12_tf_i2c = {
 	.read = lis2hh12_i2c_read,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int lis2hh12_i2c_probe(struct i2c_client *client)
+#else /* LINUX_VERSION_CODE */
 static int lis2hh12_i2c_probe(struct i2c_client *client,
-			    const struct i2c_device_id *id)
+			      const struct i2c_device_id *id)
+#endif /* LINUX_VERSION_CODE */
 {
 	int err;
 	struct lis2hh12_data *cdata;

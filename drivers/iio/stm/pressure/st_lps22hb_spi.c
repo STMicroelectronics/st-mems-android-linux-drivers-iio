@@ -8,6 +8,7 @@
  */
 
 #include <linux/spi/spi.h>
+#include <linux/of.h>
 
 #include "st_lps22hb.h"
 

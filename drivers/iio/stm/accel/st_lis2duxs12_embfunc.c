@@ -72,9 +72,12 @@ st_lis2duxs12_write_event_config(struct iio_dev *iio_dev,
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
+
 	err = st_lis2duxs12_embfunc_sensor_set_enable(sensor, state);
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }

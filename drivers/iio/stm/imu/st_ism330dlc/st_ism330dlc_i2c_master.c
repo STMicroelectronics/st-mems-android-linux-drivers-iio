@@ -406,14 +406,17 @@ static ssize_t st_ism330dlc_i2c_master_sysfs_set_sampling_frequency(
 	if (err < 0)
 		return err;
 
-	mutex_lock(&indio_dev->mlock);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
+
 	mutex_lock(&sdata->cdata->odr_lock);
 
 	if (sdata->cdata->v_odr[sdata->sindex] != odr)
 		err = st_ism330dlc_i2c_master_set_odr(sdata, odr, false);
 
 	mutex_unlock(&sdata->cdata->odr_lock);
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -1330,10 +1333,12 @@ static int st_ism330dlc_i2c_master_read_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&indio_dev->mlock);
+		err = iio_device_claim_direct_mode(indio_dev);
+		if (err)
+			return err;
 
 		if (st_ism330dlc_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
@@ -1342,7 +1347,7 @@ static int st_ism330dlc_i2c_master_read_raw(struct iio_dev *indio_dev,
 		err = st_ism330dlc_i2c_master_set_enable(sdata, true, false);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return err;
 		}
 
@@ -1355,14 +1360,14 @@ static int st_ism330dlc_i2c_master_read_raw(struct iio_dev *indio_dev,
 		if (err < 0) {
 			st_ism330dlc_i2c_master_set_enable(sdata, false, false);
 			mutex_unlock(&sdata->cdata->odr_lock);
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return err;
 		}
 
 		err = st_ism330dlc_i2c_master_set_enable(sdata, false, false);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return err;
 		}
 
@@ -1374,7 +1379,7 @@ static int st_ism330dlc_i2c_master_read_raw(struct iio_dev *indio_dev,
 		*val = *val >> ch->scan_type.shift;
 
 		mutex_unlock(&sdata->cdata->odr_lock);
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 
 		return IIO_VAL_INT;
 	case IIO_CHAN_INFO_SCALE:

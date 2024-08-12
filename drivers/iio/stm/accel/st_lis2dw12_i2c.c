@@ -24,8 +24,12 @@ static const struct regmap_config st_lis2dw12_i2c_regmap_config = {
 	.volatile_reg = st_lis2dw12_is_volatile_reg,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int st_lis2dw12_i2c_probe(struct i2c_client *client)
+#else /* LINUX_VERSION_CODE */
 static int st_lis2dw12_i2c_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
+#endif /* LINUX_VERSION_CODE */
 {
 	struct regmap *regmap;
 

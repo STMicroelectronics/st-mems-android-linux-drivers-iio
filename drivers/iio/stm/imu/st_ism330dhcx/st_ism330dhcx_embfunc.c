@@ -419,11 +419,9 @@ int st_ism330dhcx_reset_step_counter(struct iio_dev *iio_dev)
 	__le16 data;
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
-	if (iio_buffer_enabled(iio_dev)) {
-		err = -EBUSY;
-		goto unlock_iio_dev;
-	}
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	err = st_ism330dhcx_step_counter_set_enable(sensor, true);
 	if (err < 0)
@@ -461,7 +459,7 @@ unlock_page:
 
 	err = st_ism330dhcx_step_counter_set_enable(sensor, false);
 unlock_iio_dev:
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }

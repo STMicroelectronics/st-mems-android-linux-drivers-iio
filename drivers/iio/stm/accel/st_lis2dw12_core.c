@@ -565,7 +565,9 @@ static int st_lis2dw12_write_raw(struct iio_dev *iio_dev,
 	struct st_lis2dw12_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
@@ -600,7 +602,7 @@ static int st_lis2dw12_write_raw(struct iio_dev *iio_dev,
 	}
 
 unlock:
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }
@@ -669,7 +671,9 @@ static ssize_t st_lis2dw12_enable_selftest(struct device *dev,
 	u8 data[ST_LIS2DW12_DATA_SIZE], val;
 	int i, err, gain;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	if (iio_buffer_enabled(iio_dev)) {
 		err = -EBUSY;
@@ -758,7 +762,7 @@ static ssize_t st_lis2dw12_enable_selftest(struct device *dev,
 	err = st_lis2dw12_sensor_set_enable(sensor, false);
 
 unlock:
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err < 0 ? err : size;
 }

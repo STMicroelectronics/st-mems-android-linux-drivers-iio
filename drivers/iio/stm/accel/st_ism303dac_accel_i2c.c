@@ -10,8 +10,10 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
+#include <linux/of.h>
 #include <linux/hrtimer.h>
 #include <linux/types.h>
+#include <linux/version.h>
 
 #include "st_ism303dac_accel.h"
 
@@ -77,8 +79,12 @@ static const struct ism303dac_transfer_function ism303dac_tf_i2c = {
 	.read = ism303dac_i2c_read,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int ism303dac_i2c_probe(struct i2c_client *client)
+#else /* LINUX_VERSION_CODE */
 static int ism303dac_i2c_probe(struct i2c_client *client,
 			       const struct i2c_device_id *id)
+#endif /* LINUX_VERSION_CODE */
 {
 	struct ism303dac_data *cdata;
 

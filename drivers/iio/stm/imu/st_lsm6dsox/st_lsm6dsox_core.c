@@ -934,7 +934,9 @@ static int st_lsm6dsox_write_raw(struct iio_dev *iio_dev,
 	struct st_lsm6dsox_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
@@ -986,7 +988,7 @@ static int st_lsm6dsox_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }

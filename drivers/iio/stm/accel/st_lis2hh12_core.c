@@ -460,9 +460,12 @@ ssize_t lis2hh12_sysfs_set_sampling_frequency(struct device * dev,
 	if (i == LIS2HH12_ODR_LIST_NUM)
 		return -EINVAL;
 
-	mutex_lock(&indio_dev->mlock);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
+
 	sdata->odr = lis2hh12_odr_table.odr_avl[i].hz;
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	err = lis2hh12_write_max_odr(sdata);
 
@@ -505,13 +508,16 @@ ssize_t lis2hh12_sysfs_flush_fifo(struct device *dev,
 	int64_t sensor_last_timestamp;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lis2hh12_sensor_data *sdata = iio_priv(indio_dev);
+	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	ret = iio_device_claim_direct_mode(indio_dev);
+	if (ret)
+		return ret;
 
 	if (lis2hh12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
 		disable_irq(sdata->cdata->irq);
 	} else {
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 		return -EINVAL;
 	}
 
@@ -529,7 +535,7 @@ ssize_t lis2hh12_sysfs_flush_fifo(struct device *dev,
 				sdata->cdata->sensor_timestamp);
 
 	enable_irq(sdata->cdata->irq);
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	return size;
 }
@@ -623,15 +629,18 @@ static int lis2hh12_read_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&indio_dev->mlock);
+		err = iio_device_claim_direct_mode(indio_dev);
+		if (err)
+			return err;
+
 		if (lis2hh12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
 		err = lis2hh12_set_enable(sdata, true);
 		if (err < 0) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
@@ -641,7 +650,7 @@ static int lis2hh12_read_raw(struct iio_dev *indio_dev,
 
 		err = lis2hh12_read_register(sdata->cdata, ch->address, nbytes, outdata);
 		if (err < 0) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return err;
 		}
 
@@ -649,7 +658,7 @@ static int lis2hh12_read_raw(struct iio_dev *indio_dev,
 		*val = *val >> ch->scan_type.shift;
 
 		err = lis2hh12_set_enable(sdata, false);
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 
 		if (err < 0)
 			return err;
@@ -677,10 +686,12 @@ static int lis2hh12_write_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
-		mutex_lock(&indio_dev->mlock);
+		err = iio_device_claim_direct_mode(indio_dev);
+		if (err)
+			return err;
 
 		if (lis2hh12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
@@ -690,7 +701,7 @@ static int lis2hh12_write_raw(struct iio_dev *indio_dev,
 		}
 
 		err = lis2hh12_set_fs(sdata, lis2hh12_fs_table.fs_avl[i].gain);
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 
 		break;
 
@@ -745,14 +756,9 @@ static ssize_t lis2hh12_enable_selftest(struct device *dev,
 	u8 data[LIS2HH12_DATA_SIZE], stval, status;
 	int i, err, gain, odr, trycount;
 
-	mutex_lock(&iio_dev->mlock);
-
-	/* self test procedure run only when accel sensor is disabled */
-	if (iio_buffer_enabled(iio_dev)) {
-		err = -EBUSY;
-
-		goto unlock;
-	}
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	for (i = 0; i < ARRAY_SIZE(lis2hh12_selftest_table); i++)
 		if (!strncmp(buf, lis2hh12_selftest_table[i].mode,
@@ -955,7 +961,7 @@ static ssize_t lis2hh12_enable_selftest(struct device *dev,
 	err = lis2hh12_set_enable(sdata, false);
 
 unlock:
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err < 0 ? err : size;
 }

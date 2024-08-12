@@ -8,6 +8,8 @@
  */
 
 #include <linux/i2c.h>
+#include <linux/of.h>
+#include <linux/version.h>
 
 #include "st_lps22df.h"
 
@@ -68,6 +70,25 @@ static const struct st_lps22df_transfer_function st_lps22df_tf_i2c = {
 	.read = st_lps22df_i2c_read,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int st_lps22df_i2c_probe(struct i2c_client *client)
+{
+	const struct i2c_device_id *id = i2c_client_get_device_id(client);
+	enum st_lps22df_hw_id hw_id;
+	const void *data;
+
+	data = device_get_match_data(&client->dev);
+	if (data)
+		hw_id = (uintptr_t)data;
+	else if (id)
+		hw_id = (enum st_lps22df_hw_id)id->driver_data;
+	else
+		return -ENOSYS;
+
+	return st_lps22df_common_probe(&client->dev, client->irq,
+				       hw_id, &st_lps22df_tf_i2c);
+}
+#else /* LINUX_VERSION_CODE */
 static int st_lps22df_i2c_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
@@ -75,6 +96,7 @@ static int st_lps22df_i2c_probe(struct i2c_client *client,
 	return st_lps22df_common_probe(&client->dev, client->irq,
 				       hw_id, &st_lps22df_tf_i2c);
 }
+#endif /* LINUX_VERSION_CODE */
 
 static const struct i2c_device_id st_lps22df_ids[] = {
 	{ "lps22df", ST_LPS22DF_ID },

@@ -78,8 +78,12 @@ static const struct st_lsm6ds3h_transfer_function st_lsm6ds3h_tf_i2c = {
 	.read = st_lsm6ds3h_i2c_read,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int st_lsm6ds3h_i2c_probe(struct i2c_client *client)
+#else /* LINUX_VERSION_CODE */
 static int st_lsm6ds3h_i2c_probe(struct i2c_client *client,
-						const struct i2c_device_id *id)
+				 const struct i2c_device_id *id)
+#endif /* LINUX_VERSION_CODE */
 {
 	int err;
 	struct lsm6ds3h_data *cdata;

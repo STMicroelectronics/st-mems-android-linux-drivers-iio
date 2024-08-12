@@ -21,14 +21,23 @@ static const struct regmap_config st_asm330lhhx_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
-static int st_asm330lhhx_i2c_probe(struct i2c_client *client,
-			       const struct i2c_device_id *id)
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int st_asm330lhhx_i2c_probe(struct i2c_client *client)
 {
-	int hw_id = id->driver_data;
+	const struct i2c_device_id *id = i2c_client_get_device_id(client);
+	enum st_asm330lhhx_hw_id hw_id;
 	struct regmap *regmap;
+	const void *data;
 
-	regmap = devm_regmap_init_i2c(client,
-				      &st_asm330lhhx_i2c_regmap_config);
+	data = device_get_match_data(&client->dev);
+	if (data)
+		hw_id = (uintptr_t)data;
+	else if (id)
+		hw_id = (enum st_asm330lhhx_hw_id)id->driver_data;
+	else
+		return -ENOSYS;
+
+	regmap = devm_regmap_init_i2c(client, &st_asm330lhhx_i2c_regmap_config);
 	if (IS_ERR(regmap)) {
 		dev_err(&client->dev,
 			"Failed to register i2c regmap %d\n",
@@ -36,9 +45,26 @@ static int st_asm330lhhx_i2c_probe(struct i2c_client *client,
 		return PTR_ERR(regmap);
 	}
 
-	return st_asm330lhhx_probe(&client->dev, client->irq,
-			       hw_id, regmap);
+	return st_asm330lhhx_probe(&client->dev, client->irq, hw_id, regmap);
 }
+#else /* LINUX_VERSION_CODE */
+static int st_asm330lhhx_i2c_probe(struct i2c_client *client,
+			       const struct i2c_device_id *id)
+{
+	int hw_id = id->driver_data;
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_i2c(client, &st_asm330lhhx_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+		return PTR_ERR(regmap);
+	}
+
+	return st_asm330lhhx_probe(&client->dev, client->irq, hw_id, regmap);
+}
+#endif /* LINUX_VERSION_CODE */
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
 static void st_asm330lhhx_i2c_remove(struct i2c_client *client)

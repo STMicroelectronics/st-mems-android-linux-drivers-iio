@@ -77,7 +77,12 @@ static irqreturn_t st_h3lis331dl_handler_thread(int irq, void *private)
 		struct st_h3lis331dl_sensor *sensor;
 
 		sensor = iio_priv(hw->iio_devs);
+
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+		iio_trigger_poll_nested(sensor->trig);
+#else /* LINUX_VERSION_CODE */
 		iio_trigger_poll_chained(sensor->trig);
+#endif /* LINUX_VERSION_CODE */
 
 		return IRQ_HANDLED;
 	}

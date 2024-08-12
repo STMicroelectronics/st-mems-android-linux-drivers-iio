@@ -10,6 +10,7 @@
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/i2c.h>
+#include <linux/version.h>
 
 #include "st_mag3d.h"
 
@@ -35,8 +36,12 @@ static const struct st_mag3d_transfer_function st_mag3d_tf_i2c = {
 	.read = st_mag3d_i2c_read,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int st_mag3d_i2c_probe(struct i2c_client *client)
+#else /* LINUX_VERSION_CODE */
 static int st_mag3d_i2c_probe(struct i2c_client *client,
-				const struct i2c_device_id *id)
+			      const struct i2c_device_id *id)
+#endif /* LINUX_VERSION_CODE */
 {
 	return st_mag3d_probe(&client->dev, client->irq, client->name,
 			      &st_mag3d_tf_i2c);

@@ -7,10 +7,12 @@
  * Copyright 2016 STMicroelectronics Inc.
  */
 
+#include <linux/i2c.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/i2c.h>
+#include <linux/of.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #include "st_acc33.h"
 
@@ -65,8 +67,12 @@ static const struct st_acc33_transfer_function st_acc33_transfer_fn = {
 	.write = st_acc33_i2c_write,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int st_acc33_i2c_probe(struct i2c_client *client)
+#else /* LINUX_VERSION_CODE */
 static int st_acc33_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
+#endif /* LINUX_VERSION_CODE */
 {
 	return st_acc33_probe(&client->dev, client->irq, client->name,
 			      &st_acc33_transfer_fn);

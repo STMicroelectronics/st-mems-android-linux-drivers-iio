@@ -390,15 +390,13 @@ static int st_lis2du12_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&iio_dev->mlock);
-		if (iio_buffer_enabled(iio_dev)) {
-			ret = -EBUSY;
-			mutex_unlock(&iio_dev->mlock);
-			break;
-		}
+		ret = iio_device_claim_direct_mode(iio_dev);
+		if (ret)
+			return ret;
+
 		ret = st_lis2du12_read_oneshot(sensor, ch->address,
 					       val);
-		mutex_unlock(&iio_dev->mlock);
+		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_OFFSET:
 		switch (ch->type) {
@@ -446,7 +444,9 @@ static int st_lis2du12_write_raw(struct iio_dev *iio_dev,
 	struct st_lis2du12_sensor *sensor = iio_priv(iio_dev);
 	int err = 0;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
@@ -471,7 +471,7 @@ static int st_lis2du12_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }
@@ -539,12 +539,9 @@ static ssize_t st_lis2du12_enable_selftest(struct device *dev,
 	s16 out1[3], out2[3];
 	int i, err, gain;
 
-	mutex_lock(&iio_dev->mlock);
-
-	if (iio_buffer_enabled(iio_dev)) {
-		err = -EBUSY;
-		goto unlock;
-	}
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	for (i = 0; i < ARRAY_SIZE(st_lis2du12_selftest_table); i++)
 		if (!strncmp(buf, st_lis2du12_selftest_table[i].mode,
@@ -670,7 +667,7 @@ selftest_restore:
 	err = st_lis2du12_sensor_set_enable(sensor, false);
 
 unlock:
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err < 0 ? err : size;
 }

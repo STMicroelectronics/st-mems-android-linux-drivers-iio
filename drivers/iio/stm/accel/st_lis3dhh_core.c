@@ -14,6 +14,7 @@
 #include <linux/iio/buffer.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
+#include <linux/of.h>
 #include <linux/spi/spi.h>
 #include <asm/unaligned.h>
 
@@ -170,16 +171,18 @@ static int st_lis3dhh_read_raw(struct iio_dev *iio_dev,
 		int err, delay;
 		u8 data[2];
 
-		mutex_lock(&iio_dev->mlock);
+		ret = iio_device_claim_direct_mode(iio_dev);
+		if (ret)
+			return ret;
 
 		if (iio_buffer_enabled(iio_dev)) {
-			mutex_unlock(&iio_dev->mlock);
+			iio_device_release_direct_mode(iio_dev);
 			return -EBUSY;
 		}
 
 		err = st_lis3dhh_set_enable(hw, true);
 		if (err < 0) {
-			mutex_unlock(&iio_dev->mlock);
+			iio_device_release_direct_mode(iio_dev);
 			return err;
 		}
 
@@ -189,20 +192,20 @@ static int st_lis3dhh_read_raw(struct iio_dev *iio_dev,
 
 		err = st_lis3dhh_spi_read(hw, ch->address, 2, data);
 		if (err < 0) {
-			mutex_unlock(&iio_dev->mlock);
+			iio_device_release_direct_mode(iio_dev);
 			return err;
 		}
 
 		err = st_lis3dhh_set_enable(hw, false);
 		if (err < 0) {
-			mutex_unlock(&iio_dev->mlock);
+			iio_device_release_direct_mode(iio_dev);
 			return err;
 		}
 
 		*val = (s16)get_unaligned_le16(data);
 		*val = *val >> ch->scan_type.shift;
 
-		mutex_unlock(&iio_dev->mlock);
+		iio_device_release_direct_mode(iio_dev);
 
 		ret = IIO_VAL_INT;
 		break;

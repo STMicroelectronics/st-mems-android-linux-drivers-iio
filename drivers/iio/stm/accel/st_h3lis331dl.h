@@ -81,6 +81,12 @@
 #define ST_H3LIS331DL_ODR_LIST_SIZE	8
 #define ST_H3LIS331DL_FS_LIST_SIZE	3
 
+enum st_h3lis331dl_hw_id {
+	ST_H3LIS331DL_ID,
+	ST_LIS331DLH_ID,
+	ST_H3LIS331DL_MAX_ID,
+};
+
 /**
  * struct st_h3lis331dl_reg - Generic sensor register description (addr + mask)
  * @addr: Address of register.

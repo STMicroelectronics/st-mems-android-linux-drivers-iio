@@ -254,16 +254,13 @@ static int st_acc33_read_raw(struct iio_dev *iio_dev,
 		u8 data[2];
 		int err, delay;
 
-		mutex_lock(&iio_dev->mlock);
-
-		if (iio_buffer_enabled(iio_dev)) {
-			mutex_unlock(&iio_dev->mlock);
-			return -EBUSY;
-		}
+		err = iio_device_claim_direct_mode(iio_dev);
+		if (err)
+			return err;
 
 		err = st_acc33_set_enable(hw, true);
 		if (err < 0) {
-			mutex_unlock(&iio_dev->mlock);
+			iio_device_release_direct_mode(iio_dev);
 			return err;
 		}
 
@@ -273,20 +270,20 @@ static int st_acc33_read_raw(struct iio_dev *iio_dev,
 
 		err = hw->tf->read(hw->dev, ch->address, 2, data);
 		if (err < 0) {
-			mutex_unlock(&iio_dev->mlock);
+			iio_device_release_direct_mode(iio_dev);
 			return err;
 		}
 
 		err = st_acc33_set_enable(hw, false);
 		if (err < 0) {
-			mutex_unlock(&iio_dev->mlock);
+			iio_device_release_direct_mode(iio_dev);
 			return err;
 		}
 
 		*val = (s16)get_unaligned_le16(data);
 		*val = *val >> ch->scan_type.shift;
 
-		mutex_unlock(&iio_dev->mlock);
+		iio_device_release_direct_mode(iio_dev);
 
 		ret = IIO_VAL_INT;
 		break;
@@ -315,7 +312,10 @@ static int st_acc33_write_raw(struct iio_dev *iio_dev,
 	struct st_acc33_hw *hw = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
+
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		err = st_acc33_set_fs(hw, val2);
@@ -336,7 +336,7 @@ static int st_acc33_write_raw(struct iio_dev *iio_dev,
 		err = -EINVAL;
 		break;
 	}
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }

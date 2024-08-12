@@ -65,8 +65,12 @@ static const struct st_mag40_transfer_function st_mag40_tf_i2c = {
 	.read = st_mag40_i2c_read,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int st_mag40_i2c_probe(struct i2c_client *client)
+#else /* LINUX_VERSION_CODE */
 static int st_mag40_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
+#endif /* LINUX_VERSION_CODE */
 {
 	struct st_mag40_data *cdata;
 	struct iio_dev *iio_dev;

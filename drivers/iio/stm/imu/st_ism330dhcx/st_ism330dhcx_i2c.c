@@ -12,6 +12,7 @@
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <linux/of.h>
+#include <linux/version.h>
 
 #include "st_ism330dhcx.h"
 
@@ -20,8 +21,12 @@ static const struct regmap_config st_ism330dhcx_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int st_ism330dhcx_i2c_probe(struct i2c_client *client)
+#else /* LINUX_VERSION_CODE */
 static int st_ism330dhcx_i2c_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
+#endif /* LINUX_VERSION_CODE */
 {
 	struct regmap *regmap;
 

@@ -64,7 +64,13 @@ static irqreturn_t st_imu68_trigger_thread_handler(int irq, void *p)
 		sensor = iio_priv(hw->iio_devs[i]);
 
 		if (status & sensor->status_mask) {
+
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+			iio_trigger_poll_nested(sensor->trigger);
+#else /* LINUX_VERSION_CODE */
 			iio_trigger_poll_chained(sensor->trigger);
+#endif /* LINUX_VERSION_CODE */
+
 			count++;
 		}
 	}

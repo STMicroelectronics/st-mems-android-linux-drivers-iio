@@ -274,16 +274,13 @@ static int st_lps22hh_read_raw(struct iio_dev *indio_dev,
 		u8 len = ch->scan_type.realbits / 8;
 		u8 data[4] = {};
 
-		mutex_lock(&indio_dev->mlock);
-		if (iio_buffer_enabled(indio_dev)) {
-			mutex_unlock(&indio_dev->mlock);
-			ret = -EBUSY;
-			break;
-		}
+		ret = iio_device_claim_direct_mode(indio_dev);
+		if (ret)
+			return ret;
 
 		ret = st_lps22hh_set_enable(sensor, true);
 		if (ret < 0) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			ret = -EBUSY;
 			break;
 		}
@@ -291,7 +288,7 @@ static int st_lps22hh_read_raw(struct iio_dev *indio_dev,
 		msleep(40);
 		ret = hw->tf->read(hw->dev, ch->address, len, data);
 		if (ret < 0) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return ret;
 		}
 
@@ -301,7 +298,7 @@ static int st_lps22hh_read_raw(struct iio_dev *indio_dev,
 			*val = (s16)get_unaligned_le16(data);
 
 		ret = st_lps22hh_set_enable(sensor, false);
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 
 		if (ret < 0)
 			return ret;

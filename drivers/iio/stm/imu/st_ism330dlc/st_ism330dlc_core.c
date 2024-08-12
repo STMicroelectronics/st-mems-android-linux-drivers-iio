@@ -1631,10 +1631,12 @@ static int st_ism330dlc_read_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&indio_dev->mlock);
+		err = iio_device_claim_direct_mode(indio_dev);
+		if (err)
+			return err;
 
 		if (st_ism330dlc_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
@@ -1643,7 +1645,7 @@ static int st_ism330dlc_read_raw(struct iio_dev *indio_dev,
 		err = st_ism330dlc_set_enable(sdata, true, false);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return err;
 		}
 
@@ -1658,7 +1660,7 @@ static int st_ism330dlc_read_raw(struct iio_dev *indio_dev,
 		if (err < 0) {
 			st_ism330dlc_set_enable(sdata, false, false);
 			mutex_unlock(&sdata->cdata->odr_lock);
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return err;
 		}
 
@@ -1668,7 +1670,7 @@ static int st_ism330dlc_read_raw(struct iio_dev *indio_dev,
 		st_ism330dlc_set_enable(sdata, false, false);
 
 		mutex_unlock(&sdata->cdata->odr_lock);
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 
 		return IIO_VAL_INT;
 	case IIO_CHAN_INFO_SCALE:
@@ -1691,15 +1693,17 @@ static int st_ism330dlc_write_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
-		mutex_lock(&indio_dev->mlock);
+		err = iio_device_claim_direct_mode(indio_dev);
+		if (err)
+			return err;
 
 		if (st_ism330dlc_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
 		err = st_ism330dlc_set_fs(sdata, val2);
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 		break;
 	default:
 		return -EINVAL;
@@ -1791,7 +1795,9 @@ static ssize_t st_ism330dlc_sysfs_set_sampling_frequency(struct device *dev,
 	if (err < 0)
 		return err;
 
-	mutex_lock(&indio_dev->mlock);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
 
 	mutex_lock(&sdata->cdata->odr_lock);
 #ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
@@ -1811,7 +1817,7 @@ static ssize_t st_ism330dlc_sysfs_set_sampling_frequency(struct device *dev,
 #endif /* CONFIG_ST_ISM330DLC_XL_DATA_INJECTION */
 	mutex_unlock(&sdata->cdata->odr_lock);
 
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -1907,7 +1913,6 @@ static ssize_t st_ism330dlc_sysfs_start_selftest_status(struct device *dev,
 		break;
 	default:
 		mutex_unlock(&sdata->cdata->odr_lock);
-		mutex_unlock(&indio_dev->mlock);
 		return -EINVAL;
 	}
 
@@ -2071,14 +2076,17 @@ ssize_t st_ism330dlc_sysfs_flush_fifo(struct device *dev,
 	u64 timestamp_flush = 0;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ism330dlc_sensor_data *sdata = iio_priv(indio_dev);
+	int err;
 
-	mutex_lock(&indio_dev->mlock);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
 
 	if (st_ism330dlc_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
 		mutex_lock(&sdata->cdata->odr_lock);
 		disable_irq(sdata->cdata->irq);
 	} else {
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 		return -EINVAL;
 	}
 
@@ -2119,7 +2127,7 @@ ssize_t st_ism330dlc_sysfs_flush_fifo(struct device *dev,
 				timestamp_flush);
 
 	mutex_unlock(&sdata->cdata->odr_lock);
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	return size;
 }
@@ -2142,7 +2150,10 @@ ssize_t st_ism330dlc_sysfs_set_hwfifo_enabled(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ism330dlc_sensor_data *sdata = iio_priv(indio_dev);
 
-	mutex_lock(&indio_dev->mlock);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
+
 	if (st_ism330dlc_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
 		err = -EBUSY;
 		goto set_hwfifo_enabled_unlock_mutex;
@@ -2162,12 +2173,13 @@ ssize_t st_ism330dlc_sysfs_set_hwfifo_enabled(struct device *dev,
 		sdata->cdata->sensors_use_fifo &= ~BIT(sdata->sindex);
 
 	mutex_unlock(&sdata->cdata->odr_lock);
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	return size;
 
 set_hwfifo_enabled_unlock_mutex:
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
+
 	return err;
 }
 
@@ -2240,16 +2252,18 @@ static ssize_t st_ism330dlc_sysfs_set_injection_mode(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ism330dlc_sensor_data *sdata = iio_priv(indio_dev);
 
-	mutex_lock(&indio_dev->mlock);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
 
 	if (st_ism330dlc_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 		return -EBUSY;
 	}
 
 	err = kstrtoint(buf, 10, &start);
 	if (err < 0) {
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 		return err;
 	}
 
@@ -2262,7 +2276,7 @@ static ssize_t st_ism330dlc_sysfs_set_injection_mode(struct device *dev,
 				ST_ISM330DLC_START_INJECT_XL_MASK, 0, true);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return err;
 		}
 
@@ -2274,7 +2288,7 @@ static ssize_t st_ism330dlc_sysfs_set_injection_mode(struct device *dev,
 				st_ism330dlc_odr_table.odr_avl[1].value, true);
 			if (err < 0) {
 				mutex_unlock(&sdata->cdata->odr_lock);
-				mutex_unlock(&indio_dev->mlock);
+				iio_device_release_direct_mode(indio_dev);
 				return err;
 			}
 		}
@@ -2290,7 +2304,7 @@ static ssize_t st_ism330dlc_sysfs_set_injection_mode(struct device *dev,
 				ST_ISM330DLC_START_INJECT_XL_MASK, 1, true);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return err;
 		}
 
@@ -2298,7 +2312,7 @@ static ssize_t st_ism330dlc_sysfs_set_injection_mode(struct device *dev,
 	}
 
 	mutex_unlock(&sdata->cdata->odr_lock);
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	return size;
 }
@@ -2321,10 +2335,12 @@ static ssize_t st_ism330dlc_sysfs_upload_xl_data(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ism330dlc_sensor_data *sdata = iio_priv(indio_dev);
 
-	mutex_lock(&indio_dev->mlock);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
 
 	if (!sdata->cdata->injection_mode) {
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 		return -EINVAL;
 	}
 
@@ -2352,7 +2368,7 @@ static ssize_t st_ism330dlc_sysfs_upload_xl_data(struct device *dev,
 			current_odr = 26;
 			n = 1;
 		} else {
-			mutex_unlock(&indio_dev->mlock);
+			iio_device_release_direct_mode(indio_dev);
 			return -EINVAL;
 		}
 
@@ -2362,7 +2378,7 @@ static ssize_t st_ism330dlc_sysfs_upload_xl_data(struct device *dev,
 				st_ism330dlc_odr_table.mask[sdata->sindex],
 				st_ism330dlc_odr_table.odr_avl[n].value, true);
 			if (err < 0) {
-				mutex_unlock(&indio_dev->mlock);
+				iio_device_release_direct_mode(indio_dev);
 				return err;
 			}
 
@@ -2375,11 +2391,11 @@ static ssize_t st_ism330dlc_sysfs_upload_xl_data(struct device *dev,
 	err = sdata->cdata->tf->write(sdata->cdata, ST_ISM330DLC_INJECT_XL_X_ADDR,
 				      3, (u8 *)sample, false);
 	if (err < 0) {
-		mutex_unlock(&indio_dev->mlock);
+		iio_device_release_direct_mode(indio_dev);
 		return err;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	iio_device_release_direct_mode(indio_dev);
 
 	usleep_range(1000, 2000);
 

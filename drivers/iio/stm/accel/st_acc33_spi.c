@@ -10,6 +10,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/spi/spi.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 
 #include "st_acc33.h"

@@ -17,6 +17,7 @@
 #include <linux/iio/buffer.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
+#include <linux/version.h>
 
 #include "st_mag40_core.h"
 
@@ -68,7 +69,11 @@ static irqreturn_t st_mag40_trigger_thread_handler(int irq, void *private)
 	if (!(status & ST_MAG40_AVL_DATA_MASK))
 		return IRQ_NONE;
 
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+	iio_trigger_poll_nested(cdata->iio_trig);
+#else /* LINUX_VERSION_CODE */
 	iio_trigger_poll_chained(cdata->iio_trig);
+#endif /* LINUX_VERSION_CODE */
 
 	return IRQ_HANDLED;
 }

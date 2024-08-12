@@ -21,8 +21,12 @@ static const struct regmap_config st_iis2iclx_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+static int st_iis2iclx_i2c_probe(struct i2c_client *client)
+#else /* LINUX_VERSION_CODE */
 static int st_iis2iclx_i2c_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
+#endif /* LINUX_VERSION_CODE */
 {
 	struct regmap *regmap;
 
@@ -50,6 +54,7 @@ static int st_iis2iclx_i2c_remove(struct i2c_client *client)
 	return 0;
 }
 #endif /* LINUX_VERSION_CODE */
+
 static const struct of_device_id st_iis2iclx_i2c_of_match[] = {
 	{ .compatible = "st," ST_IIS2ICLX_DEV_NAME },
 	{},

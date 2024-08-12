@@ -485,14 +485,9 @@ ssize_t st_ism330dhcx_set_watermark(struct device *dev,
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	if (!sensor->hw->has_hw_fifo)
-		return -EINVAL;
-
-	mutex_lock(&iio_dev->mlock);
-	if (iio_buffer_enabled(iio_dev)) {
-		err = -EBUSY;
-		goto out;
-	}
+	err = iio_device_claim_direct_mode(iio_dev);
+	if (err)
+		return err;
 
 	err = kstrtoint(buf, 10, &val);
 	if (err < 0)
@@ -505,7 +500,7 @@ ssize_t st_ism330dhcx_set_watermark(struct device *dev,
 	sensor->watermark = val;
 
 out:
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return err < 0 ? err : size;
 }

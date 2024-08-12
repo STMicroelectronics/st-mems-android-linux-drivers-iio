@@ -133,7 +133,12 @@ read_fifo_status:
 		cdata->num_steps += (1 << 16);
 
 	if (src_dig_func & ST_LSM6DSM_SRC_STEP_COUNTER_DATA_AVL)
+
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+		iio_trigger_poll_nested(cdata->trig[ST_MASK_ID_STEP_COUNTER]);
+#else /* LINUX_VERSION_CODE */
 		iio_trigger_poll_chained(cdata->trig[ST_MASK_ID_STEP_COUNTER]);
+#endif /* LINUX_VERSION_CODE */
 
 	if ((src_dig_func & ST_LSM6DSM_SRC_TILT_DATA_AVL) &&
 				(cdata->sensors_enabled & BIT(ST_MASK_ID_TILT))) {
@@ -148,7 +153,12 @@ read_fifo_status:
 
 	if ((src2_dig_func & ST_LSM6DSM_SRC_WTILT_DATA_AVL) &&
 	    (cdata->sensors_enabled & BIT(ST_MASK_ID_WTILT)))
+
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+		iio_trigger_poll_nested(cdata->trig[ST_MASK_ID_WTILT]);
+#else /* LINUX_VERSION_CODE */
 		iio_trigger_poll_chained(cdata->trig[ST_MASK_ID_WTILT]);
+#endif /* LINUX_VERSION_CODE */
 
 	err = cdata->tf->read(cdata, ST_LSM6DSM_TAP_SRC,
                   1, &src_tap_func, true);

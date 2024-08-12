@@ -538,7 +538,12 @@ static int st_lsm6ds3_buffer_postenable(struct iio_dev *indio_dev)
 	mutex_unlock(&sdata->cdata->odr_lock);
 
 	if (sdata->sindex == ST_MASK_ID_STEP_COUNTER)
+
+#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+		iio_trigger_poll_nested(sdata->cdata->trig[ST_MASK_ID_STEP_COUNTER]);
+#else /* LINUX_VERSION_CODE */
 		iio_trigger_poll_chained(sdata->cdata->trig[ST_MASK_ID_STEP_COUNTER]);
+#endif /* LINUX_VERSION_CODE */
 
 	if (sdata->sindex == ST_MASK_ID_SIGN_MOTION)
 		sdata->cdata->sign_motion_event_ready = true;

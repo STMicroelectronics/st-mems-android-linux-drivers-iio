@@ -97,23 +97,6 @@ static const struct iio_chan_spec st_mag3d_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
-static inline int st_mag3d_claim_direct_mode(struct iio_dev *iio_dev)
-{
-	mutex_lock(&iio_dev->mlock);
-
-	if (iio_buffer_enabled(iio_dev)) {
-		mutex_unlock(&iio_dev->mlock);
-		return -EBUSY;
-	}
-
-	return 0;
-}
-
-static inline void st_mag3d_release_direct_mode(struct iio_dev *iio_dev)
-{
-	mutex_unlock(&iio_dev->mlock);
-}
-
 static int st_mag3d_write_with_mask(struct st_mag3d_hw *hw, u8 addr,
 				    u8 mask, u8 val)
 {
@@ -258,12 +241,12 @@ static int st_mag3d_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = st_mag3d_claim_direct_mode(iio_dev);
+		ret = iio_device_claim_direct_mode(iio_dev);
 		if (ret)
 			break;
 
 		ret = st_mag3d_read_oneshot(hw, ch->address, val);
-		st_mag3d_release_direct_mode(iio_dev);
+		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SCALE:
 		*val = 0;
@@ -285,7 +268,7 @@ static int st_mag3d_write_raw(struct iio_dev *iio_dev,
 	struct st_mag3d_hw *hw = iio_priv(iio_dev);
 	int ret;
 
-	ret = st_mag3d_claim_direct_mode(iio_dev);
+	ret = iio_device_claim_direct_mode(iio_dev);
 	if (ret)
 		return ret;
 
@@ -298,7 +281,7 @@ static int st_mag3d_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	st_mag3d_release_direct_mode(iio_dev);
+	iio_device_release_direct_mode(iio_dev);
 
 	return ret;
 }
