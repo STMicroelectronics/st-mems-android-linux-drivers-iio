@@ -37,3 +37,11 @@ config IIO_ST_ASM330LHHX_MLC_PRELOAD
 	help
 	  Preload some examples on machine learning core and finite state
 	  machine. The examples code are hardcoded in to the driver.
+
+config IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND
+	bool "Store accel sample in FIFO during suspend"
+	depends on IIO_ST_ASM330LHHX
+	help
+	  When enabled the IIO_ST_ASM330LHHX_ENABLE_SYSTEM_WAKEUP is possible
+	  to store accel samples in internal HW FIFO. After resume all stored
+	  data will be pushed to user space.

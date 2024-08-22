@@ -797,6 +797,8 @@ struct st_asm330lhhx_sensor {
  * @wk_th_mg: Wake-up threshold in mg.
  * @wk_dur_ms: Wake-up duration in ms.
  * @sixD_threshold: 6D threshold in mg.
+ * @wakeup_source: Flag for wakeup source.
+ * @wakeup_status: Last wake-up status.
  */
 struct st_asm330lhhx_hw {
 	struct device *dev;
@@ -861,6 +863,10 @@ struct st_asm330lhhx_hw {
 	u32 wk_th_mg;
 	u32 wk_dur_ms;
 	u32 sixD_threshold;
+
+	bool wakeup_source;
+	u32 wakeup_status;
+
 };
 
 /**
@@ -1158,6 +1164,7 @@ int st_asm330lhhx_get_batch_val(struct st_asm330lhhx_sensor *sensor,
 				int odr, int uodr, u8 *val);
 int st_asm330lhhx_update_watermark(struct st_asm330lhhx_sensor *sensor,
 				   u16 watermark);
+int st_asm330lhhx_flush_fifo_during_resume(struct st_asm330lhhx_hw *hw);
 ssize_t st_asm330lhhx_flush_fifo(struct device *dev,
 				 struct device_attribute *attr,
 				 const char *buf, size_t size);

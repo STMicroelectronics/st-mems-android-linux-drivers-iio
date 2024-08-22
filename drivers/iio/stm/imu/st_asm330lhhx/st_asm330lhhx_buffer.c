@@ -466,6 +466,18 @@ out:
 	return err < 0 ? err : size;
 }
 
+int __maybe_unused
+st_asm330lhhx_flush_fifo_during_resume(struct st_asm330lhhx_hw *hw)
+{
+	int count;
+
+	mutex_lock(&hw->fifo_lock);
+	count = st_asm330lhhx_read_fifo(hw);
+	mutex_unlock(&hw->fifo_lock);
+
+	return count;
+}
+
 ssize_t st_asm330lhhx_flush_fifo(struct device *dev,
 				 struct device_attribute *attr,
 				 const char *buf, size_t size)

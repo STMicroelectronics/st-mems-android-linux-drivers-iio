@@ -1882,8 +1882,65 @@ static int st_asm330lhhx_write_raw_get_fmt(struct iio_dev *indio_dev,
 	return -EINVAL;
 }
 
+static
+ssize_t __maybe_unused st_asm330lhhx_get_wakeup_status(struct device *dev,
+				       struct device_attribute *attr, char *buf)
+{
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
+	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
+	struct st_asm330lhhx_hw *hw = sensor->hw;
+	int len;
+
+	len = scnprintf(buf, PAGE_SIZE, "%x\n", hw->wakeup_status);
+
+	/* reset status */
+	hw->wakeup_status = 0;
+
+	return len;
+}
+
+static ssize_t
+st_asm330lhhx_sysfs_read_enable_wakeup(struct device *dev,
+				       struct device_attribute *attr, char *buf)
+{
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
+	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
+	struct st_asm330lhhx_hw *hw = sensor->hw;
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", (int)hw->wakeup_source);
+
+}
+
+static ssize_t
+st_asm330lhhx_sysfs_write_enable_wakeup(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t size)
+{
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
+	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
+	struct st_asm330lhhx_hw *hw = sensor->hw;
+	int err;
+	u32 val;
+
+	err = kstrtouint(buf, 10, &val);
+	if (err < 0)
+		return err;
+
+	if (val > 1)
+		return -EINVAL;
+
+	hw->wakeup_source = !!val;
+
+	return size;
+}
+
 static IIO_DEVICE_ATTR(discharded_samples, 0444,
 		       st_asm330lhhx_get_discharded_samples, NULL, 0);
+static IIO_DEVICE_ATTR(wakeup_status, 0444,
+		       st_asm330lhhx_get_wakeup_status, NULL, 0);
+static IIO_DEVICE_ATTR(enable_wakeup, 0644,
+		       st_asm330lhhx_sysfs_read_enable_wakeup,
+		       st_asm330lhhx_sysfs_write_enable_wakeup, 0);
 
 static struct attribute *st_asm330lhhx_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -1900,6 +1957,9 @@ static struct attribute *st_asm330lhhx_acc_attributes[] = {
 #ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
 	&iio_dev_attr_discharded_samples.dev_attr.attr,
 #endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
+
+	&iio_dev_attr_wakeup_status.dev_attr.attr,
+	&iio_dev_attr_enable_wakeup.dev_attr.attr,
 
 	NULL,
 };
@@ -2251,10 +2311,11 @@ static struct iio_dev *st_asm330lhhx_alloc_iiodev(struct st_asm330lhhx_hw *hw,
 
 static void st_asm330lhhx_get_properties(struct st_asm330lhhx_hw *hw)
 {
-	if (device_property_read_u32(hw->dev, "st,module_id",
-				     &hw->module_id)) {
+	if (device_property_read_u32(hw->dev, "st,module_id", &hw->module_id))
 		hw->module_id = 1;
-	}
+
+	if (device_property_read_bool(hw->dev, "wakeup-source"))
+		hw->wakeup_source = true;
 }
 
 static void st_asm330lhhx_disable_regulator_action(void *_data)
@@ -2437,10 +2498,83 @@ void st_asm330lhhx_remove(struct device *dev)
 }
 EXPORT_SYMBOL(st_asm330lhhx_remove);
 
+static int __maybe_unused
+st_asm330lhhx_configure_wake_up(struct st_asm330lhhx_hw *hw)
+{
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)
+	u16 fifo_watermark = ST_ASM330LHHX_MAX_FIFO_DEPTH;
+	__le16 wdata;
+#endif /* CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND */
+
+	int err;
+
+	/* disable fifo wtm interrupt */
+	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_INT1_CTRL_ADDR,
+				 ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
+					    0));
+	if (err < 0)
+		return err;
+
+	/* set fifo in bypass mode */
+	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
+				 ST_ASM330LHHX_REG_FIFO_MODE_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_REG_FIFO_MODE_MASK,
+					    ST_ASM330LHHX_FIFO_BYPASS));
+	if (err < 0)
+		return err;
+
+	/* enable wake-up interrupt */
+	err = regmap_update_bits(hw->regmap, hw->embfunc_pg0_irq_reg,
+				 ST_ASM330LHHX_INT_WU_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_INT_WU_MASK,
+					    0x01));
+	if (err < 0)
+		return err;
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)
+	/* set max fifo watermark level */
+	wdata = cpu_to_le16(fifo_watermark);
+	err = regmap_bulk_write(hw->regmap, ST_ASM330LHHX_REG_FIFO_CTRL1_ADDR,
+				&wdata, sizeof(wdata));
+	if (err < 0)
+		return err;
+
+	/* enable xl batching at 26 Hz */
+	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_FIFO_CTRL3_ADDR,
+				 ST_ASM330LHHX_REG_BDR_XL_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_REG_BDR_XL_MASK,
+					    0x02));
+	if (err < 0)
+		return err;
+
+	err = st_asm330lhhx_reset_hwts(hw);
+	if (err < 0)
+		return err;
+
+	/* set fifo mode continuous for batching */
+	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
+				 ST_ASM330LHHX_REG_FIFO_MODE_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_REG_FIFO_MODE_MASK,
+					    ST_ASM330LHHX_FIFO_CONT));
+	if (err < 0)
+		return err;
+#endif /* CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND */
+
+	/* set sensors odr to 26 Hz */
+	err = regmap_update_bits(hw->regmap,
+			st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.addr,
+			st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.mask,
+			ST_ASM330LHHX_SHIFT_VAL(0x02,
+				st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.mask));
+
+	return err < 0 ? err : 0;
+}
+
 static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 {
 	struct st_asm330lhhx_hw *hw = dev_get_drvdata(dev);
-	struct st_asm330lhhx_sensor *sensor;
 	int i, err = 0;
 
 	dev_info(dev, "Suspending device\n");
@@ -2448,6 +2582,8 @@ static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 	disable_hardirq(hw->irq);
 
 	for (i = 0; i < ST_ASM330LHHX_ID_MAX; i++) {
+		struct st_asm330lhhx_sensor *sensor;
+
 		if (!hw->iio_devs[i])
 			continue;
 
@@ -2465,12 +2601,54 @@ static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 		err = st_asm330lhhx_suspend_fifo(hw);
 		if (err < 0)
 			return err;
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
+		hrtimer_cancel(&hw->timesync_timer);
+		cancel_work_sync(&hw->timesync_work);
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+
 	}
 
 	err = st_asm330lhhx_bk_regs(hw);
+	if (err < 0)
+		return err;
 
-	if (device_may_wakeup(dev))
+	if (device_may_wakeup(dev) && (hw->wakeup_source == true)) {
+		u32 dummy;
+
+		/* configure wake-up events trigger */
+		err = st_asm330lhhx_configure_wake_up(hw);
+		if (err < 0)
+			return err;
+
+		/* avoid false wake-up events */
+		usleep_range(40000, 41000);
+
+		/* clean wake-up source */
+		err = regmap_read(hw->regmap,
+				  ST_ASM330LHHX_REG_ALL_INT_SRC_ADDR,
+				  &dummy);
+		if (err < 0)
+			return err;
+
+		/*
+		 * enable event interrupt
+		 *
+		 * NOTE: be careful, check whether wake-up threshold value is
+		 * greater than 0 before enable the interrupt, the risk is that
+		 * with zero thresholds system will be immediately reawakened
+		 */
+		err = regmap_update_bits(hw->regmap,
+					 ST_ASM330LHHX_REG_INT_CFG1_ADDR,
+					 ST_ASM330LHHX_INTERRUPTS_ENABLE_MASK,
+					 FIELD_PREP(ST_ASM330LHHX_INTERRUPTS_ENABLE_MASK,
+						    0x01));
+		if (err < 0)
+			return err;
+
 		enable_irq_wake(hw->irq);
+		dev_info(dev, "Enabling wake-up\n");
+	}
 
 	return err < 0 ? err : 0;
 }
@@ -2478,19 +2656,44 @@ static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 {
 	struct st_asm330lhhx_hw *hw = dev_get_drvdata(dev);
-	struct st_asm330lhhx_sensor *sensor;
 	int i, err = 0;
 
 	dev_info(dev, "Resuming device\n");
 
-	if (device_may_wakeup(dev))
+	if (device_may_wakeup(dev) && (hw->wakeup_source == true)) {
+		/* set accel sensor in power down */
+		err = regmap_update_bits(hw->regmap,
+				st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.addr,
+				st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.mask,
+				ST_ASM330LHHX_SHIFT_VAL(0x00,
+					st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.mask));
+
 		disable_irq_wake(hw->irq);
+
+		/* clean wake-up source */
+		err = regmap_read(hw->regmap,
+				  ST_ASM330LHHX_REG_WAKE_UP_SRC_ADDR,
+				  &hw->wakeup_status);
+		if (err < 0)
+			return err;
+
+		/* unmask only bits: WU_IA, X_WU, Y_WU and Z_WU */
+		hw->wakeup_status &= ST_ASM330LHHX_WAKE_UP_EVENT_MASK;
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)
+	/* flush fifo data to user space */
+		st_asm330lhhx_flush_fifo_during_resume(hw);
+#endif /* CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND */
+
+	}
 
 	err = st_asm330lhhx_restore_regs(hw);
 	if (err < 0)
 		return err;
 
 	for (i = 0; i < ST_ASM330LHHX_ID_MAX; i++) {
+		struct st_asm330lhhx_sensor *sensor;
+
 		if (!hw->iio_devs[i])
 			continue;
 
@@ -2509,6 +2712,14 @@ static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 
 	if (st_asm330lhhx_is_fifo_enabled(hw))
 		err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_CONT);
+
+#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
+	if (hw->fifo_mode != ST_ASM330LHHX_FIFO_BYPASS) {
+		hrtimer_start(&hw->timesync_timer,
+			      ktime_set(0, 0),
+			      HRTIMER_MODE_REL);
+	}
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	enable_irq(hw->irq);
 
