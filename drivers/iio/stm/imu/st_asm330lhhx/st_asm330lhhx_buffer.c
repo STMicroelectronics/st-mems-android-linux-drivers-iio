@@ -651,7 +651,11 @@ static irqreturn_t st_asm330lhhx_handler_thread(int irq, void *private)
 	clear_bit(ST_ASM330LHHX_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
-	return st_asm330lhhx_event_handler(hw);;
+	/* if irq line is the same of FIFO manage it */
+	if (hw->irq_emb == hw->irq)
+		return st_asm330lhhx_event_handler(hw);
+
+	return IRQ_HANDLED;
 }
 
 static int st_asm330lhhx_fifo_preenable(struct iio_dev *iio_dev)
@@ -742,7 +746,7 @@ static int st_asm330lhhx_config_interrupt(struct st_asm330lhhx_hw *hw,
 				 FIELD_PREP(ST_ASM330LHHX_LIR_MASK,
 					    enable ? 1 : 0));
 	if (err < 0)
-	return err;
+		return err;
 
 	/* enable FIFO watermak interrupt */
 	return regmap_update_bits(hw->regmap, hw->drdy_reg,

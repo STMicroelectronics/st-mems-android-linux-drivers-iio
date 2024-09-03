@@ -12,6 +12,7 @@
 #include <linux/iio/sysfs.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/of_irq.h>
 #include <linux/pm.h>
 #include <linux/property.h>
 #include <linux/regulator/consumer.h>
@@ -559,19 +560,27 @@ static inline int st_asm330lhhx_get_odr_divider_index(int odr_div)
 	return i;
 }
 
-int st_asm330lhhx_of_get_pin(struct st_asm330lhhx_hw *hw, int *pin)
+static int st_asm330lhhx_check_irq_config_pin(struct st_asm330lhhx_hw *hw)
 {
-	if (!dev_fwnode(hw->dev))
+	int int_pin, emb_pin, irq_emb;
+	struct fwnode_handle *fwnode;
+	struct device *dev = hw->dev;
+	int irq, ret;
+
+	fwnode = dev_fwnode(dev);
+	if (!fwnode)
 		return -EINVAL;
 
-	return device_property_read_u32(hw->dev, "st,int-pin", pin);
-}
+	irq = fwnode_irq_get(fwnode, 0);
+	if (irq <= 0) {
+		dev_err(dev, "failed to get interrupt configuration line\n");
 
-int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw)
-{
-	int err = 0, int_pin;
+		return -ENODEV;
+	}
+	irq_emb = irq;
 
-	if (st_asm330lhhx_of_get_pin(hw, &int_pin) < 0) {
+	ret = fwnode_property_read_u32(fwnode, "st,int-pin", &int_pin);
+	if (ret < 0) {
 		struct st_sensors_platform_data *pdata;
 		struct device *dev = hw->dev;
 
@@ -579,14 +588,42 @@ int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw)
 		int_pin = pdata ? pdata->drdy_int_pin : 1;
 	}
 
-	switch (int_pin) {
+	/* if st,wakeup-int-pin not set the emb_pin is set to int_pin */
+	ret = fwnode_property_read_u32(fwnode, "st,wakeup-int-pin", &emb_pin);
+	if (ret < 0)
+		emb_pin = int_pin;
+
+	if (emb_pin != int_pin) {
+		/* read irq configuration at index 1 if set in DT */
+		irq_emb = fwnode_irq_get(fwnode, 1);
+		if (irq_emb <= 0)
+			irq_emb = irq;
+	}
+
+	/* if irq is configured the device support FIFO irq watermark */
+	hw->irq_emb = irq_emb;
+	hw->irq = irq;
+	hw->int_pin = int_pin;
+	hw->emb_pin = emb_pin;
+	hw->has_hw_fifo = irq > 0 ? true : false;
+
+	return 0;
+}
+
+int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw)
+{
+	int err;
+
+	err = st_asm330lhhx_check_irq_config_pin(hw);
+	if (err < 0)
+		return err;
+
+	switch (hw->int_pin) {
 	case 1:
 		hw->drdy_reg = ST_ASM330LHHX_REG_INT1_CTRL_ADDR;
-		hw->embfunc_pg0_irq_reg = ST_ASM330LHHX_REG_MD1_CFG_ADDR;
 		break;
 	case 2:
 		hw->drdy_reg = ST_ASM330LHHX_REG_INT2_CTRL_ADDR;
-		hw->embfunc_pg0_irq_reg = ST_ASM330LHHX_REG_MD2_CFG_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -594,9 +631,20 @@ int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw)
 		break;
 	}
 
-	hw->int_pin = int_pin;
+	switch (hw->emb_pin) {
+	case 1:
+		hw->embfunc_pg0_irq_reg = ST_ASM330LHHX_REG_MD1_CFG_ADDR;
+		break;
+	case 2:
+		hw->embfunc_pg0_irq_reg = ST_ASM330LHHX_REG_MD2_CFG_ADDR;
+		break;
+	default:
+		dev_err(hw->dev, "unsupported embedded func interrupt pin\n");
+		err = -EINVAL;
+		break;
+	}
 
-	return err;
+	return 0;
 }
 
 static int __maybe_unused st_asm330lhhx_bk_regs(struct st_asm330lhhx_hw *hw)
@@ -1761,12 +1809,8 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 	st_asm330lhhx_bk_regs(hw);
 
 	/* disable FIFO watermak interrupt */
-	if (hw->irq > 0) {
-		/* disable FIFO watermak interrupt */
-		ret = st_asm330lhhx_get_int_reg(hw);
-		if (ret < 0)
-			goto restore_regs;
-
+	ret = st_asm330lhhx_get_int_reg(hw);
+	if (ret > 0) {
 		ret = st_asm330lhhx_update_bits_locked(hw, hw->drdy_reg,
 					     ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
 					     0);
@@ -2187,6 +2231,10 @@ static int st_asm330lhhx_init_device(struct st_asm330lhhx_hw *hw)
 {
 	int err;
 
+	err = st_asm330lhhx_get_int_reg(hw);
+	if (err < 0)
+		dev_info(hw->dev, "interrupt lines not configured\n");
+
 	/* enable Block Data Update */
 	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_CTRL3_C_ADDR,
 				 ST_ASM330LHHX_REG_BDU_MASK,
@@ -2389,10 +2437,8 @@ int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 
 	hw->regmap = regmap;
 	hw->dev = dev;
-	hw->irq = irq;
 	hw->odr_table_entry = st_asm330lhhx_odr_table;
 	hw->hw_timestamp_global = 0;
-	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	err = st_asm330lhhx_power_enable(hw);
 	if (err != 0)
@@ -2580,6 +2626,8 @@ static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 	dev_info(dev, "Suspending device\n");
 
 	disable_hardirq(hw->irq);
+	if (hw->irq != hw->irq_emb)
+		disable_hardirq(hw->irq_emb);
 
 	for (i = 0; i < ST_ASM330LHHX_ID_MAX; i++) {
 		struct st_asm330lhhx_sensor *sensor;
@@ -2646,7 +2694,7 @@ static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 		if (err < 0)
 			return err;
 
-		enable_irq_wake(hw->irq);
+		enable_irq_wake(hw->irq_emb);
 		dev_info(dev, "Enabling wake-up\n");
 	}
 
@@ -2668,7 +2716,7 @@ static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 				ST_ASM330LHHX_SHIFT_VAL(0x00,
 					st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.mask));
 
-		disable_irq_wake(hw->irq);
+		disable_irq_wake(hw->irq_emb);
 
 		/* clean wake-up source */
 		err = regmap_read(hw->regmap,
@@ -2722,6 +2770,8 @@ static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 #endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	enable_irq(hw->irq);
+	if (hw->irq != hw->irq_emb)
+		enable_irq(hw->irq_emb);
 
 	return err < 0 ? err : 0;
 }

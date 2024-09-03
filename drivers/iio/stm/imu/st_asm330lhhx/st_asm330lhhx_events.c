@@ -709,6 +709,11 @@ int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw)
 	return IRQ_HANDLED;
 }
 
+static irqreturn_t st_asm330lhhx_handler_thread_emb(int irq, void *private)
+{
+	return st_asm330lhhx_event_handler((struct st_asm330lhhx_hw *)private);
+}
+
 int st_asm330lhhx_update_threshold_events(struct st_asm330lhhx_hw *hw)
 {
 	int ret;
@@ -768,6 +773,26 @@ int st_asm330lhhx_event_init(struct st_asm330lhhx_hw *hw)
 	err = st_asm330lhhx_set_6D_threshold(hw, 60);
 	if (err < 0)
 		return err;
+
+	/* check if embedded function routed to a dedicated irq line */
+	if (hw->irq_emb != hw->irq) {
+		unsigned long irq_type;
+
+		irq_type = irqd_get_trigger_type(irq_get_irq_data(hw->irq_emb));
+		if (irq_type == IRQF_TRIGGER_NONE)
+			irq_type = IRQF_TRIGGER_HIGH;
+
+		err = devm_request_threaded_irq(hw->dev, hw->irq_emb, NULL,
+					       st_asm330lhhx_handler_thread_emb,
+					       irq_type | IRQF_ONESHOT,
+					       "asm330lhhx_emb", hw);
+		if (err) {
+			dev_err(hw->dev, "failed to request trigger irq %d\n",
+				hw->irq_emb);
+
+			return err;
+		}
+	}
 
 	return err;
 }

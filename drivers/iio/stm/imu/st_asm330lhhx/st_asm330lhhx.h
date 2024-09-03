@@ -750,8 +750,10 @@ struct st_asm330lhhx_sensor {
  * struct st_asm330lhhx_hw - ST IMU MEMS hw instance
  * @dev: Pointer to instance of struct device (I2C or SPI).
  * @irq: Device interrupt line (I2C or SPI).
+ * @irq_emb: Embedded function interrupt line).
  * @regmap: Register map of the device.
  * @int_pin: Save interrupt pin used by sensor.
+ * @emb_pin: Embedded function interrupt pin used by sensor.
  * @lock: Mutex to protect read and write operations.
  * @fifo_lock: Mutex to prevent concurrent access to the hw FIFO.
  * @page_lock: Mutex to prevent concurrent memory page configuration.
@@ -803,8 +805,10 @@ struct st_asm330lhhx_sensor {
 struct st_asm330lhhx_hw {
 	struct device *dev;
 	int irq;
+	int irq_emb;
 	struct regmap *regmap;
 	int int_pin;
+	int emb_pin;
 
 	struct mutex lock;
 	struct mutex fifo_lock;
@@ -1193,7 +1197,6 @@ int st_asm330lhhx_shub_set_enable(struct st_asm330lhhx_sensor *sensor,
 			      bool enable);
 int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
 			    u8 addr, u8 *data, int len);
-int st_asm330lhhx_of_get_pin(struct st_asm330lhhx_hw *hw, int *pin);
 int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw);
 
 #if defined (CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
