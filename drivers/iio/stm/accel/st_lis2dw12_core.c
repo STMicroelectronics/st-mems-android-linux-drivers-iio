@@ -1059,8 +1059,8 @@ static int st_lis2dw12_configure_wake_up(struct st_lis2dw12_hw *hw)
 		goto restore_cache;
 
 	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_WAKE_UP_THS_ADDR,
-				 ST_LIS2DW12_WAKE_UP_THS_MAK,
-				 FIELD_PREP(ST_LIS2DW12_WAKE_UP_THS_MAK, 0x02));
+				 ST_LIS2DW12_WAKE_UP_THS_MASK,
+				 FIELD_PREP(ST_LIS2DW12_WAKE_UP_THS_MASK, 0x02));
 	if (err < 0)
 		goto restore_cache;
 

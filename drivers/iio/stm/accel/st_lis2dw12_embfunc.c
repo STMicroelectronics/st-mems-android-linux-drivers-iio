@@ -69,17 +69,17 @@ static int st_lis2dw12_init_embfunc_hw(struct st_lis2dw12_hw *hw)
 
 	/* configure default threshold for Tap event recognition */
 	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_TAP_THS_X_ADDR,
-						 ST_LIS2DW12_TAP_THS_MAK, 9);
+						 ST_LIS2DW12_TAP_THS_MASK, 9);
 	if (err < 0)
 		return err;
 
 	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_TAP_THS_Y_ADDR,
-						 ST_LIS2DW12_TAP_THS_MAK, 9);
+						 ST_LIS2DW12_TAP_THS_MASK, 9);
 	if (err < 0)
 		return err;
 
 	return st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_TAP_THS_Z_ADDR,
-						  ST_LIS2DW12_TAP_THS_MAK, 9);
+						  ST_LIS2DW12_TAP_THS_MASK, 9);
 }
 
 static int st_lis2dw12_read_event_config(struct iio_dev *iio_dev,
