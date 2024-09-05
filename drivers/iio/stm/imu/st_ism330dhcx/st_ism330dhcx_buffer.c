@@ -21,18 +21,6 @@
 
 #include "st_ism330dhcx.h"
 
-#define ST_ISM330DHCX_REG_EMB_FUNC_STATUS_MAINPAGE		0x35
-#define ST_ISM330DHCX_REG_INT_STEP_DET_MASK		BIT(3)
-#define ST_ISM330DHCX_REG_INT_TILT_MASK			BIT(4)
-#define ST_ISM330DHCX_REG_INT_SIGMOT_MASK			BIT(5)
-#define ST_ISM330DHCX_REG_INT_GLANCE_MASK			BIT(0)
-#define ST_ISM330DHCX_REG_INT_MOTION_MASK			BIT(1)
-#define ST_ISM330DHCX_REG_INT_NO_MOTION_MASK		BIT(2)
-#define ST_ISM330DHCX_REG_INT_WAKEUP_MASK			BIT(3)
-#define ST_ISM330DHCX_REG_INT_PICKUP_MASK			BIT(4)
-#define ST_ISM330DHCX_REG_INT_ORIENTATION_MASK		BIT(5)
-#define ST_ISM330DHCX_REG_INT_WRIST_MASK			BIT(6)
-
 #define ST_ISM330DHCX_SAMPLE_DISCHARD			0x7ffd
 
 #define ST_ISM330DHCX_EWMA_LEVEL				120
@@ -212,7 +200,7 @@ int st_ism330dhcx_update_watermark(struct st_ism330dhcx_sensor *sensor,
 	int i, err;
 	u8 data;
 
-	for (i = ST_ISM330DHCX_ID_GYRO; i <= ST_ISM330DHCX_ID_STEP_COUNTER; i++) {
+	for (i = ST_ISM330DHCX_ID_GYRO; i < ST_ISM330DHCX_ID_EXT0; i++) {
 		if (!hw->iio_devs[i])
 			continue;
 
@@ -293,9 +281,6 @@ iio_dev *st_ism330dhcx_get_iiodev_from_tag(struct st_ism330dhcx_hw *hw,
 		break;
 	case ST_ISM330DHCX_EXT1_TAG:
 		iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_EXT1];
-		break;
-	case ST_ISM330DHCX_SC_TAG:
-		iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_STEP_COUNTER];
 		break;
 	default:
 		iio_dev = NULL;
@@ -392,17 +377,6 @@ static int st_ism330dhcx_read_fifo(struct st_ism330dhcx_hw *hw)
 				if (unlikely(drdymask >=
 						ST_ISM330DHCX_SAMPLE_DISCHARD)) {
 					continue;
-				}
-
-				/*
-				 * hw ts in not queued in FIFO if only step
-				 * counter enabled
-				 */
-				if (sensor->id == ST_ISM330DHCX_ID_STEP_COUNTER) {
-					val = get_unaligned_le32(ptr + 2);
-					hw->tsample = (val +
-						((s64)hw->hw_ts_high << 32)) *
-						hw->ts_delta_ns;
 				}
 
 				memcpy(iio_buf, ptr, ST_ISM330DHCX_SAMPLE_SIZE);
@@ -624,21 +598,13 @@ static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
 		if (err < 0)
 			goto out;
 	} else {
-		if (sensor->id == ST_ISM330DHCX_ID_STEP_COUNTER) {
-			err = st_ism330dhcx_step_counter_set_enable(sensor,
-								 enable);
-			if (err < 0)
-				goto out;
-		} else {
-			err = st_ism330dhcx_sensor_set_enable(sensor, enable);
-			if (err < 0)
-				goto out;
+		err = st_ism330dhcx_sensor_set_enable(sensor, enable);
+		if (err < 0)
+			goto out;
 
-			err = st_ism330dhcx_set_sensor_batching_odr(sensor,
-								 enable);
-			if (err < 0)
-				goto out;
-		}
+		err = st_ism330dhcx_set_sensor_batching_odr(sensor, enable);
+		if (err < 0)
+			goto out;
 	}
 
 	/*
@@ -728,133 +694,6 @@ static irqreturn_t st_ism330dhcx_handler_irq(int irq, void *private)
 }
 
 /**
- * Bottom handler for sensor event generation + FIFO management
- *
- * @param  irq: irq line number
- * @param  private: device private environment pointer
- * @return  IRQ_HANDLED or < 0 for error
- */
-static irqreturn_t st_ism330dhcx_handler_thread(int irq, void *private)
-{
-	struct st_ism330dhcx_hw *hw = (struct st_ism330dhcx_hw *)private;
-
-	mutex_lock(&hw->fifo_lock);
-	st_ism330dhcx_read_fifo(hw);
-	clear_bit(ST_ISM330DHCX_HW_FLUSH, &hw->state);
-	mutex_unlock(&hw->fifo_lock);
-
-	if (hw->enable_mask & (BIT(ST_ISM330DHCX_ID_STEP_DETECTOR) |
-			       BIT(ST_ISM330DHCX_ID_SIGN_MOTION) |
-			       BIT(ST_ISM330DHCX_ID_TILT) |
-			       BIT(ST_ISM330DHCX_ID_MOTION) |
-			       BIT(ST_ISM330DHCX_ID_NO_MOTION) |
-			       BIT(ST_ISM330DHCX_ID_WAKEUP) |
-			       BIT(ST_ISM330DHCX_ID_PICKUP) |
-			       BIT(ST_ISM330DHCX_ID_ORIENTATION) |
-			       BIT(ST_ISM330DHCX_ID_WRIST_TILT) |
-			       BIT(ST_ISM330DHCX_ID_GLANCE))) {
-		struct iio_dev *iio_dev;
-		u8 status[3];
-		s64 event;
-		int err;
-
-		err = regmap_bulk_read(hw->regmap,
-				     ST_ISM330DHCX_REG_EMB_FUNC_STATUS_MAINPAGE,
-				     status, sizeof(status));
-		if (err < 0)
-			return IRQ_HANDLED;
-
-		/* embedded function sensors */
-		if (status[0] & ST_ISM330DHCX_REG_INT_STEP_DET_MASK) {
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_STEP_DETECTOR];
-			event = IIO_UNMOD_EVENT_CODE(IIO_STEPS, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-		if (status[0] & ST_ISM330DHCX_REG_INT_SIGMOT_MASK) {
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_SIGN_MOTION];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_SIGN_MOTION, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-		if (status[0] & ST_ISM330DHCX_REG_INT_TILT_MASK) {
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_TILT];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_TILT, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-		/*  fsm sensors */
-		if (status[1] & ST_ISM330DHCX_REG_INT_GLANCE_MASK) {
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_GLANCE];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_GESTURE, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-		if (status[1] & ST_ISM330DHCX_REG_INT_MOTION_MASK) {
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_MOTION];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_GESTURE, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-		if (status[1] & ST_ISM330DHCX_REG_INT_NO_MOTION_MASK) {
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_NO_MOTION];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_GESTURE, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-		if (status[1] & ST_ISM330DHCX_REG_INT_WAKEUP_MASK) {
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_WAKEUP];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_GESTURE, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-		if (status[1] & ST_ISM330DHCX_REG_INT_PICKUP_MASK) {
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_PICKUP];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_GESTURE, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-		if (status[1] & ST_ISM330DHCX_REG_INT_ORIENTATION_MASK) {
-			u8 fsm_orientation;
-
-			st_ism330dhcx_fsm_get_orientation(hw, &fsm_orientation);
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_ORIENTATION];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_GESTURE, -1,
-						     IIO_EV_TYPE_THRESH,
-						     fsm_orientation);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-		if (status[1] & ST_ISM330DHCX_REG_INT_WRIST_MASK) {
-			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_WRIST_TILT];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_GESTURE, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       st_ism330dhcx_get_time_ns(hw));
-		}
-	}
-
-	return IRQ_HANDLED;
-}
-
-/**
  * Enable FIFO Timestamp
  *
  * @param  hw: ST IMU MEMS hw instance
@@ -862,6 +701,16 @@ static irqreturn_t st_ism330dhcx_handler_thread(int irq, void *private)
  */
 static int st_ism330dhcx_config_timestamp(struct st_ism330dhcx_hw *hw)
 {
+	int err;
+
+	/* init timestamp engine */
+	err = st_ism330dhcx_write_with_mask(hw,
+					    ST_ISM330DHCX_REG_CTRL10_C_ADDR,
+					    ST_ISM330DHCX_REG_TIMESTAMP_EN_MASK,
+					    1);
+	if (err < 0)
+		return err;
+
 	return st_ism330dhcx_write_with_mask(hw,
 					     ST_ISM330DHCX_REG_FIFO_CTRL4_ADDR,
 					     ST_ISM330DHCX_REG_DEC_TS_MASK, 1);
@@ -875,8 +724,12 @@ static int st_ism330dhcx_config_timestamp(struct st_ism330dhcx_hw *hw)
  */
 static int st_ism330dhcx_config_interrupt(struct st_ism330dhcx_hw *hw)
 {
-	u8 drdy_reg, ef_irq_reg;
 	int err;
+
+	/* configure interrupt registers */
+	err = st_ism330dhcx_get_int_reg(hw);
+	if (err < 0)
+		return err;
 
 	/* configure latch interrupts enabled */
 	err = st_ism330dhcx_write_with_mask(hw,
@@ -885,28 +738,11 @@ static int st_ism330dhcx_config_interrupt(struct st_ism330dhcx_hw *hw)
 	if (err < 0)
 		return err;
 
-	/* init timestamp engine */
-	err = st_ism330dhcx_write_with_mask(hw,
-					    ST_ISM330DHCX_REG_CTRL10_C_ADDR,
-					    ST_ISM330DHCX_REG_TIMESTAMP_EN_MASK,
-					    1);
-	if (err < 0)
-		return err;
-
-	/* configure interrupt registers */
-	err = st_ism330dhcx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
-	if (err < 0)
-		return err;
 
 	/* enable FIFO watermak interrupt */
-	err = st_ism330dhcx_write_with_mask(hw, drdy_reg,
-					 ST_ISM330DHCX_REG_INT_FIFO_TH_MASK, 1);
-	if (err < 0)
-		return err;
-
-	/* enable enbedded function interrupts */
-	return st_ism330dhcx_write_with_mask(hw, ef_irq_reg,
-					ST_ISM330DHCX_REG_INT_EMB_FUNC_MASK, 1);
+	return st_ism330dhcx_write_with_mask(hw, hw->irq_reg,
+					     ST_ISM330DHCX_REG_INT_FIFO_TH_MASK,
+					     1);
 }
 
 static int st_ism330dhcx_buffer_preenable(struct iio_dev *iio_dev)
@@ -1012,6 +848,25 @@ int st_ism330dhcx_allocate_sw_trigger(struct st_ism330dhcx_hw *hw)
 }
 
 /**
+ * Bottom handler for sensor event generation + FIFO management
+ *
+ * @param  irq: irq line number
+ * @param  private: device private environment pointer
+ * @return  IRQ_HANDLED or < 0 for error
+ */
+static irqreturn_t st_ism330dhcx_handler_thread(int irq, void *private)
+{
+	struct st_ism330dhcx_hw *hw = (struct st_ism330dhcx_hw *)private;
+
+	mutex_lock(&hw->fifo_lock);
+	st_ism330dhcx_read_fifo(hw);
+	clear_bit(ST_ISM330DHCX_HW_FLUSH, &hw->state);
+	mutex_unlock(&hw->fifo_lock);
+
+	return st_ism330dhcx_event_handler(hw);
+}
+
+/**
  * Init IIO buffers and triggers
  *
  * @param  hw: ST IMU MEMS hw instance
@@ -1103,13 +958,6 @@ int st_ism330dhcx_hw_trigger_setup(struct st_ism330dhcx_hw *hw)
 	err = st_ism330dhcx_config_interrupt(hw);
 	if (err)
 		return err;
-
-#ifdef CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES
-	/* init finite state machine */
-	err = st_ism330dhcx_fsm_init(hw);
-	if (err)
-		return err;
-#endif /* CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES */
 
 	err = st_ism330dhcx_config_timestamp(hw);
 

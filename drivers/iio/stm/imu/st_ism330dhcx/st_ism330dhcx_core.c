@@ -74,7 +74,43 @@ static struct st_ism330dhcx_suspend_resume_entry
 		},
 		[ST_ISM330DHCX_REG_TAP_CFG0_REG] = {
 			.addr = ST_ISM330DHCX_REG_TAP_CFG0_ADDR,
-			.mask = ST_ISM330DHCX_REG_LIR_MASK,
+			.mask = ST_ISM330DHCX_REG_LIR_MASK |
+				ST_ISM330DHCX_TAP_EN_MASK |
+				ST_ISM330DHCX_REG_INT_CLR_ON_READ_MASK,
+		},
+		[ST_ISM330DHCX_REG_TAP_CFG1_REG] = {
+			.addr = ST_ISM330DHCX_REG_TAP_CFG1_ADDR,
+			.mask = ST_ISM330DHCX_TAP_THS_X_MASK |
+				ST_ISM330DHCX_TAP_PRIORITY_MASK,
+		},
+		[ST_ISM330DHCX_REG_TAP_CFG2_REG] = {
+			.addr = ST_ISM330DHCX_REG_TAP_CFG2_ADDR,
+			.mask = ST_ISM330DHCX_TAP_THS_Y_MASK |
+				ST_ISM330DHCX_INTERRUPTS_ENABLE_MASK,
+		},
+		[ST_ISM330DHCX_REG_TAP_THS_6D_REG] = {
+			.addr = ST_ISM330DHCX_REG_TAP_THS_6D_ADDR,
+			.mask = ST_ISM330DHCX_TAP_THS_Z_MASK |
+				ST_ISM330DHCX_SIXD_THS_MASK,
+		},
+		[ST_ISM330DHCX_REG_INT_DUR2_REG] = {
+			.addr = ST_ISM330DHCX_REG_INT_DUR2_ADDR,
+			.mask = ST_ISM330DHCX_SHOCK_MASK |
+				ST_ISM330DHCX_QUIET_MASK |
+				ST_ISM330DHCX_DUR_MASK,
+		},
+		[ST_ISM330DHCX_REG_WAKE_UP_THS_REG] = {
+			.addr = ST_ISM330DHCX_REG_WAKE_UP_THS_ADDR,
+			.mask = ST_ISM330DHCX_WAKE_UP_THS_MASK |
+				ST_ISM330DHCX_SINGLE_DOUBLE_TAP_MASK,
+		},
+		[ST_ISM330DHCX_REG_WAKE_UP_DUR_REG] = {
+			.addr = ST_ISM330DHCX_REG_WAKE_UP_DUR_ADDR,
+			.mask = ST_ISM330DHCX_WAKE_UP_DUR_MASK,
+		},
+		[ST_ISM330DHCX_REG_FREE_FALL_REG] = {
+			.addr = ST_ISM330DHCX_REG_FREE_FALL_ADDR,
+			.mask = GENMASK(7, 0),
 		},
 		[ST_ISM330DHCX_REG_INT1_CTRL_REG] = {
 			.addr = ST_ISM330DHCX_REG_INT1_CTRL_ADDR,
@@ -204,6 +240,16 @@ static const struct iio_chan_spec st_ism330dhcx_acc_channels[] = {
 	ST_ISM330DHCX_DATA_CHANNEL(IIO_ACCEL, ST_ISM330DHCX_REG_OUTZ_L_A_ADDR,
 				1, IIO_MOD_Z, 2, 16, 16, 's'),
 	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ACCEL, flush),
+
+	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ACCEL, freefall),
+	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ACCEL, 6D),
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ACCEL, tap),
+	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ACCEL, dtap),
+#endif /* LINUX_VERSION_CODE */
+
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
@@ -227,60 +273,6 @@ static const struct iio_chan_spec st_ism330dhcx_gyro_channels[] = {
 				1, IIO_MOD_Z, 2, 16, 16, 's'),
 	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ANGL_VEL, flush),
 	IIO_CHAN_SOFT_TIMESTAMP(3),
-};
-
-/**
- * Step Counter IIO channels description
- *
- * Step Counter exports to IIO framework the following data channels:
- * Step Counters (16 bit unsigned in little endian)
- * Timestamp (64 bit signed in little endian)
- * Step Counter exports to IIO framework the following event channels:
- * Flush event done
- */
-static const struct iio_chan_spec st_ism330dhcx_step_counter_channels[] = {
-	{
-		.type = STM_IIO_STEP_COUNTER,
-		.scan_index = 0,
-		.scan_type = {
-			.sign = 'u',
-			.realbits = 16,
-			.storagebits = 16,
-			.endianness = IIO_LE,
-		},
-	},
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_STEP_COUNTER, flush),
-	IIO_CHAN_SOFT_TIMESTAMP(1),
-};
-
-/**
- * @brief  Step Detector IIO channels description
- *
- * Step Detector exports to IIO framework the following event channels:
- * Step detection event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_step_detector_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(IIO_STEPS, thr),
-};
-
-/**
- * Significant Motion IIO channels description
- *
- * Significant Motion exports to IIO framework the following event channels:
- * Significant Motion event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_sign_motion_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_SIGN_MOTION, thr),
-};
-
-/**
- * Tilt IIO channels description
- *
- * Tilt exports to IIO framework the following event channels:
- * Tilt event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_tilt_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_TILT, thr),
 };
 
 /**
@@ -309,76 +301,6 @@ static const struct iio_chan_spec st_ism330dhcx_temp_channels[] = {
 	},
 	ST_ISM330DHCX_EVENT_CHANNEL(IIO_TEMP, flush),
 	IIO_CHAN_SOFT_TIMESTAMP(1),
-};
-
-/**
- * Glance IIO channels description
- *
- * Glance exports to IIO framework the following event channels:
- * Glance event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_glance_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_GESTURE, thr),
-};
-
-/**
- * Motion IIO channels description
- *
- * Motion exports to IIO framework the following event channels:
- * Motion event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_motion_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_GESTURE, thr),
-};
-
-/**
- * No Motion IIO channels description
- *
- * No Motion exports to IIO framework the following event channels:
- * No Motion event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_no_motion_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_GESTURE, thr),
-};
-
-/**
- * Wakeup IIO channels description
- *
- * Wakeup exports to IIO framework the following event channels:
- * Wakeup event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_wakeup_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_GESTURE, thr),
-};
-
-/**
- * Pickup IIO channels description
- *
- * Pickup exports to IIO framework the following event channels:
- * Pickup event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_pickup_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_GESTURE, thr),
-};
-
-/**
- * Orientation IIO channels description
- *
- * Orientation exports to IIO framework the following data channels:
- * Orientation event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_orientation_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_GESTURE, thr),
-};
-
-/**
- * Wrist IIO channels description
- *
- * Wrist exports to IIO framework the following event channels:
- * Wrist event detection
- */
-static const struct iio_chan_spec st_ism330dhcx_wrist_channels[] = {
-	ST_ISM330DHCX_EVENT_CHANNEL(STM_IIO_GESTURE, thr),
 };
 
 /**
@@ -541,8 +463,8 @@ static u16 st_ism330dhcx_check_odr_dependency(struct st_ism330dhcx_hw *hw,
  * @param  req_uodr: Least significant part of ODR value (in micro Hz).
  * @return  0 if OK, negative value for ERROR
  */
-static int st_ism330dhcx_set_odr(struct st_ism330dhcx_sensor *sensor, int req_odr,
-			      int req_uodr)
+int st_ism330dhcx_set_odr(struct st_ism330dhcx_sensor *sensor, int req_odr,
+			  int req_uodr)
 {
 	struct st_ism330dhcx_hw *hw = sensor->hw;
 	enum st_ism330dhcx_sensor_id id = sensor->id;
@@ -550,17 +472,6 @@ static int st_ism330dhcx_set_odr(struct st_ism330dhcx_sensor *sensor, int req_od
 	u8 val;
 
 	switch (id) {
-	case ST_ISM330DHCX_ID_STEP_COUNTER:
-	case ST_ISM330DHCX_ID_STEP_DETECTOR:
-	case ST_ISM330DHCX_ID_SIGN_MOTION:
-	case ST_ISM330DHCX_ID_TILT:
-	case ST_ISM330DHCX_ID_NO_MOTION:
-	case ST_ISM330DHCX_ID_MOTION:
-	case ST_ISM330DHCX_ID_GLANCE:
-	case ST_ISM330DHCX_ID_WAKEUP:
-	case ST_ISM330DHCX_ID_PICKUP:
-	case ST_ISM330DHCX_ID_ORIENTATION:
-	case ST_ISM330DHCX_ID_WRIST_TILT:
 	case ST_ISM330DHCX_ID_TEMP:
 	case ST_ISM330DHCX_ID_EXT0:
 	case ST_ISM330DHCX_ID_EXT1:
@@ -569,7 +480,7 @@ static int st_ism330dhcx_set_odr(struct st_ism330dhcx_sensor *sensor, int req_od
 		int i;
 
 		id = ST_ISM330DHCX_ID_ACC;
-		for (i = ST_ISM330DHCX_ID_ACC; i <= ST_ISM330DHCX_ID_TILT; i++) {
+		for (i = ST_ISM330DHCX_ID_ACC; i < ST_ISM330DHCX_ID_MAX; i++) {
 			if (!hw->iio_devs[i])
 				continue;
 
@@ -754,6 +665,12 @@ static int st_ism330dhcx_write_raw(struct iio_dev *iio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		err = st_ism330dhcx_set_full_scale(sensor, val2);
+		if (err)
+			goto release_iio;
+
+		/* some events depends on xl full scale */
+		if (chan->type == IIO_ACCEL)
+			err = st_ism330dhcx_update_threshold_events(sensor->hw);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		u8 data;
@@ -781,6 +698,10 @@ static int st_ism330dhcx_write_raw(struct iio_dev *iio_dev,
 					break;
 
 				err = st_ism330dhcx_update_batching(iio_dev, 1);
+
+				/* some events depends on xl odr */
+				if (chan->type == IIO_ACCEL)
+					st_ism330dhcx_update_duration_events(sensor->hw);
 				break;
 			default:
 				break;
@@ -793,6 +714,7 @@ static int st_ism330dhcx_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
+release_iio:
 	iio_device_release_direct_mode(iio_dev);
 
 	return err;
@@ -819,55 +741,6 @@ static int st_ism330dhcx_reg_access(struct iio_dev *iio_dev, unsigned int reg,
 	return (ret < 0) ? ret : 0;
 }
 #endif /* CONFIG_DEBUG_FS */
-
-/**
- * Read sensor event configuration
- *
- * @param  iio_dev: IIO Device.
- * @param  chan: IIO Channel.
- * @param  type: Event Type.
- * @param  dir: Event Direction.
- * @return  1 if Enabled, 0 Disabled
- */
-static int st_ism330dhcx_read_event_config(struct iio_dev *iio_dev,
-					const struct iio_chan_spec *chan,
-					enum iio_event_type type,
-					enum iio_event_direction dir)
-{
-	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
-	struct st_ism330dhcx_hw *hw = sensor->hw;
-
-	return !!(hw->enable_mask & BIT(sensor->id));
-}
-
-/**
- * Write sensor event configuration
- *
- * @param  iio_dev: IIO Device.
- * @param  chan: IIO Channel.
- * @param  type: Event Type.
- * @param  dir: Event Direction.
- * @param  state: New event state.
- * @return  0 if OK, negative for ERROR
- */
-static int st_ism330dhcx_write_event_config(struct iio_dev *iio_dev,
-					 const struct iio_chan_spec *chan,
-					 enum iio_event_type type,
-					 enum iio_event_direction dir,
-					 int state)
-{
-	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
-	int err;
-
-	err = iio_device_claim_direct_mode(iio_dev);
-	if (err)
-		return err;
-
-	err = st_ism330dhcx_embfunc_sensor_set_enable(sensor, state);
-	iio_device_release_direct_mode(iio_dev);
-
-	return err;
-}
 
 /**
  * Get a list of available sensor ODR
@@ -930,28 +803,6 @@ static ssize_t st_ism330dhcx_sysfs_scale_avail(struct device *dev,
 	buf[len - 1] = '\n';
 
 	return len;
-}
-
-/**
- * Reset step counter value
- *
- * @param  dev: IIO Device.
- * @param  attr: IIO Channel attribute.
- * @param  buf: User buffer.
- * @param  size: User buffer size.
- * @return  buffer len, negative for ERROR
- */
-static ssize_t
-st_ism330dhcx_sysfs_reset_step_counter(struct device *dev,
-				    struct device_attribute *attr,
-				    const char *buf, size_t size)
-{
-	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
-	int err;
-
-	err = st_ism330dhcx_reset_step_counter(iio_dev);
-
-	return err < 0 ? err : size;
 }
 
 static int st_ism330dhcx_write_raw_get_fmt(struct iio_dev *indio_dev,
@@ -1279,7 +1130,6 @@ st_ism330dhcx_sysfs_start_selftest(struct device *dev,
 	enum st_ism330dhcx_sensor_id id = sensor->id;
 	struct st_ism330dhcx_hw *hw = sensor->hw;
 	int ret, test;
-	u8 drdy_reg, ef_irq_reg;
 	u32 gain;
 
 	if (id != ST_ISM330DHCX_ID_ACC &&
@@ -1309,15 +1159,14 @@ st_ism330dhcx_sysfs_start_selftest(struct device *dev,
 
 	st_ism330dhcx_bk_regs(hw);
 
-	/* disable FIFO watermak interrupt */
-	ret = st_ism330dhcx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
-	if (ret < 0)
-		goto restore_regs;
-
 	/* disable interrupt on FIFO watermak */
 	if (hw->has_hw_fifo) {
-		ret = st_ism330dhcx_write_with_mask(hw, drdy_reg,
-					ST_ISM330DHCX_REG_INT_FIFO_TH_MASK, 0);
+		ret = st_ism330dhcx_get_int_reg(hw);
+		if (ret < 0)
+			goto restore_regs;
+
+		ret = st_ism330dhcx_write_with_mask(hw, hw->irq_reg,
+					 ST_ISM330DHCX_REG_INT_FIFO_TH_MASK, 0);
 		if (ret < 0)
 			goto restore_regs;
 	}
@@ -1370,8 +1219,6 @@ static IIO_DEVICE_ATTR(hwfifo_watermark_max, 0444,
 static IIO_DEVICE_ATTR(hwfifo_flush, 0200, NULL, st_ism330dhcx_flush_fifo, 0);
 static IIO_DEVICE_ATTR(hwfifo_watermark, 0644, st_ism330dhcx_get_watermark,
 		       st_ism330dhcx_set_watermark, 0);
-static IIO_DEVICE_ATTR(reset_counter, 0200, NULL,
-		       st_ism330dhcx_sysfs_reset_step_counter, 0);
 static IIO_DEVICE_ATTR(module_id, 0444, st_ism330dhcx_get_module_id, NULL, 0);
 static IIO_DEVICE_ATTR(selftest_available, 0444,
 		       st_ism330dhcx_sysfs_get_selftest_available,
@@ -1401,10 +1248,16 @@ static const struct iio_info st_ism330dhcx_acc_info = {
 	.read_raw = st_ism330dhcx_read_raw,
 	.write_raw = st_ism330dhcx_write_raw,
 	.write_raw_get_fmt = st_ism330dhcx_write_raw_get_fmt,
+	.read_event_config = st_ism330dhcx_read_event_config,
+	.write_event_config = st_ism330dhcx_write_event_config,
+	.write_event_value = st_ism330dhcx_write_event_value,
+	.read_event_value = st_ism330dhcx_read_event_value,
+
 #ifdef CONFIG_DEBUG_FS
 	/* connect debug info to first device */
 	.debugfs_reg_access = st_ism330dhcx_reg_access,
 #endif /* CONFIG_DEBUG_FS */
+
 };
 
 static struct attribute *st_ism330dhcx_gyro_attributes[] = {
@@ -1451,192 +1304,21 @@ static const struct iio_info st_ism330dhcx_temp_info = {
 	.write_raw_get_fmt = st_ism330dhcx_write_raw_get_fmt,
 };
 
-static struct attribute *st_ism330dhcx_step_counter_attributes[] = {
-	&iio_dev_attr_hwfifo_watermark_max.dev_attr.attr,
-	&iio_dev_attr_hwfifo_watermark.dev_attr.attr,
-	&iio_dev_attr_reset_counter.dev_attr.attr,
-	&iio_dev_attr_hwfifo_flush.dev_attr.attr,
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_step_counter_attribute_group = {
-	.attrs = st_ism330dhcx_step_counter_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_step_counter_info = {
-	.attrs = &st_ism330dhcx_step_counter_attribute_group,
-};
-
-static struct attribute *st_ism330dhcx_step_detector_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_step_detector_attribute_group = {
-	.attrs = st_ism330dhcx_step_detector_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_step_detector_info = {
-	.attrs = &st_ism330dhcx_step_detector_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
-static struct attribute *st_ism330dhcx_sign_motion_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_sign_motion_attribute_group = {
-	.attrs = st_ism330dhcx_sign_motion_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_sign_motion_info = {
-	.attrs = &st_ism330dhcx_sign_motion_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
-static struct attribute *st_ism330dhcx_tilt_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_tilt_attribute_group = {
-	.attrs = st_ism330dhcx_tilt_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_tilt_info = {
-	.attrs = &st_ism330dhcx_tilt_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
-static struct attribute *st_ism330dhcx_glance_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_glance_attribute_group = {
-	.attrs = st_ism330dhcx_glance_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_glance_info = {
-	.attrs = &st_ism330dhcx_glance_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
-static struct attribute *st_ism330dhcx_motion_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_motion_attribute_group = {
-	.attrs = st_ism330dhcx_motion_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_motion_info = {
-	.attrs = &st_ism330dhcx_motion_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
-static struct attribute *st_ism330dhcx_no_motion_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_no_motion_attribute_group = {
-	.attrs = st_ism330dhcx_no_motion_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_no_motion_info = {
-	.attrs = &st_ism330dhcx_no_motion_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
-static struct attribute *st_ism330dhcx_wakeup_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_wakeup_attribute_group = {
-	.attrs = st_ism330dhcx_wakeup_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_wakeup_info = {
-	.attrs = &st_ism330dhcx_wakeup_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
-static struct attribute *st_ism330dhcx_pickup_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_pickup_attribute_group = {
-	.attrs = st_ism330dhcx_pickup_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_pickup_info = {
-	.attrs = &st_ism330dhcx_pickup_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
-static struct attribute *st_ism330dhcx_orientation_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_orientation_attribute_group = {
-	.attrs = st_ism330dhcx_orientation_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_orientation_info = {
-	.attrs = &st_ism330dhcx_orientation_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
-static struct attribute *st_ism330dhcx_wrist_attributes[] = {
-	&iio_dev_attr_module_id.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_ism330dhcx_wrist_attribute_group = {
-	.attrs = st_ism330dhcx_wrist_attributes,
-};
-
-static const struct iio_info st_ism330dhcx_wrist_info = {
-	.attrs = &st_ism330dhcx_wrist_attribute_group,
-	.read_event_config = st_ism330dhcx_read_event_config,
-	.write_event_config = st_ism330dhcx_write_event_config,
-};
-
 static const unsigned long st_ism330dhcx_available_scan_masks[] = { 0x7, 0x0 };
 static const unsigned long st_ism330dhcx_sc_available_scan_masks[] = { 0x1, 0x0 };
 
-static int st_ism330dhcx_of_get_pin(struct st_ism330dhcx_hw *hw, int *pin)
+static int st_ism330dhcx_check_irq_config_pin(struct st_ism330dhcx_hw *hw)
 {
-	struct device_node *np = hw->dev->of_node;
+	struct fwnode_handle *fwnode;
+	struct device *dev = hw->dev;
+	int int_pin, ret;
 
-	if (!np)
+	fwnode = dev_fwnode(dev);
+	if (!fwnode)
 		return -EINVAL;
 
-	return of_property_read_u32(np, "st,int-pin", pin);
-}
-
-int st_ism330dhcx_get_int_reg(struct st_ism330dhcx_hw *hw, u8 *drdy_reg,
-			      u8 *ef_irq_reg)
-{
-	int err = 0, int_pin;
-
-	if (st_ism330dhcx_of_get_pin(hw, &int_pin) < 0) {
+	ret = fwnode_property_read_u32(fwnode, "st,int-pin", &int_pin);
+	if (ret < 0) {
 		struct st_sensors_platform_data *pdata;
 		struct device *dev = hw->dev;
 
@@ -1644,18 +1326,27 @@ int st_ism330dhcx_get_int_reg(struct st_ism330dhcx_hw *hw, u8 *drdy_reg,
 		int_pin = pdata ? pdata->drdy_int_pin : 1;
 	}
 
-	switch (int_pin) {
+	hw->int_pin = int_pin;
+
+	return 0;
+}
+
+int st_ism330dhcx_get_int_reg(struct st_ism330dhcx_hw *hw)
+{
+	int err;
+
+	err = st_ism330dhcx_check_irq_config_pin(hw);
+	if (err < 0)
+		return err;
+
+	switch (hw->int_pin) {
 	case 1:
+		hw->irq_reg = ST_ISM330DHCX_REG_INT1_CTRL_ADDR;
 		hw->embfunc_pg0_irq_reg = ST_ISM330DHCX_REG_MD1_CFG_ADDR;
-		hw->embfunc_irq_reg = ST_ISM330DHCX_REG_EMB_FUNC_INT1_ADDR;
-		*ef_irq_reg = ST_ISM330DHCX_REG_MD1_CFG_ADDR;
-		*drdy_reg = ST_ISM330DHCX_REG_INT1_CTRL_ADDR;
 		break;
 	case 2:
+		hw->irq_reg = ST_ISM330DHCX_REG_INT2_CTRL_ADDR;
 		hw->embfunc_pg0_irq_reg = ST_ISM330DHCX_REG_MD2_CFG_ADDR;
-		hw->embfunc_irq_reg = ST_ISM330DHCX_REG_EMB_FUNC_INT2_ADDR;
-		*ef_irq_reg = ST_ISM330DHCX_REG_MD2_CFG_ADDR;
-		*drdy_reg = ST_ISM330DHCX_REG_INT2_CTRL_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -1796,157 +1487,6 @@ static struct iio_dev *st_ism330dhcx_alloc_iiodev(struct st_ism330dhcx_hw *hw,
 		sensor->gain = st_ism330dhcx_fs_table[id].fs_avl[0].gain;
 		sensor->offset = ST_ISM330DHCX_TEMP_OFFSET;
 		break;
-#ifdef CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES
-	case ST_ISM330DHCX_ID_STEP_COUNTER:
-		iio_dev->channels = st_ism330dhcx_step_counter_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_ism330dhcx_step_counter_channels);
-		iio_dev->name = "ism330dhcx_step_c";
-		iio_dev->info = &st_ism330dhcx_step_counter_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->max_watermark = 1;
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_STEP_DETECTOR:
-		iio_dev->channels = st_ism330dhcx_step_detector_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_ism330dhcx_step_detector_channels);
-		iio_dev->name = "ism330dhcx_step_d";
-		iio_dev->info = &st_ism330dhcx_step_detector_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_SIGN_MOTION:
-		iio_dev->channels = st_ism330dhcx_sign_motion_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_ism330dhcx_sign_motion_channels);
-		iio_dev->name = "ism330dhcx_sign_motion";
-		iio_dev->info = &st_ism330dhcx_sign_motion_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_TILT:
-		iio_dev->channels = st_ism330dhcx_tilt_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_ism330dhcx_tilt_channels);
-		iio_dev->name = "ism330dhcx_tilt";
-		iio_dev->info = &st_ism330dhcx_tilt_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_GLANCE:
-		iio_dev->channels = st_ism330dhcx_glance_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_ism330dhcx_glance_channels);
-		iio_dev->name = "ism330dhcx_glance";
-		iio_dev->info = &st_ism330dhcx_glance_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_MOTION:
-		iio_dev->channels = st_ism330dhcx_motion_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_ism330dhcx_motion_channels);
-		iio_dev->name = "ism330dhcx_motion";
-		iio_dev->info = &st_ism330dhcx_motion_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_NO_MOTION:
-		iio_dev->channels = st_ism330dhcx_no_motion_channels;
-		iio_dev->num_channels =
-				ARRAY_SIZE(st_ism330dhcx_no_motion_channels);
-		iio_dev->name = "ism330dhcx_no_motion";
-		iio_dev->info = &st_ism330dhcx_no_motion_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_WAKEUP:
-		iio_dev->channels = st_ism330dhcx_wakeup_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_ism330dhcx_wakeup_channels);
-		iio_dev->name = "ism330dhcx_wk";
-		iio_dev->info = &st_ism330dhcx_wakeup_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_PICKUP:
-		iio_dev->channels = st_ism330dhcx_pickup_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_ism330dhcx_pickup_channels);
-		iio_dev->name = "ism330dhcx_pickup";
-		iio_dev->info = &st_ism330dhcx_pickup_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_ORIENTATION:
-		iio_dev->channels = st_ism330dhcx_orientation_channels;
-		iio_dev->num_channels =
-				ARRAY_SIZE(st_ism330dhcx_orientation_channels);
-		iio_dev->name = "ism330dhcx_dev_orientation";
-		iio_dev->info = &st_ism330dhcx_orientation_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-	case ST_ISM330DHCX_ID_WRIST_TILT:
-		iio_dev->channels = st_ism330dhcx_wrist_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_ism330dhcx_wrist_channels);
-		iio_dev->name = "ism330dhcx_wrist";
-		iio_dev->info = &st_ism330dhcx_wrist_info;
-		iio_dev->available_scan_masks =
-					st_ism330dhcx_sc_available_scan_masks;
-
-		sensor->odr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].hz;
-		sensor->uodr =
-			st_ism330dhcx_odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[2].uhz;
-		break;
-#endif /* CONFIG_IIO_ST_ISM330DHCX_EN_BASIC_FEATURES */
 	default:
 		return NULL;
 	}
@@ -1990,6 +1530,7 @@ int st_ism330dhcx_probe(struct device *dev, int irq, struct regmap *regmap)
 	hw->dev = dev;
 	hw->irq = irq;
 	hw->odr_table = st_ism330dhcx_odr_table;
+	hw->fs_table = st_ism330dhcx_fs_table;
 	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	err = st_ism330dhcx_check_whoami(hw);
@@ -2012,21 +1553,17 @@ int st_ism330dhcx_probe(struct device *dev, int irq, struct regmap *regmap)
 
 	/* if fifo not supported just few sensors can be enabled */
 	if (hw->has_hw_fifo) {
-		for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_main_sensor_list_irq); i++) {
-			enum st_ism330dhcx_sensor_id id = st_ism330dhcx_main_sensor_list_irq[i];
+		err = st_ism330dhcx_event_init(hw);
+		if (err < 0)
+			return err;
+	}
 
-			hw->iio_devs[id] = st_ism330dhcx_alloc_iiodev(hw, id);
-			if (!hw->iio_devs[id])
-				continue;
-		}
-	} else {
-		for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_main_sensor_list); i++) {
-			enum st_ism330dhcx_sensor_id id = st_ism330dhcx_main_sensor_list[i];
+	for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_main_sensor_list_irq); i++) {
+		enum st_ism330dhcx_sensor_id id = st_ism330dhcx_main_sensor_list_irq[i];
 
-			hw->iio_devs[id] = st_ism330dhcx_alloc_iiodev(hw, id);
-			if (!hw->iio_devs[id])
-				continue;
-		}
+		hw->iio_devs[id] = st_ism330dhcx_alloc_iiodev(hw, id);
+		if (!hw->iio_devs[id])
+			continue;
 	}
 
 	err = st_ism330dhcx_shub_probe(hw);
