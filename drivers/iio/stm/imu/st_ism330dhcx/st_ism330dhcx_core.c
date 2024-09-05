@@ -156,90 +156,32 @@ static const struct st_ism330dhcx_odr_table_entry st_ism330dhcx_odr_table[] = {
  */
 static const struct st_ism330dhcx_fs_table_entry st_ism330dhcx_fs_table[] = {
 	[ST_ISM330DHCX_ID_ACC] = {
+		.reg = {
+			.addr = ST_ISM330DHCX_CTRL1_XL_ADDR,
+			.mask = GENMASK(3, 2),
+		},
+		.fs_avl[0] = { ST_ISM330DHCX_ACC_FS_2G_GAIN,  0x00 },
+		.fs_avl[1] = { ST_ISM330DHCX_ACC_FS_4G_GAIN,  0x02 },
+		.fs_avl[2] = { ST_ISM330DHCX_ACC_FS_8G_GAIN,  0x03 },
+		.fs_avl[3] = { ST_ISM330DHCX_ACC_FS_16G_GAIN, 0x01 },
 		.size = ST_ISM330DHCX_FS_ACC_LIST_SIZE,
-		.fs_avl[0] = {
-			.reg = {
-				.addr = ST_ISM330DHCX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
-			},
-			.gain = ST_ISM330DHCX_ACC_FS_2G_GAIN,
-			.val = 0x0,
-		},
-		.fs_avl[1] = {
-			.reg = {
-				.addr = ST_ISM330DHCX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
-			},
-			.gain = ST_ISM330DHCX_ACC_FS_4G_GAIN,
-			.val = 0x2,
-		},
-		.fs_avl[2] = {
-			.reg = {
-				.addr = ST_ISM330DHCX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
-			},
-			.gain = ST_ISM330DHCX_ACC_FS_8G_GAIN,
-			.val = 0x3,
-		},
-		.fs_avl[3] = {
-			.reg = {
-				.addr = ST_ISM330DHCX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
-			},
-			.gain = ST_ISM330DHCX_ACC_FS_16G_GAIN,
-			.val = 0x1,
-		},
 	},
 	[ST_ISM330DHCX_ID_GYRO] = {
+		.reg = {
+			.addr = ST_ISM330DHCX_CTRL2_G_ADDR,
+			.mask = GENMASK(3, 0),
+		},
+		.fs_avl[0] = { ST_ISM330DHCX_GYRO_FS_250_GAIN,  0x00 },
+		.fs_avl[1] = { ST_ISM330DHCX_GYRO_FS_500_GAIN,  0x04 },
+		.fs_avl[2] = { ST_ISM330DHCX_GYRO_FS_1000_GAIN, 0x08 },
+		.fs_avl[3] = { ST_ISM330DHCX_GYRO_FS_2000_GAIN, 0x0C },
+		.fs_avl[4] = { ST_ISM330DHCX_GYRO_FS_4000_GAIN, 0x01 },
 		.size = ST_ISM330DHCX_FS_GYRO_LIST_SIZE,
-		.fs_avl[0] = {
-			.reg = {
-				.addr = ST_ISM330DHCX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = ST_ISM330DHCX_GYRO_FS_250_GAIN,
-			.val = 0x0,
-		},
-		.fs_avl[1] = {
-			.reg = {
-				.addr = ST_ISM330DHCX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = ST_ISM330DHCX_GYRO_FS_500_GAIN,
-			.val = 0x4,
-		},
-		.fs_avl[2] = {
-			.reg = {
-				.addr = ST_ISM330DHCX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = ST_ISM330DHCX_GYRO_FS_1000_GAIN,
-			.val = 0x8,
-		},
-		.fs_avl[3] = {
-			.reg = {
-				.addr = ST_ISM330DHCX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = ST_ISM330DHCX_GYRO_FS_2000_GAIN,
-			.val = 0x0C,
-		},
-		.fs_avl[4] = {
-			.reg = {
-				.addr = ST_ISM330DHCX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = ST_ISM330DHCX_GYRO_FS_4000_GAIN,
-			.val = 0x1,
-		},
 	},
 	[ST_ISM330DHCX_ID_TEMP] = {
+		.reg = { 0 },
+		.fs_avl[0] = { ST_ISM330DHCX_TEMP_FS_GAIN, 0x00 },
 		.size = ST_ISM330DHCX_FS_TEMP_LIST_SIZE,
-		.fs_avl[0] = {
-			.reg = { 0 },
-			.gain = ST_ISM330DHCX_TEMP_FS_GAIN,
-			.val = 0x0
-		},
 	},
 };
 
@@ -520,8 +462,8 @@ static int st_ism330dhcx_set_full_scale(struct st_ism330dhcx_sensor *sensor, u32
 
 	val = st_ism330dhcx_fs_table[id].fs_avl[i].val;
 	err = st_ism330dhcx_write_with_mask(sensor->hw,
-				st_ism330dhcx_fs_table[id].fs_avl[i].reg.addr,
-				st_ism330dhcx_fs_table[id].fs_avl[i].reg.mask,
+				st_ism330dhcx_fs_table[id].reg.addr,
+				st_ism330dhcx_fs_table[id].reg.mask,
 				val);
 	if (err < 0)
 		return err;

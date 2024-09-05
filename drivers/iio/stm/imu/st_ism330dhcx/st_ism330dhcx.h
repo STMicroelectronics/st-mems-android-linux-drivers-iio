@@ -253,12 +253,10 @@ struct st_ism330dhcx_odr_table_entry {
  * @struct st_ism330dhcx_fs
  * @brief Full scale entry
  *
- * reg: Sensor register description for FS (address and mask).
  * gain: The gain to obtain data value from raw data (LSB).
  * val: Register value.
  */
 struct st_ism330dhcx_fs {
-	struct st_ism330dhcx_reg reg;
 	u32 gain;
 	u8 val;
 };
@@ -267,6 +265,7 @@ struct st_ism330dhcx_fs {
  * @struct st_ism330dhcx_fs_table_entry
  * @brief Full scale table
  *
+ * reg: Sensor register description for FS (address and mask).
  * size: Full scale number of entry.
  * fs_avl: Full scale entry.
  */
@@ -275,6 +274,7 @@ struct st_ism330dhcx_fs {
 #define ST_ISM330DHCX_FS_GYRO_LIST_SIZE		5
 #define ST_ISM330DHCX_FS_TEMP_LIST_SIZE		1
 struct st_ism330dhcx_fs_table_entry {
+	struct st_ism330dhcx_reg reg;
 	u8 size;
 	struct st_ism330dhcx_fs fs_avl[ST_ISM330DHCX_FS_LIST_SIZE];
 };

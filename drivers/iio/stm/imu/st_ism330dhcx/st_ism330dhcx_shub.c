@@ -106,10 +106,7 @@ static const struct st_ism330dhcx_ext_dev_settings st_ism330dhcx_ext_dev_table[]
 		},
 		.fs_table = {
 			.size = 1,
-			.fs_avl[0] = {
-				.gain = 1500,
-				.val = 0x0,
-			}, /* 1500 uG/LSB */
+			.fs_avl[0] = { 1500, 0x00 }, /* 1500 uG/LSB */
 		},
 		.temp_comp_reg = {
 			.addr = 0x60,
@@ -165,10 +162,7 @@ static const struct st_ism330dhcx_ext_dev_settings st_ism330dhcx_ext_dev_table[]
 		.fs_table = {
 			.size = 1,
 			/* hPa micro scale */
-			.fs_avl[0] = {
-				.gain = 1000000UL/4096UL,
-				.val = 0x0,
-			},
+			.fs_avl[0] = { 1000000UL/4096UL, 0x00 },
 		},
 		.bdu_reg = {
 			.addr = 0x10,
@@ -204,10 +198,7 @@ static const struct st_ism330dhcx_ext_dev_settings st_ism330dhcx_ext_dev_table[]
 		.fs_table = {
 			.size = 1,
 			/* hPa micro scale */
-			.fs_avl[0] = {
-				.gain = 1000000UL/4096UL,
-				.val = 0x0,
-			},
+			.fs_avl[0] = { 1000000UL/4096UL, 0x00 },
 		},
 		.bdu_reg = {
 			.addr = 0x10,
