@@ -130,6 +130,7 @@ static int st_lis2dw12_read_fifo(struct st_lis2dw12_hw *hw)
 	struct iio_chan_spec const *ch = iio_dev->channels;
 	int i, err, word_len, fifo_len, read_len = 0;
 	s64 delta_ts;
+	u8 ovr;
 
 	err = st_lis2dw12_read(hw, ST_LIS2DW12_FIFO_SAMPLES_ADDR,
 			       &status, sizeof(status));
@@ -137,8 +138,15 @@ static int st_lis2dw12_read_fifo(struct st_lis2dw12_hw *hw)
 		return err;
 
 	samples = status & ST_LIS2DW12_FIFO_SAMPLES_DIFF_MASK;
+	ovr = status & ST_LIS2DW12_FIFO_SAMPLES_OVR_MASK;
 	delta_ts = div_s64(hw->delta_ts, hw->watermark);
-	fifo_len = samples * ST_LIS2DW12_DATA_SIZE;
+
+	/* if overrun flush all */
+	if (!ovr)
+		fifo_len = samples * ST_LIS2DW12_DATA_SIZE;
+	else
+		fifo_len = ST_LIS2DW12_FIFO_SAMPLES_DIFF_MASK *
+			   ST_LIS2DW12_DATA_SIZE;
 
 	while (read_len < fifo_len) {
 		word_len = min_t(int, fifo_len - read_len, sizeof(buff));
@@ -188,6 +196,18 @@ ssize_t st_lis2dw12_flush_fifo(struct device *dev,
 	iio_push_event(iio_dev, code, hw->ts_irq);
 
 	return err < 0 ? err : size;
+}
+
+int __maybe_unused
+st_lis2dw12_flush_fifo_during_resume(struct st_lis2dw12_hw *hw)
+{
+	int count;
+
+	mutex_lock(&hw->fifo_lock);
+	count = st_lis2dw12_read_fifo(hw);
+	mutex_unlock(&hw->fifo_lock);
+
+	return count;
 }
 
 int st_lis2dw12_suspend_fifo(struct st_lis2dw12_hw *hw)

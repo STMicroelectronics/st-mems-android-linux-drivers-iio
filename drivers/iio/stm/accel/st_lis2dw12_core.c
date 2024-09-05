@@ -358,16 +358,18 @@ static int st_lis2dw12_init_hw(struct st_lis2dw12_hw *hw)
 	int err;
 
 	/* soft reset the device */
+	regcache_cache_bypass(hw->regmap, true);
 	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_CTRL2_ADDR,
 						 ST_LIS2DW12_RESET_MASK, 1);
 	if (err < 0)
-		return err;
+		goto restore_cache;
 
 	/* enable BDU */
 	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_CTRL2_ADDR,
 						 ST_LIS2DW12_BDU_MASK, 1);
 	if (err < 0)
-		return err;
+		goto restore_cache;
+	regcache_cache_bypass(hw->regmap, false);
 
 	/* enable all interrupts */
 	err = st_lis2dw12_write_with_mask_locked(hw,
@@ -406,6 +408,11 @@ static int st_lis2dw12_init_hw(struct st_lis2dw12_hw *hw)
 
 	return st_lis2dw12_write_with_mask_locked(hw, hw->irq_reg,
 						  ST_LIS2DW12_FTH_INT_MASK, 1);
+
+restore_cache:
+	regcache_cache_bypass(hw->regmap, false);
+
+	return err;
 }
 
 static ssize_t
@@ -975,7 +982,6 @@ int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
 	mutex_init(&hw->lock);
 
 	hw->dev = dev;
-	hw->irq = irq;
 	hw->regmap = regmap;
 	hw->watermark = 1;
 
@@ -1022,6 +1028,7 @@ int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev,
 						     "wakeup-source"));
+
 	return 0;
 }
 EXPORT_SYMBOL(st_lis2dw12_probe);
@@ -1037,6 +1044,82 @@ int st_lis2dw12_remove(struct device *dev)
 }
 EXPORT_SYMBOL(st_lis2dw12_remove);
 
+static int st_lis2dw12_configure_wake_up(struct st_lis2dw12_hw *hw)
+{
+	u32 status;
+	int err;
+	u32 val;
+
+	/* disable cache support when setting odr register for suspend */
+	regcache_cache_bypass(hw->regmap, true);
+	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_CTRL4_INT1_CTRL_ADDR,
+				 ST_LIS2DW12_WU_INT1_MASK,
+				 FIELD_PREP(ST_LIS2DW12_WU_INT1_MASK, 0x00));
+	if (err < 0)
+		goto restore_cache;
+
+	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_WAKE_UP_THS_ADDR,
+				 ST_LIS2DW12_WAKE_UP_THS_MAK,
+				 FIELD_PREP(ST_LIS2DW12_WAKE_UP_THS_MAK, 0x02));
+	if (err < 0)
+		goto restore_cache;
+
+#if defined(CONFIG_IIO_ST_LIS2DW12_STORE_SAMPLE_FIFO_SUSPEND)
+	/* disable interrupt on FIFO watermark */
+	err = regmap_update_bits(hw->regmap, hw->irq_reg,
+				 ST_LIS2DW12_FTH_INT_MASK,
+				 FIELD_PREP(ST_LIS2DW12_FTH_INT_MASK, 0));
+	if (err < 0)
+		goto restore_cache;
+
+	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_FIFO_CTRL_ADDR,
+				 ST_LIS2DW12_FIFOMODE_MASK,
+				 FIELD_PREP(ST_LIS2DW12_FIFOMODE_MASK,
+					    ST_LIS2DW12_FIFO_BYPASS));
+	if (err < 0)
+		goto restore_cache;
+
+	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_FIFO_CTRL_ADDR,
+				 ST_LIS2DW12_FTH_MASK,
+				 FIELD_PREP(ST_LIS2DW12_FTH_MASK, 31));
+	if (err < 0)
+		goto restore_cache;
+
+	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_FIFO_CTRL_ADDR,
+				 ST_LIS2DW12_FIFOMODE_MASK,
+				 FIELD_PREP(ST_LIS2DW12_FIFOMODE_MASK,
+					    ST_LIS2DW12_FIFO_CONTINUOUS));
+	if (err < 0)
+		goto restore_cache;
+#endif /* CONFIG_IIO_ST_LIS2DW12_STORE_SAMPLE_FIFO_SUSPEND */
+
+	/* set sensor odr to 25 Hz */
+	val = st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[2].val <<
+						    __ffs(ST_LIS2DW12_ODR_MASK);
+
+	err = regmap_write(hw->regmap, ST_LIS2DW12_CTRL1_ADDR, val);
+	if (err < 0)
+		goto restore_cache;
+
+	/* avoid false wake-up events */
+	usleep_range(40000, 41000);
+
+	/* clean wake-up source */
+	err = regmap_read(hw->regmap, ST_LIS2DW12_ALL_INT_SRC_ADDR, &status);
+	if (err < 0)
+		goto restore_cache;
+
+	/* enable wake-up event interrupt */
+	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_CTRL4_INT1_CTRL_ADDR,
+				 ST_LIS2DW12_WU_INT1_MASK,
+				 FIELD_PREP(ST_LIS2DW12_WU_INT1_MASK, 0x01));
+
+restore_cache:
+	regcache_cache_bypass(hw->regmap, false);
+
+	return err < 0 ? err : 0;
+}
+
 static int __maybe_unused st_lis2dw12_suspend(struct device *dev)
 {
 	struct st_lis2dw12_hw *hw = dev_get_drvdata(dev);
@@ -1048,6 +1131,12 @@ static int __maybe_unused st_lis2dw12_suspend(struct device *dev)
 
 	/* cancel any pending work */
 	st_lis2dw12_cancel_workqueue(hw);
+
+	if (st_lis2dw12_is_fifo_enabled(hw)) {
+		err = st_lis2dw12_suspend_fifo(hw);
+		if (err < 0)
+			return err;
+	}
 
 	for (i = 0; i < ST_LIS2DW12_ID_MAX; i++) {
 		if (!hw->iio_devs[i])
@@ -1064,24 +1153,22 @@ static int __maybe_unused st_lis2dw12_suspend(struct device *dev)
 			if (err < 0)
 				return err;
 		} else {
-			err = st_lis2dw12_set_odr(sensor,
-					 ST_LIS2DW12_MIN_ODR_IN_WAKEUP);
+			err = st_lis2dw12_configure_wake_up(hw);
 			if (err < 0)
 				return err;
 		}
 	}
 
-	if (st_lis2dw12_is_fifo_enabled(hw)) {
-		err = st_lis2dw12_suspend_fifo(hw);
-		if (err < 0)
-			return err;
-	}
-
 	regcache_mark_dirty(hw->regmap);
 
 	if (hw->enable_mask & ST_LIS2DW12_WAKE_UP_SENSORS) {
+		int wk_irq = hw->irq;
+
+		if (hw->irq_emb > 0)
+			wk_irq = hw->irq_emb;
+
 		if (device_may_wakeup(dev))
-			enable_irq_wake(hw->irq);
+			enable_irq_wake(wk_irq);
 	}
 
 	dev_info(dev, "Suspending device\n");
@@ -1097,11 +1184,22 @@ static int __maybe_unused st_lis2dw12_resume(struct device *dev)
 
 	dev_info(dev, "Resuming device\n");
 
+	st_lis2dw12_flush_fifo_during_resume(hw);
 	regcache_sync(hw->regmap);
 
 	if (hw->enable_mask & ST_LIS2DW12_WAKE_UP_SENSORS) {
+		int wk_irq = hw->irq;
+		u8 status;
+
+		if (hw->irq_emb > 0)
+			wk_irq = hw->irq_emb;
+
 		if (device_may_wakeup(dev))
-			disable_irq_wake(hw->irq);
+			disable_irq_wake(wk_irq);
+
+		/* clean wake-up source */
+		st_lis2dw12_read(hw, ST_LIS2DW12_ALL_INT_SRC_ADDR,
+				 &status, sizeof(status));
 	}
 
 	for (i = 0; i < ST_LIS2DW12_ID_MAX; i++) {
@@ -1119,7 +1217,7 @@ static int __maybe_unused st_lis2dw12_resume(struct device *dev)
 
 	if (st_lis2dw12_is_fifo_enabled(hw))
 		err = st_lis2dw12_set_fifo_mode(hw,
-					   ST_LIS2DW12_FIFO_CONTINUOUS);
+						ST_LIS2DW12_FIFO_CONTINUOUS);
 
 	if (hw->irq > 0)
 		enable_irq(hw->irq);

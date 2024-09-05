@@ -226,7 +226,7 @@ iio_dev *st_lis2dw12_alloc_embfunc_iiodev(struct st_lis2dw12_hw *hw,
 		iio_dev->available_scan_masks =
 				st_lis2dw12_event_avail_scan_masks;
 
-		sensor->odr = hw->odr_entry[ST_LIS2DW12_ID_ACC].odr[5].hz;
+		sensor->odr = ST_LIS2DW12_MIN_ODR_IN_WAKEUP;
 		break;
 	case ST_LIS2DW12_ID_TAP_TAP:
 		iio_dev->channels = st_lis2dw12_tap_tap_channels;

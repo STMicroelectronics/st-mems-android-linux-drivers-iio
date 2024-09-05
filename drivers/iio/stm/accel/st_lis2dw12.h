@@ -62,6 +62,7 @@
 #define ST_LIS2DW12_FS_MASK			GENMASK(5, 4)
 #define ST_LIS2DW12_BW_MASK			GENMASK(7, 6)
 
+#define ST_LIS2DW12_OUT_T_ADDR			0x26
 #define ST_LIS2DW12_STATUS_ADDR			0x27
 #define ST_LIS2DW12_STATUS_FF_MASK		BIT(0)
 #define ST_LIS2DW12_STATUS_TAP_TAP_MASK		BIT(4)
@@ -80,6 +81,7 @@
 #define ST_LIS2DW12_FIFO_SAMPLES_ADDR		0x2f
 #define ST_LIS2DW12_FIFO_SAMPLES_FTH_MASK	BIT(7)
 #define ST_LIS2DW12_FIFO_SAMPLES_OVR_MASK	BIT(6)
+#define ST_LIS2DW12_FIFO_SAMPLES_DIFF_MASK	GENMASK(5, 0)
 
 #define ST_LIS2DW12_TAP_THS_X_ADDR		0x30
 #define ST_LIS2DW12_TAP_THS_Y_ADDR		0x31
@@ -98,18 +100,27 @@
 #define ST_LIS2DW12_FREE_FALL_THS_MASK		GENMASK(2, 0)
 #define ST_LIS2DW12_FREE_FALL_DUR_MASK		GENMASK(7, 3)
 
+#define ST_LIS2DW12_STATUS_DUP_ADDR		0x37
+
 #define ST_LIS2DW12_WU_SRC_ADDR			0x38
+#define ST_LIS2DW12_WU_IA_MASK			BIT(3)
+
 #define ST_LIS2DW12_TAP_SRC_ADDR		0x39
 #define ST_LIS2DW12_STAP_SRC_MASK		BIT(5)
 #define ST_LIS2DW12_DTAP_SRC_MASK		BIT(4)
 #define ST_LIS2DW12_TAP_EVT_MASK		GENMASK(2, 0)
-#define ST_LIS2DW12_FIFO_SAMPLES_DIFF_MASK	GENMASK(5, 0)
+
+#define ST_LIS2DW12_SIXD_SRC_ADDR		0x3a
 
 #define ST_LIS2DW12_ALL_INT_SRC_ADDR		0x3b
 #define ST_LIS2DW12_ALL_INT_SRC_FF_MASK		BIT(0)
 #define ST_LIS2DW12_ALL_INT_SRC_WU_MASK		BIT(1)
 #define ST_LIS2DW12_ALL_INT_SRC_TAP_MASK	BIT(2)
 #define ST_LIS2DW12_ALL_INT_SRC_TAP_TAP_MASK	BIT(3)
+
+#define ST_LIS2DW12_ABS_INT_X_ADDR		0x3c
+#define ST_LIS2DW12_ABS_INT_Y_ADDR		0x3d
+#define ST_LIS2DW12_ABS_INT_Z_ADDR		0x3e
 
 #define ST_LIS2DW12_ABS_INT_CFG_ADDR		0x3f
 #define ST_LIS2DW12_ALL_INT_MASK		BIT(5)
@@ -300,6 +311,7 @@ static inline bool st_lis2dw12_is_volatile_reg(struct device *dev,
 	case ST_LIS2DW12_TEMP_OUT_T_L_ADDR:
 	case ST_LIS2DW12_TEMP_OUT_T_L_ADDR + 1:
 	case ST_LIS2DW12_WHOAMI_ADDR:
+	case ST_LIS2DW12_OUT_T_ADDR:
 	case ST_LIS2DW12_STATUS_ADDR:
 	case ST_LIS2DW12_OUT_X_L_ADDR:
 	case ST_LIS2DW12_OUT_X_L_ADDR + 1:
@@ -308,8 +320,14 @@ static inline bool st_lis2dw12_is_volatile_reg(struct device *dev,
 	case ST_LIS2DW12_OUT_Z_L_ADDR:
 	case ST_LIS2DW12_OUT_Z_L_ADDR + 1:
 	case ST_LIS2DW12_FIFO_SAMPLES_ADDR:
+	case ST_LIS2DW12_STATUS_DUP_ADDR:
+	case ST_LIS2DW12_WU_SRC_ADDR:
 	case ST_LIS2DW12_TAP_SRC_ADDR:
+	case ST_LIS2DW12_SIXD_SRC_ADDR:
 	case ST_LIS2DW12_ALL_INT_SRC_ADDR:
+	case ST_LIS2DW12_ABS_INT_X_ADDR:
+	case ST_LIS2DW12_ABS_INT_Y_ADDR:
+	case ST_LIS2DW12_ABS_INT_Z_ADDR:
 		return true;
 	default:
 		return false;
@@ -352,6 +370,7 @@ ssize_t st_lis2dw12_set_hwfifo_watermark(struct device *device,
 int st_lis2dw12_sensor_set_enable(struct st_lis2dw12_sensor *sensor,
 				  bool enable);
 int st_lis2dw12_suspend_fifo(struct st_lis2dw12_hw *hw);
+int st_lis2dw12_flush_fifo_during_resume(struct st_lis2dw12_hw *hw);
 
 #ifdef CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES
 int st_lis2dw12_emb_event(struct st_lis2dw12_hw *hw);
