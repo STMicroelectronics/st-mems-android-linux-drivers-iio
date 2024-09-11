@@ -32,8 +32,7 @@ config IIO_ST_LSM6DSV16BX_EN_BASIC_FEATURES
 	bool "Enable internal basic features event detection"
 	depends on IIO_ST_LSM6DSV16BX
 	help
-	  Enable internal event detection features like: free fall, tilt, sleep
-	  change, wake-up, 6D orientation, tap, double tap, step counter, step
+	  Enable internal event detection features like: tilt, step counter, step
 	  detection and significant motion. If this feature is enabled it is
 	  necessary to extend the iio_chan_type_name_spec array in industrialio-
 	  core.c by adding the custom types used by this driver.

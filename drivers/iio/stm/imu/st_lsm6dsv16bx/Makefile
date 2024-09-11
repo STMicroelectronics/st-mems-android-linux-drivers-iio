@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0-only
 st_lsm6dsv16bx-y := st_lsm6dsv16bx_core.o st_lsm6dsv16bx_buffer.o \
-		 st_lsm6dsv16bx_qvar.o st_lsm6dsv16bx_mlc.o
+		 st_lsm6dsv16bx_qvar.o st_lsm6dsv16bx_mlc.o \
+		 st_lsm6dsv16bx_events.o
 
-st_lsm6dsv16bx-$(CONFIG_IIO_ST_LSM6DSV16BX_EN_BASIC_FEATURES) += st_lsm6dsv16bx_events.o st_lsm6dsv16bx_embfunc.o
+st_lsm6dsv16bx-$(CONFIG_IIO_ST_LSM6DSV16BX_EN_BASIC_FEATURES) += st_lsm6dsv16bx_embfunc.o
 st_lsm6dsv16bx-$(CONFIG_IIO_ST_LSM6DSV16BX_ASYNC_HW_TIMESTAMP) += st_lsm6dsv16bx_hwtimestamp.o
 
 obj-$(CONFIG_IIO_ST_LSM6DSV16BX) += st_lsm6dsv16bx.o

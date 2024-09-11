@@ -267,6 +267,16 @@ static const struct iio_chan_spec st_lsm6dsv16bx_acc_channels[] = {
 				    1, IIO_MOD_Z, 2, 16, 16, 's',
 				    st_lsm6dsv16bx_chan_spec_ext_info),
 	ST_LSM6DSV16BX_EVENT_CHANNEL(IIO_ACCEL, flush),
+
+	ST_LSM6DSV16BX_EVENT_CHANNEL(IIO_ACCEL, freefall),
+	ST_LSM6DSV16BX_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_LSM6DSV16BX_EVENT_CHANNEL(IIO_ACCEL, 6D),
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LSM6DSV16BX_EVENT_CHANNEL(IIO_ACCEL, tap),
+	ST_LSM6DSV16BX_EVENT_CHANNEL(IIO_ACCEL, dtap),
+#endif /* LINUX_VERSION_CODE */
+
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
 };
@@ -560,7 +570,8 @@ st_lsm6dsv16bx_check_gyro_odr_dependency(struct st_lsm6dsv16bx_sensor *sensor,
 
 	return odr;
 }
-static int st_lsm6dsv16bx_set_odr(struct st_lsm6dsv16bx_sensor *sensor,
+
+int st_lsm6dsv16bx_set_odr(struct st_lsm6dsv16bx_sensor *sensor,
 				  int req_odr, int req_uodr)
 {
 	enum st_lsm6dsv16bx_sensor_id id = sensor->id;
@@ -586,12 +597,6 @@ static int st_lsm6dsv16bx_set_odr(struct st_lsm6dsv16bx_sensor *sensor,
 	case ST_LSM6DSV16BX_ID_STEP_DETECTOR:
 	case ST_LSM6DSV16BX_ID_SIGN_MOTION:
 	case ST_LSM6DSV16BX_ID_TILT:
-	case ST_LSM6DSV16BX_ID_TAP:
-	case ST_LSM6DSV16BX_ID_DTAP:
-	case ST_LSM6DSV16BX_ID_WK:
-	case ST_LSM6DSV16BX_ID_FF:
-	case ST_LSM6DSV16BX_ID_SLPCHG:
-	case ST_LSM6DSV16BX_ID_6D:
 	case ST_LSM6DSV16BX_ID_ACC:
 		odr = st_lsm6dsv16bx_check_acc_odr_dependency(sensor, req_odr,
 							      req_uodr);
@@ -829,6 +834,12 @@ static int st_lsm6dsv16bx_write_raw(struct iio_dev *iio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		err = st_lsm6dsv16bx_set_full_scale(sensor, val2);
+		if (err < 0)
+			break;
+
+		/* some events depends on xl full scale */
+		if (chan->type == IIO_ACCEL)
+			err = st_lsm6dsv16bx_update_threshold_events(sensor->hw);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		int todr, tuodr;
@@ -856,6 +867,12 @@ static int st_lsm6dsv16bx_write_raw(struct iio_dev *iio_dev,
 						break;
 
 					err = st_lsm6dsv16bx_update_batching(iio_dev, 1);
+					if (err < 0)
+						break;
+
+					/* some events depends on xl odr */
+					if (chan->type == IIO_ACCEL)
+						err = st_lsm6dsv16bx_update_duration_events(sensor->hw);
 					break;
 				default:
 					break;
@@ -947,8 +964,7 @@ static int st_lsm6dsv16bx_of_get_pin(struct st_lsm6dsv16bx_hw *hw, int *pin)
 	return of_property_read_u32(np, "st,int-pin", pin);
 }
 
-static int st_lsm6dsv16bx_get_int_reg(struct st_lsm6dsv16bx_hw *hw,
-				      u8 *drdy_reg, u8 *ef_irq_reg)
+int st_lsm6dsv16bx_get_int_reg(struct st_lsm6dsv16bx_hw *hw, u8 *drdy_reg)
 {
 	int int_pin;
 
@@ -962,9 +978,13 @@ static int st_lsm6dsv16bx_get_int_reg(struct st_lsm6dsv16bx_hw *hw,
 
 	switch (int_pin) {
 	case 1:
+		hw->embfunc_pg0_irq_reg = ST_LSM6DSV16BX_REG_MD1_CFG_ADDR;
+		hw->embfunc_irq_reg = ST_LSM6DSV16BX_REG_EMB_FUNC_INT1_ADDR;
 		*drdy_reg = ST_LSM6DSV16BX_REG_INT1_CTRL_ADDR;
 		break;
 	case 2:
+		hw->embfunc_pg0_irq_reg = ST_LSM6DSV16BX_REG_MD2_CFG_ADDR;
+		hw->embfunc_irq_reg = ST_LSM6DSV16BX_REG_EMB_FUNC_INT2_ADDR;
 		*drdy_reg = ST_LSM6DSV16BX_REG_INT2_CTRL_ADDR;
 		break;
 	default:
@@ -1190,9 +1210,9 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	enum st_lsm6dsv16bx_sensor_id id = sensor->id;
 	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
-	u8 drdy_reg, ef_irq_reg;
 	int ret, test;
 	int odr, uodr;
+	u8 drdy_reg;
 	u32 gain;
 
 	if (id != ST_LSM6DSV16BX_ID_ACC &&
@@ -1224,7 +1244,7 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 	uodr = sensor->uodr;
 
 	/* disable interrupt on FIFO watermak */
-	ret = st_lsm6dsv16bx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
+	ret = st_lsm6dsv16bx_get_int_reg(hw, &drdy_reg);
 	if (ret < 0)
 		goto restore_regs;
 
@@ -1358,6 +1378,10 @@ static const struct iio_info st_lsm6dsv16bx_acc_info = {
 	.read_raw = st_lsm6dsv16bx_read_raw,
 	.write_raw_get_fmt = st_lsm6dsv16bx_write_raw_get_fmt,
 	.write_raw = st_lsm6dsv16bx_write_raw,
+	.read_event_config = st_lsm6dsv16bx_read_event_config,
+	.write_event_config = st_lsm6dsv16bx_write_event_config,
+	.write_event_value = st_lsm6dsv16bx_write_event_value,
+	.read_event_value = st_lsm6dsv16bx_read_event_value,
 	.debugfs_reg_access = st_lsm6dsv16bx_reg_access,
 };
 
@@ -1591,7 +1615,7 @@ static int st_lsm6dsv16bx_tdm_init_device(struct st_lsm6dsv16bx_hw *hw)
 
 static int st_lsm6dsv16bx_init_device(struct st_lsm6dsv16bx_hw *hw)
 {
-	u8 drdy_reg, ef_irq_reg;
+	u8 drdy_reg;
 	int err;
 
 	/* latch interrupts */
@@ -1613,7 +1637,7 @@ static int st_lsm6dsv16bx_init_device(struct st_lsm6dsv16bx_hw *hw)
 	if (err < 0)
 		return err;
 
-	err = st_lsm6dsv16bx_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
+	err = st_lsm6dsv16bx_get_int_reg(hw, &drdy_reg);
 	if (err < 0)
 		return err;
 
@@ -1886,11 +1910,11 @@ int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
 	err = st_lsm6dsv16bx_probe_embfunc(hw);
 	if (err < 0)
 		return err;
+#endif /* IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
 
-	err = st_lsm6dsv16bx_probe_event(hw);
+	err = st_lsm6dsv16bx_event_init(hw);
 	if (err < 0)
 		return err;
-#endif /* IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
 
 	if (hw->settings->st_qvar_probe &&
 	    (!dev_fwnode(dev) ||
