@@ -29,6 +29,7 @@
 #define ST_ISM330DHCX_REG_FUNC_CFG_ACCESS_ADDR	0x01
 #define ST_ISM330DHCX_REG_SHUB_REG_MASK		BIT(6)
 #define ST_ISM330DHCX_REG_FUNC_CFG_MASK		BIT(7)
+#define ST_ISM330DHCX_REG_ACCESS_MASK		GENMASK(7, 6)
 
 #define ST_ISM330DHCX_REG_FIFO_CTRL1_ADDR	0x07
 #define ST_ISM330DHCX_REG_FIFO_CTRL2_ADDR	0x08
@@ -134,6 +135,11 @@
 #define ST_ISM330DHCX_REG_OUTY_L_A_ADDR		0x2a
 #define ST_ISM330DHCX_REG_OUTZ_L_A_ADDR		0x2c
 
+#define ST_ISM330DHCX_REG_EMB_FUNC_STATUS_MAINPAGE	0x35
+#define ST_ISM330DHCX_REG_INT_STEP_DET_MASK	BIT(3)
+#define ST_ISM330DHCX_REG_INT_TILT_MASK		BIT(4)
+#define ST_ISM330DHCX_REG_INT_SIGMOT_MASK	BIT(5)
+
 #define ST_ISM330DHCX_REG_FIFO_STATUS1_ADDR	0x3a
 #define ST_ISM330DHCX_REG_FIFO_STATUS_DIFF	GENMASK(9, 0)
 
@@ -192,8 +198,27 @@
 #define ST_ISM330DHCX_REG_FIFO_DATA_OUT_TAG_ADDR	0x78
 
 /* embedded registers */
+#define ST_ISM330DHCX_EMB_FUNC_EN_A_ADDR	0x04
+#define ST_ISM330DHCX_PEDO_EN_MASK		BIT(3)
+#define ST_ISM330DHCX_TILT_EN_MASK		BIT(4)
+#define ST_ISM330DHCX_SIGN_MOTION_EN_MASK	BIT(5)
+
 #define ST_ISM330DHCX_REG_EMB_FUNC_INT1_ADDR	0x0a
 #define ST_ISM330DHCX_REG_EMB_FUNC_INT2_ADDR	0x0e
+#define ST_ISM330DHCX_INT_STEP_DET_MASK		BIT(3)
+#define ST_ISM330DHCX_INT_TILT_MASK		BIT(4)
+#define ST_ISM330DHCX_INT_SIGMOT_MASK		BIT(5)
+
+#define ST_ISM330DHCX_PAGE_RW_ADDR		0x17
+#define ST_ISM330DHCX_REG_EMB_FUNC_LIR_MASK	BIT(7)
+
+#define ST_ISM330DHCX_EMB_FUNC_FIFO_CFG_ADDR	0x44
+#define ST_ISM330DHCX_PEDO_FIFO_EN_MASK		BIT(6)
+
+#define ST_ISM330DHCX_REG_STEP_COUNTER_L_ADDR	0x62
+
+#define ST_ISM330DHCX_REG_EMB_FUNC_SRC_ADDR	0x64
+#define ST_ISM330DHCX_REG_PEDO_RST_STEP_MASK	BIT(7)
 
 /* Timestamp Tick 25us/LSB */
 #define ST_ISM330DHCX_TS_DELTA_NS		25000ULL
@@ -210,6 +235,8 @@
 #define ST_ISM330DHCX_FIFO_SAMPLE_SIZE		(ST_ISM330DHCX_SAMPLE_SIZE + \
 						 ST_ISM330DHCX_TAG_SIZE)
 #define ST_ISM330DHCX_MAX_FIFO_DEPTH		416
+
+#define ST_ISM330DHCX_MIN_ODR_IN_EMB_FUNC	26
 
 #define ST_ISM330DHCX_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
 
@@ -294,6 +321,9 @@ enum st_ism330dhcx_event_id {
 	ST_ISM330DHCX_EVENT_DTAP,
 #endif /* LINUX_VERSION_CODE */
 
+	ST_ISM330DHCX_EVENT_STEPC,
+	ST_ISM330DHCX_EVENT_SIGNMOT,
+
 	ST_ISM330DHCX_EVENT_MAX
 };
 
@@ -341,10 +371,20 @@ enum st_ism330dhcx_suspend_resume_register {
 	ST_ISM330DHCX_REG_FIFO_CTRL2_REG,
 	ST_ISM330DHCX_REG_FIFO_CTRL3_REG,
 	ST_ISM330DHCX_REG_FIFO_CTRL4_REG,
+	ST_ISM330DHCX_REG_EMB_FUNC_EN_A_REG,
+	ST_ISM330DHCX_REG_EMB_FUNC_FIFO_CFG_REG,
+	ST_ISM330DHCX_REG_PAGE_RW_REG,
 	ST_ISM330DHCX_SUSPEND_RESUME_REGS,
 };
 
+enum st_ism330dhcx_page_sel_register {
+	FUNC_CFG_ACCESS_0 = 0,
+	FUNC_CFG_ACCESS_SHUB_REG,
+	FUNC_CFG_ACCESS_FUNC_CFG,
+};
+
 struct st_ism330dhcx_suspend_resume_entry {
+	u8 page;
 	u8 addr;
 	u8 val;
 	u8 mask;
@@ -440,6 +480,7 @@ enum st_ism330dhcx_sensor_id {
 	ST_ISM330DHCX_ID_TEMP,
 	ST_ISM330DHCX_ID_EXT0,
 	ST_ISM330DHCX_ID_EXT1,
+	ST_ISM330DHCX_ID_STEP_COUNTER,
 	ST_ISM330DHCX_ID_MAX,
 };
 
@@ -462,6 +503,7 @@ st_ism330dhcx_buffered_sensor_list[] = {
 	[2] = ST_ISM330DHCX_ID_TEMP,
 	[3] = ST_ISM330DHCX_ID_EXT0,
 	[4] = ST_ISM330DHCX_ID_EXT1,
+	[5] = ST_ISM330DHCX_ID_STEP_COUNTER,
 };
 
 /**
@@ -591,6 +633,7 @@ struct st_ism330dhcx_hw {
 
 	u16 fsm_enable_mask;
 	u8 irq_reg;
+	u8 embfunc_irq_reg;
 	u8 embfunc_pg0_irq_reg;
 
 	u8 ext_data_len;
@@ -819,5 +862,10 @@ int st_ism330dhcx_update_threshold_events(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_update_duration_events(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_event_init(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_event_handler(struct st_ism330dhcx_hw *hw);
+
+/* embedded functions: step counter / event detector / significant motion */
+int st_ism330dhcx_embfunc_probe(struct st_ism330dhcx_hw *hw);
+int st_ism330dhcx_embfunc_handler_thread(struct st_ism330dhcx_hw *hw);
+int st_ism330dhcx_step_enable(struct st_ism330dhcx_sensor *sensor, bool enable);
 
 #endif /* ST_ISM330DHCX_H */

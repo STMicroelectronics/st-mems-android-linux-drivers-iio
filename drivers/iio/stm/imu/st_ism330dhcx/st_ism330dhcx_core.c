@@ -47,96 +47,133 @@ static struct st_ism330dhcx_selftest_table {
 static struct st_ism330dhcx_suspend_resume_entry
 	st_ism330dhcx_suspend_resume[ST_ISM330DHCX_SUSPEND_RESUME_REGS] = {
 		[ST_ISM330DHCX_CTRL1_XL_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_CTRL1_XL_ADDR,
 			.mask = GENMASK(3, 2),
 		},
 		[ST_ISM330DHCX_CTRL2_G_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_CTRL2_G_ADDR,
 			.mask = GENMASK(3, 2),
 		},
 		[ST_ISM330DHCX_REG_CTRL3_C_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_CTRL3_C_ADDR,
 			.mask = ST_ISM330DHCX_REG_BDU_MASK       |
 				ST_ISM330DHCX_REG_PP_OD_MASK     |
 				ST_ISM330DHCX_REG_H_LACTIVE_MASK,
 		},
 		[ST_ISM330DHCX_REG_CTRL4_C_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_CTRL4_C_ADDR,
 			.mask = ST_ISM330DHCX_REG_DRDY_MASK,
 		},
 		[ST_ISM330DHCX_REG_CTRL5_C_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_CTRL5_C_ADDR,
 			.mask = ST_ISM330DHCX_REG_ROUNDING_MASK,
 		},
 		[ST_ISM330DHCX_REG_CTRL10_C_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_CTRL10_C_ADDR,
 			.mask = ST_ISM330DHCX_REG_TIMESTAMP_EN_MASK,
 		},
 		[ST_ISM330DHCX_REG_TAP_CFG0_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_TAP_CFG0_ADDR,
 			.mask = ST_ISM330DHCX_REG_LIR_MASK |
 				ST_ISM330DHCX_TAP_EN_MASK |
 				ST_ISM330DHCX_REG_INT_CLR_ON_READ_MASK,
 		},
 		[ST_ISM330DHCX_REG_TAP_CFG1_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_TAP_CFG1_ADDR,
 			.mask = ST_ISM330DHCX_TAP_THS_X_MASK |
 				ST_ISM330DHCX_TAP_PRIORITY_MASK,
 		},
 		[ST_ISM330DHCX_REG_TAP_CFG2_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_TAP_CFG2_ADDR,
 			.mask = ST_ISM330DHCX_TAP_THS_Y_MASK |
 				ST_ISM330DHCX_INTERRUPTS_ENABLE_MASK,
 		},
 		[ST_ISM330DHCX_REG_TAP_THS_6D_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_TAP_THS_6D_ADDR,
 			.mask = ST_ISM330DHCX_TAP_THS_Z_MASK |
 				ST_ISM330DHCX_SIXD_THS_MASK,
 		},
 		[ST_ISM330DHCX_REG_INT_DUR2_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_INT_DUR2_ADDR,
 			.mask = ST_ISM330DHCX_SHOCK_MASK |
 				ST_ISM330DHCX_QUIET_MASK |
 				ST_ISM330DHCX_DUR_MASK,
 		},
 		[ST_ISM330DHCX_REG_WAKE_UP_THS_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_WAKE_UP_THS_ADDR,
 			.mask = ST_ISM330DHCX_WAKE_UP_THS_MASK |
 				ST_ISM330DHCX_SINGLE_DOUBLE_TAP_MASK,
 		},
 		[ST_ISM330DHCX_REG_WAKE_UP_DUR_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_WAKE_UP_DUR_ADDR,
 			.mask = ST_ISM330DHCX_WAKE_UP_DUR_MASK,
 		},
 		[ST_ISM330DHCX_REG_FREE_FALL_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_FREE_FALL_ADDR,
 			.mask = GENMASK(7, 0),
 		},
 		[ST_ISM330DHCX_REG_INT1_CTRL_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_INT1_CTRL_ADDR,
 			.mask = ST_ISM330DHCX_REG_INT_FIFO_TH_MASK,
 		},
 		[ST_ISM330DHCX_REG_INT2_CTRL_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_INT2_CTRL_ADDR,
 			.mask = ST_ISM330DHCX_REG_INT_FIFO_TH_MASK,
 		},
 		[ST_ISM330DHCX_REG_FIFO_CTRL1_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_FIFO_CTRL1_ADDR,
 			.mask = GENMASK(7, 0),
 		},
 		[ST_ISM330DHCX_REG_FIFO_CTRL2_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_FIFO_CTRL2_ADDR,
 			.mask = ST_ISM330DHCX_REG_FIFO_WTM8_MASK,
 		},
 		[ST_ISM330DHCX_REG_FIFO_CTRL3_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_FIFO_CTRL3_ADDR,
 			.mask = ST_ISM330DHCX_REG_BDR_XL_MASK |
 				ST_ISM330DHCX_REG_BDR_GY_MASK,
 		},
 		[ST_ISM330DHCX_REG_FIFO_CTRL4_REG] = {
+			.page = FUNC_CFG_ACCESS_0,
 			.addr = ST_ISM330DHCX_REG_FIFO_CTRL4_ADDR,
 			.mask = ST_ISM330DHCX_REG_DEC_TS_MASK |
 				ST_ISM330DHCX_REG_ODR_T_BATCH_MASK,
+		},
+		[ST_ISM330DHCX_REG_EMB_FUNC_EN_A_REG] = {
+			.page = FUNC_CFG_ACCESS_FUNC_CFG,
+			.addr = ST_ISM330DHCX_EMB_FUNC_EN_A_ADDR,
+			.mask = ST_ISM330DHCX_PEDO_EN_MASK |
+				ST_ISM330DHCX_TILT_EN_MASK |
+				ST_ISM330DHCX_SIGN_MOTION_EN_MASK,
+		},
+		[ST_ISM330DHCX_REG_EMB_FUNC_FIFO_CFG_REG] = {
+			.page = FUNC_CFG_ACCESS_FUNC_CFG,
+			.addr = ST_ISM330DHCX_EMB_FUNC_FIFO_CFG_ADDR,
+			.mask = ST_ISM330DHCX_PEDO_FIFO_EN_MASK,
+		},
+		[ST_ISM330DHCX_REG_PAGE_RW_REG] = {
+			.page = FUNC_CFG_ACCESS_FUNC_CFG,
+			.addr = ST_ISM330DHCX_PAGE_RW_ADDR,
+			.mask = ST_ISM330DHCX_REG_EMB_FUNC_LIR_MASK,
 		},
 	};
 
@@ -475,6 +512,7 @@ int st_ism330dhcx_set_odr(struct st_ism330dhcx_sensor *sensor, int req_odr,
 	case ST_ISM330DHCX_ID_TEMP:
 	case ST_ISM330DHCX_ID_EXT0:
 	case ST_ISM330DHCX_ID_EXT1:
+	case ST_ISM330DHCX_ID_STEP_COUNTER:
 	case ST_ISM330DHCX_ID_ACC: {
 		int odr;
 		int i;
@@ -1343,10 +1381,12 @@ int st_ism330dhcx_get_int_reg(struct st_ism330dhcx_hw *hw)
 	case 1:
 		hw->irq_reg = ST_ISM330DHCX_REG_INT1_CTRL_ADDR;
 		hw->embfunc_pg0_irq_reg = ST_ISM330DHCX_REG_MD1_CFG_ADDR;
+		hw->embfunc_irq_reg = ST_ISM330DHCX_REG_EMB_FUNC_INT1_ADDR;
 		break;
 	case 2:
 		hw->irq_reg = ST_ISM330DHCX_REG_INT2_CTRL_ADDR;
 		hw->embfunc_pg0_irq_reg = ST_ISM330DHCX_REG_MD2_CFG_ADDR;
+		hw->embfunc_irq_reg = ST_ISM330DHCX_REG_EMB_FUNC_INT2_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -1551,19 +1591,23 @@ int st_ism330dhcx_probe(struct device *dev, int irq, struct regmap *regmap)
 	if (err < 0)
 		return err;
 
-	/* if fifo not supported just few sensors can be enabled */
-	if (hw->has_hw_fifo) {
-		err = st_ism330dhcx_event_init(hw);
-		if (err < 0)
-			return err;
-	}
-
 	for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_main_sensor_list_irq); i++) {
 		enum st_ism330dhcx_sensor_id id = st_ism330dhcx_main_sensor_list_irq[i];
 
 		hw->iio_devs[id] = st_ism330dhcx_alloc_iiodev(hw, id);
 		if (!hw->iio_devs[id])
 			continue;
+	}
+
+	/* if fifo not supported just few sensors can be enabled */
+	if (hw->has_hw_fifo) {
+		err = st_ism330dhcx_event_init(hw);
+		if (err < 0)
+			return err;
+
+		err = st_ism330dhcx_embfunc_probe(hw);
+		if (err < 0)
+			return err;
 	}
 
 	err = st_ism330dhcx_shub_probe(hw);
@@ -1601,17 +1645,52 @@ EXPORT_SYMBOL(st_ism330dhcx_probe);
 static int __maybe_unused st_ism330dhcx_bk_regs(struct st_ism330dhcx_hw *hw)
 {
 	unsigned int data;
+	bool restore = 0;
 	int i, err = 0;
 
 	mutex_lock(&hw->page_lock);
+
 	for (i = 0; i < ST_ISM330DHCX_SUSPEND_RESUME_REGS; i++) {
+		if (st_ism330dhcx_suspend_resume[i].page != FUNC_CFG_ACCESS_0) {
+			err = regmap_update_bits(hw->regmap,
+				     ST_ISM330DHCX_REG_FUNC_CFG_ACCESS_ADDR,
+				     ST_ISM330DHCX_REG_ACCESS_MASK,
+				     FIELD_PREP(ST_ISM330DHCX_REG_ACCESS_MASK,
+					 st_ism330dhcx_suspend_resume[i].page));
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to update %02x reg\n",
+					st_ism330dhcx_suspend_resume[i].addr);
+				break;
+			}
+
+			restore = 1;
+		}
+
 		err = regmap_read(hw->regmap,
 				  st_ism330dhcx_suspend_resume[i].addr,
 				  &data);
 		if (err < 0) {
-			dev_err(hw->dev, "failed to read whoami register\n");
-
+			dev_err(hw->dev,
+				"failed to save register %02x\n",
+				st_ism330dhcx_suspend_resume[i].addr);
 			goto out_lock;
+		}
+
+		if (restore) {
+			err = regmap_update_bits(hw->regmap,
+				     ST_ISM330DHCX_REG_FUNC_CFG_ACCESS_ADDR,
+				     ST_ISM330DHCX_REG_ACCESS_MASK,
+				     FIELD_PREP(ST_ISM330DHCX_REG_ACCESS_MASK,
+						FUNC_CFG_ACCESS_0));
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to update %02x reg\n",
+					st_ism330dhcx_suspend_resume[i].addr);
+				break;
+			}
+
+			restore = 0;
 		}
 
 		st_ism330dhcx_suspend_resume[i].val = data;
@@ -1625,23 +1704,56 @@ out_lock:
 
 static int __maybe_unused st_ism330dhcx_restore_regs(struct st_ism330dhcx_hw *hw)
 {
+	bool restore = 0;
 	int i, err = 0;
 
 	mutex_lock(&hw->page_lock);
+
 	for (i = 0; i < ST_ISM330DHCX_SUSPEND_RESUME_REGS; i++) {
+		if (st_ism330dhcx_suspend_resume[i].page != FUNC_CFG_ACCESS_0) {
+			err = regmap_update_bits(hw->regmap,
+				     ST_ISM330DHCX_REG_FUNC_CFG_ACCESS_ADDR,
+				     ST_ISM330DHCX_REG_ACCESS_MASK,
+				     FIELD_PREP(ST_ISM330DHCX_REG_ACCESS_MASK,
+					st_ism330dhcx_suspend_resume[i].page));
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to update %02x reg\n",
+					st_ism330dhcx_suspend_resume[i].addr);
+				break;
+			}
+
+			restore = 1;
+		}
+
 		err = regmap_update_bits(hw->regmap,
 					 st_ism330dhcx_suspend_resume[i].addr,
 					 st_ism330dhcx_suspend_resume[i].mask,
 					 st_ism330dhcx_suspend_resume[i].val);
 		if (err < 0) {
-			dev_err(hw->dev, "failed to read %02x reg\n",
+			dev_err(hw->dev,
+				"failed to update %02x reg\n",
 				st_ism330dhcx_suspend_resume[i].addr);
+			break;
+		}
 
-			goto out_lock;
+		if (restore) {
+			err = regmap_update_bits(hw->regmap,
+				     ST_ISM330DHCX_REG_FUNC_CFG_ACCESS_ADDR,
+				     ST_ISM330DHCX_REG_ACCESS_MASK,
+				     FIELD_PREP(ST_ISM330DHCX_REG_ACCESS_MASK,
+						FUNC_CFG_ACCESS_0));
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to update %02x reg\n",
+					st_ism330dhcx_suspend_resume[i].addr);
+				break;
+			}
+
+			restore = 0;
 		}
 	}
 
-out_lock:
 	mutex_unlock(&hw->page_lock);
 
 	return err;

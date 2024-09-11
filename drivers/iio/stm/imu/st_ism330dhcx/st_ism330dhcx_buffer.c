@@ -149,7 +149,7 @@ static int st_ism330dhcx_ts_odr(struct st_ism330dhcx_hw *hw)
 	int odr = 0;
 	u8 i;
 
-	for (i = ST_ISM330DHCX_ID_GYRO; i <= ST_ISM330DHCX_ID_EXT1; i++) {
+	for (i = ST_ISM330DHCX_ID_GYRO; i <= ST_ISM330DHCX_ID_STEP_COUNTER; i++) {
 		if (!hw->iio_devs[i])
 			continue;
 
@@ -200,7 +200,7 @@ int st_ism330dhcx_update_watermark(struct st_ism330dhcx_sensor *sensor,
 	int i, err;
 	u8 data;
 
-	for (i = ST_ISM330DHCX_ID_GYRO; i < ST_ISM330DHCX_ID_EXT0; i++) {
+	for (i = ST_ISM330DHCX_ID_GYRO; i <= ST_ISM330DHCX_ID_STEP_COUNTER; i++) {
 		if (!hw->iio_devs[i])
 			continue;
 
@@ -281,6 +281,9 @@ iio_dev *st_ism330dhcx_get_iiodev_from_tag(struct st_ism330dhcx_hw *hw,
 		break;
 	case ST_ISM330DHCX_EXT1_TAG:
 		iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_EXT1];
+		break;
+	case ST_ISM330DHCX_SC_TAG:
+		iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_STEP_COUNTER];
 		break;
 	default:
 		iio_dev = NULL;
@@ -377,6 +380,11 @@ static int st_ism330dhcx_read_fifo(struct st_ism330dhcx_hw *hw)
 				if (unlikely(drdymask >=
 						ST_ISM330DHCX_SAMPLE_DISCHARD)) {
 					continue;
+				}
+
+				if (sensor->id == ST_ISM330DHCX_ID_STEP_COUNTER) {
+					val = get_unaligned_le32(ptr + 2);
+					hw->tsample = val * hw->ts_delta_ns;
 				}
 
 				memcpy(iio_buf, ptr, ST_ISM330DHCX_SAMPLE_SIZE);
@@ -592,26 +600,23 @@ static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
 
 	disable_irq(hw->irq);
 
-	if (sensor->id == ST_ISM330DHCX_ID_EXT0 ||
-	    sensor->id == ST_ISM330DHCX_ID_EXT1) {
+	switch (sensor->id) {
+	case ST_ISM330DHCX_ID_EXT0:
+	case ST_ISM330DHCX_ID_EXT1:
 		err = st_ism330dhcx_shub_set_enable(sensor, enable);
 		if (err < 0)
 			goto out;
-	} else {
-		err = st_ism330dhcx_sensor_set_enable(sensor, enable);
+		break;
+	case ST_ISM330DHCX_ID_STEP_COUNTER:
+		err = st_ism330dhcx_step_enable(sensor, enable);
 		if (err < 0)
 			goto out;
-
-		err = st_ism330dhcx_set_sensor_batching_odr(sensor, enable);
-		if (err < 0)
-			goto out;
-	}
-
-	/*
-	 * this is an auxiliary sensor, it need to get batched
-	 * toghether at least with a primary sensor (Acc/Gyro)
-	 */
-	if (sensor->id == ST_ISM330DHCX_ID_TEMP) {
+		break;
+	case ST_ISM330DHCX_ID_TEMP:
+		/*
+		 * This is an auxiliary sensor, it need to get batched
+		 * toghether at least with a primary sensor (Acc/Gyro).
+		 */
 		if (!(hw->enable_mask & (BIT(ST_ISM330DHCX_ID_ACC) |
 					 BIT(ST_ISM330DHCX_ID_GYRO)))) {
 			struct st_ism330dhcx_sensor *acc_sensor;
@@ -627,12 +632,33 @@ static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
 			}
 
 			err = st_ism330dhcx_write_with_mask(hw,
-					acc_sensor->batch_reg.addr,
-					acc_sensor->batch_reg.mask,
-					data);
+						     acc_sensor->batch_reg.addr,
+						     acc_sensor->batch_reg.mask,
+						     data);
+			if (err < 0)
+				goto out;
+
+			err = st_ism330dhcx_write_with_mask(hw,
+						     sensor->batch_reg.addr,
+						     sensor->batch_reg.mask,
+						     data);
 			if (err < 0)
 				goto out;
 		}
+
+		err = st_ism330dhcx_sensor_set_enable(sensor, enable);
+		if (err < 0)
+			goto out;
+		break;
+	default:
+		err = st_ism330dhcx_sensor_set_enable(sensor, enable);
+		if (err < 0)
+			goto out;
+
+		err = st_ism330dhcx_set_sensor_batching_odr(sensor, enable);
+		if (err < 0)
+			goto out;
+		break;
 	}
 
 	err = st_ism330dhcx_update_watermark(sensor, sensor->watermark);
@@ -862,6 +888,8 @@ static irqreturn_t st_ism330dhcx_handler_thread(int irq, void *private)
 	st_ism330dhcx_read_fifo(hw);
 	clear_bit(ST_ISM330DHCX_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
+
+	st_ism330dhcx_embfunc_handler_thread(hw);
 
 	return st_ism330dhcx_event_handler(hw);
 }
