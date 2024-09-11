@@ -413,6 +413,9 @@ enum st_lsm6dsv16bx_event_id {
 	ST_LSM6DSV16BX_EVENT_DTAP,
 #endif /* LINUX_VERSION_CODE */
 
+	ST_LSM6DSV16BX_EVENT_STEPC,
+	ST_LSM6DSV16BX_EVENT_SIGNMOT,
+
 	ST_LSM6DSV16BX_EVENT_MAX
 };
 
@@ -563,9 +566,6 @@ enum st_lsm6dsv16bx_sensor_id {
 	ST_LSM6DSV16BX_ID_FSM_6,
 	ST_LSM6DSV16BX_ID_FSM_7,
 	ST_LSM6DSV16BX_ID_STEP_COUNTER,
-	ST_LSM6DSV16BX_ID_STEP_DETECTOR,
-	ST_LSM6DSV16BX_ID_SIGN_MOTION,
-	ST_LSM6DSV16BX_ID_TILT,
 	ST_LSM6DSV16BX_ID_MAX,
 };
 
@@ -613,9 +613,6 @@ static const enum st_lsm6dsv16bx_sensor_id st_lsm6dsv16bx_acc_dep_sensor_list[] 
 	[17] = ST_LSM6DSV16BX_ID_FSM_6,
 	[18] = ST_LSM6DSV16BX_ID_FSM_7,
 	[19] = ST_LSM6DSV16BX_ID_STEP_COUNTER,
-	[20] = ST_LSM6DSV16BX_ID_STEP_DETECTOR,
-	[21] = ST_LSM6DSV16BX_ID_SIGN_MOTION,
-	[22] = ST_LSM6DSV16BX_ID_TILT,
 };
 
 static const enum st_lsm6dsv16bx_sensor_id st_lsm6dsv16bx_buffered_sensor_list[] = {
@@ -649,16 +646,6 @@ static const enum st_lsm6dsv16bx_sensor_id st_lsm6dsv16bx_fsm_sensor_list[] = {
 	[5] = ST_LSM6DSV16BX_ID_FSM_5,
 	[6] = ST_LSM6DSV16BX_ID_FSM_6,
 	[7] = ST_LSM6DSV16BX_ID_FSM_7,
-};
-
-/**
- * The low power embedded function only sensor list
- */
-static const enum st_lsm6dsv16bx_sensor_id st_lsm6dsv16bx_embfunc_sensor_list[] = {
-	[0] = ST_LSM6DSV16BX_ID_STEP_COUNTER,
-	[1] = ST_LSM6DSV16BX_ID_STEP_DETECTOR,
-	[2] = ST_LSM6DSV16BX_ID_SIGN_MOTION,
-	[3] = ST_LSM6DSV16BX_ID_TILT,
 };
 
 #define ST_LSM6DSV16BX_ID_ALL_FSM_MLC (BIT(ST_LSM6DSV16BX_ID_MLC_0) | \
@@ -812,12 +799,14 @@ struct st_lsm6dsv16bx_sensor {
  * @vddio_supply: Voltage regulator for VDDIIO.
  * @mlc_config: MLC/FSM data register structure.
  * @preload_mlc: MLC/FSM preload flag.
+ * @has_hw_fifo: FIFO hw support flag.
  * @qvar_workqueue: QVAR workqueue (if enabled in Kconfig).
  * @iio_devs: Pointers to acc/gyro iio_dev instances.
  * @settings: ST IMU sensor settings.
  * @fs_table: ST IMU full scale table.
  * @odr_table: ST IMU output data rate table.
  * @en_tdm: TDM enable flag.
+ * @drdy_reg: Interrupt configuration register.
  * @embfunc_irq_reg: Embedded function irq configuration register (other).
  * @embfunc_pg0_irq_reg: Embedded function irq configuration register (page 0).
  * @freefall_threshold: Accelerometer threshold for free fall algorithm.
@@ -871,6 +860,8 @@ struct st_lsm6dsv16bx_hw {
 	struct regulator *vddio_supply;
 	struct st_lsm6dsv16bx_mlc_config_t *mlc_config;
 	bool preload_mlc;
+	bool has_hw_fifo;
+
 	struct workqueue_struct *qvar_workqueue;
 	struct iio_dev *iio_devs[ST_LSM6DSV16BX_ID_MAX];
 
@@ -880,6 +871,7 @@ struct st_lsm6dsv16bx_hw {
 
 	bool en_tdm;
 
+	u8 drdy_reg;
 	u8 embfunc_irq_reg;
 	u8 embfunc_pg0_irq_reg;
 
@@ -1057,7 +1049,7 @@ int st_lsm6dsv16bx_fsm_get_orientation(struct st_lsm6dsv16bx_hw *hw, u8 *data);
 int st_lsm6dsv16bx_update_batching(struct iio_dev *iio_dev, bool enable);
 int st_lsm6dsv16bx_get_batch_val(struct st_lsm6dsv16bx_sensor *sensor,
 				 int odr, int uodr, u8 *val);
-int st_lsm6dsv16bx_get_int_reg(struct st_lsm6dsv16bx_hw *hw, u8 *drdy_reg);
+int st_lsm6dsv16bx_get_int_reg(struct st_lsm6dsv16bx_hw *hw);
 
 int st_lsm6dsv16bx_qvar_probe(struct st_lsm6dsv16bx_hw *hw);
 int
@@ -1106,25 +1098,9 @@ int st_lsm6dsv16bx_update_duration_events(struct st_lsm6dsv16bx_hw *hw);
 int st_lsm6dsv16bx_event_handler(struct st_lsm6dsv16bx_hw *hw);
 
 /* embedded functions */
-int st_lsm6dsv16bx_probe_embfunc(struct st_lsm6dsv16bx_hw *hw);
-
-#ifdef CONFIG_IIO_ST_LSM6DSV16BX_EN_BASIC_FEATURES
+int st_lsm6dsv16bx_embfunc_probe(struct st_lsm6dsv16bx_hw *hw);
 int st_lsm6dsv16bx_embfunc_handler_thread(struct st_lsm6dsv16bx_hw *hw);
-int st_lsm6dsv16bx_step_counter_set_enable(struct st_lsm6dsv16bx_sensor *sensor,
-					   bool enable);
-#else /* CONFIG_IIO_ST_LSM6DSV16BX_EN_BASIC_FEATURES */
-static inline int
-st_lsm6dsv16bx_embfunc_handler_thread(struct st_lsm6dsv16bx_hw *hw)
-{
-	return 0;
-}
-
-static inline int
-st_lsm6dsv16bx_step_counter_set_enable(struct st_lsm6dsv16bx_sensor *sensor,
-				       bool enable)
-{
-	return 0;
-}
-#endif /* CONFIG_IIO_ST_LSM6DSV16BX_EN_BASIC_FEATURES */
+int st_lsm6dsv16bx_step_enable(struct st_lsm6dsv16bx_sensor *sensor,
+			       bool enable);
 
 #endif /* ST_LSM6DSV16BX_H */

@@ -594,9 +594,6 @@ int st_lsm6dsv16bx_set_odr(struct st_lsm6dsv16bx_sensor *sensor,
 	case ST_LSM6DSV16BX_ID_MLC_3:
 	case ST_LSM6DSV16BX_ID_TEMP:
 	case ST_LSM6DSV16BX_ID_STEP_COUNTER:
-	case ST_LSM6DSV16BX_ID_STEP_DETECTOR:
-	case ST_LSM6DSV16BX_ID_SIGN_MOTION:
-	case ST_LSM6DSV16BX_ID_TILT:
 	case ST_LSM6DSV16BX_ID_ACC:
 		odr = st_lsm6dsv16bx_check_acc_odr_dependency(sensor, req_odr,
 							      req_uodr);
@@ -964,7 +961,7 @@ static int st_lsm6dsv16bx_of_get_pin(struct st_lsm6dsv16bx_hw *hw, int *pin)
 	return of_property_read_u32(np, "st,int-pin", pin);
 }
 
-int st_lsm6dsv16bx_get_int_reg(struct st_lsm6dsv16bx_hw *hw, u8 *drdy_reg)
+int st_lsm6dsv16bx_get_int_reg(struct st_lsm6dsv16bx_hw *hw)
 {
 	int int_pin;
 
@@ -980,12 +977,12 @@ int st_lsm6dsv16bx_get_int_reg(struct st_lsm6dsv16bx_hw *hw, u8 *drdy_reg)
 	case 1:
 		hw->embfunc_pg0_irq_reg = ST_LSM6DSV16BX_REG_MD1_CFG_ADDR;
 		hw->embfunc_irq_reg = ST_LSM6DSV16BX_REG_EMB_FUNC_INT1_ADDR;
-		*drdy_reg = ST_LSM6DSV16BX_REG_INT1_CTRL_ADDR;
+		hw->drdy_reg = ST_LSM6DSV16BX_REG_INT1_CTRL_ADDR;
 		break;
 	case 2:
 		hw->embfunc_pg0_irq_reg = ST_LSM6DSV16BX_REG_MD2_CFG_ADDR;
 		hw->embfunc_irq_reg = ST_LSM6DSV16BX_REG_EMB_FUNC_INT2_ADDR;
-		*drdy_reg = ST_LSM6DSV16BX_REG_INT2_CTRL_ADDR;
+		hw->drdy_reg = ST_LSM6DSV16BX_REG_INT2_CTRL_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -1243,12 +1240,7 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 	odr = sensor->odr;
 	uodr = sensor->uodr;
 
-	/* disable interrupt on FIFO watermak */
-	ret = st_lsm6dsv16bx_get_int_reg(hw, &drdy_reg);
-	if (ret < 0)
-		goto restore_regs;
-
-	ret = st_lsm6dsv16bx_write_with_mask(hw, drdy_reg,
+	ret = st_lsm6dsv16bx_write_with_mask(hw, hw->drdy_reg,
 					     ST_LSM6DSV16BX_INT_FIFO_TH_MASK,
 					     0);
 	if (ret < 0)
@@ -1615,8 +1607,11 @@ static int st_lsm6dsv16bx_tdm_init_device(struct st_lsm6dsv16bx_hw *hw)
 
 static int st_lsm6dsv16bx_init_device(struct st_lsm6dsv16bx_hw *hw)
 {
-	u8 drdy_reg;
 	int err;
+
+	err = st_lsm6dsv16bx_get_int_reg(hw);
+	if (err < 0)
+		dev_info(hw->dev, "interrupt lines not configured\n");
 
 	/* latch interrupts */
 	err = st_lsm6dsv16bx_write_with_mask(hw, ST_LSM6DSV16BX_REG_TAP_CFG0_ADDR,
@@ -1634,10 +1629,6 @@ static int st_lsm6dsv16bx_init_device(struct st_lsm6dsv16bx_hw *hw)
 	err = st_lsm6dsv16bx_write_with_mask(hw,
 				       ST_LSM6DSV16BX_REG_FUNCTIONS_ENABLE_ADDR,
 				       ST_LSM6DSV16BX_TIMESTAMP_EN_MASK, 1);
-	if (err < 0)
-		return err;
-
-	err = st_lsm6dsv16bx_get_int_reg(hw, &drdy_reg);
 	if (err < 0)
 		return err;
 
@@ -1660,10 +1651,7 @@ static int st_lsm6dsv16bx_init_device(struct st_lsm6dsv16bx_hw *hw)
 			return err;
 	}
 
-	/* enable FIFO watermak interrupt */
-	return st_lsm6dsv16bx_write_with_mask(hw, drdy_reg,
-					     ST_LSM6DSV16BX_INT_FIFO_TH_MASK,
-					     1);
+	return err;
 }
 
 static struct iio_dev *
@@ -1850,6 +1838,7 @@ int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
 	hw->dev = dev;
 	hw->irq = irq;
 	hw->regmap = regmap;
+	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	err = st_lsm6dsv16bx_power_enable(hw);
 	if (err != 0)
@@ -1905,26 +1894,24 @@ int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
 			return -ENOMEM;
 	}
 
-#ifdef IIO_ST_ISM330DLC_EN_BASIC_FEATURES
-	/* allocate step counter before buffer setup because use FIFO */
-	err = st_lsm6dsv16bx_probe_embfunc(hw);
-	if (err < 0)
-		return err;
-#endif /* IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
-
-	err = st_lsm6dsv16bx_event_init(hw);
-	if (err < 0)
-		return err;
-
-	if (hw->settings->st_qvar_probe &&
-	    (!dev_fwnode(dev) ||
-	     device_property_read_bool(dev, "enable-qvar"))) {
-		err = st_lsm6dsv16bx_qvar_probe(hw);
-		if (err)
+	if (hw->has_hw_fifo) {
+		err = st_lsm6dsv16bx_event_init(hw);
+		if (err < 0)
 			return err;
-	}
 
-	if (hw->irq > 0) {
+		/* allocate step counter before buffer setup because use FIFO */
+		err = st_lsm6dsv16bx_embfunc_probe(hw);
+		if (err < 0)
+			return err;
+
+		if (hw->settings->st_qvar_probe &&
+		    (!dev_fwnode(dev) ||
+		     device_property_read_bool(dev, "enable-qvar"))) {
+			err = st_lsm6dsv16bx_qvar_probe(hw);
+			if (err)
+				return err;
+		}
+
 		err = st_lsm6dsv16bx_buffers_setup(hw);
 		if (err < 0)
 			return err;

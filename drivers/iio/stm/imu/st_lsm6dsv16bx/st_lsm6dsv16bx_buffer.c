@@ -531,7 +531,7 @@ int st_lsm6dsv16bx_update_fifo(struct iio_dev *iio_dev, bool enable)
 			goto out;
 		break;
 	case ST_LSM6DSV16BX_ID_STEP_COUNTER:
-		err = st_lsm6dsv16bx_step_counter_set_enable(sensor, enable);
+		err = st_lsm6dsv16bx_step_enable(sensor, enable);
 		if (err < 0)
 			goto out;
 		break;
@@ -666,9 +666,19 @@ static const struct iio_buffer_setup_ops st_lsm6dsv16bx_fifo_ops = {
 
 static int st_lsm6dsv16bx_fifo_init(struct st_lsm6dsv16bx_hw *hw)
 {
-	return st_lsm6dsv16bx_write_with_mask(hw,
-					   ST_LSM6DSV16BX_REG_FIFO_CTRL4_ADDR,
-					   ST_LSM6DSV16BX_DEC_TS_BATCH_MASK, 1);
+	int err;
+
+	err = st_lsm6dsv16bx_write_with_mask(hw,
+					     ST_LSM6DSV16BX_REG_FIFO_CTRL4_ADDR,
+					     ST_LSM6DSV16BX_DEC_TS_BATCH_MASK,
+					     1);
+	if (err < 0)
+		return err;
+
+	/* enable FIFO watermak interrupt */
+	return st_lsm6dsv16bx_write_with_mask(hw, hw->drdy_reg,
+					      ST_LSM6DSV16BX_INT_FIFO_TH_MASK,
+					      1);
 }
 
 static const struct iio_trigger_ops st_lsm6dsv16bx_trigger_ops = {
