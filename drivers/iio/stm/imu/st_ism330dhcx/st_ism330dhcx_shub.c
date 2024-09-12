@@ -89,7 +89,7 @@ static const struct st_ism330dhcx_ext_dev_settings st_ism330dhcx_ext_dev_table[]
 		.wai_addr = 0x4f,
 		.wai_val = 0x40,
 		.odr_table = {
-			.odr_size = 5,
+			.size = 5,
 			.reg = {
 				.addr = 0x60,
 				.mask = GENMASK(3, 2),
@@ -149,7 +149,7 @@ static const struct st_ism330dhcx_ext_dev_settings st_ism330dhcx_ext_dev_table[]
 		.wai_addr = 0x0f,
 		.wai_val = 0xb1,
 		.odr_table = {
-			.odr_size = 4,
+			.size = 4,
 			.reg = {
 				.addr = 0x10,
 				.mask = GENMASK(6, 4),
@@ -184,7 +184,7 @@ static const struct st_ism330dhcx_ext_dev_settings st_ism330dhcx_ext_dev_table[]
 		.wai_addr = 0x0f,
 		.wai_val = 0xb3,
 		.odr_table = {
-			.odr_size = 5,
+			.size = 5,
 			.reg = {
 				.addr = 0x10,
 				.mask = GENMASK(6, 4),
@@ -545,11 +545,11 @@ static int st_ism330dhcx_shub_get_odr_val(struct st_ism330dhcx_sensor *sensor,
 	struct st_ism330dhcx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	int i;
 
-	for (i = 0; i < ext_info->ext_dev_settings->odr_table.odr_size; i++)
+	for (i = 0; i < ext_info->ext_dev_settings->odr_table.size; i++)
 		if (ext_info->ext_dev_settings->odr_table.odr_avl[i].hz >= odr)
 			break;
 
-	if (i == ext_info->ext_dev_settings->odr_table.odr_size)
+	if (i == ext_info->ext_dev_settings->odr_table.size)
 		return -EINVAL;
 
 	*val = ext_info->ext_dev_settings->odr_table.odr_avl[i].val;

@@ -116,25 +116,68 @@ int st_ism330dhcx_set_fifo_mode(struct st_ism330dhcx_hw *hw,
  * @param  enable: enable or disable batching mode
  * @return  0 FIFO configured accordingly, non zero otherwise
  */
-int __st_ism330dhcx_set_sensor_batching_odr(struct st_ism330dhcx_sensor *sensor,
-					 bool enable)
+static inline int
+st_ism330dhcx_set_sensor_batching_odr(struct st_ism330dhcx_sensor *s,
+				      bool enable)
 {
-	struct st_ism330dhcx_hw *hw = sensor->hw;
+	enum st_ism330dhcx_sensor_id id = s->id;
+	struct st_ism330dhcx_hw *hw = s->hw;
+	int req_odr = enable ? s->odr : 0;
 	u8 data = 0;
 	int err;
-	int podr, puodr;
 
-	if (enable) {
-		err = st_ism330dhcx_get_odr_val(sensor->id, sensor->odr,
-					     sensor->uodr, &podr, &puodr,
-					     &data);
-		if (err < 0)
-			return err;
+	switch (id) {
+	case ST_ISM330DHCX_ID_EXT0:
+	case ST_ISM330DHCX_ID_EXT1:
+	case ST_ISM330DHCX_ID_TEMP:
+	case ST_ISM330DHCX_ID_ACC: {
+		int odr;
+		int i;
+
+		if (id == ST_ISM330DHCX_ID_TEMP) {
+			if (enable) {
+				err = st_ism330dhcx_get_batch_val(s, req_odr,
+								  0, &data);
+				if (err < 0)
+					return err;
+			}
+
+			err = st_ism330dhcx_write_with_mask(hw,
+				      hw->odr_table[id].batching_reg.addr,
+				      hw->odr_table[id].batching_reg.mask,
+				      data);
+			if (err < 0)
+				return err;
+		}
+
+		id = ST_ISM330DHCX_ID_ACC;
+		for (i = ST_ISM330DHCX_ID_ACC; i < ST_ISM330DHCX_ID_MAX; i++) {
+			if (!hw->iio_devs[i] || i == s->id)
+				continue;
+
+			odr = st_ism330dhcx_check_odr_dependency(hw, req_odr,
+								 0, i);
+			if (odr != req_odr)
+				return 0;
+
+			req_odr = max_t(int, req_odr, odr);
+		}
+		break;
+	}
+	case ST_ISM330DHCX_ID_GYRO:
+		break;
+	default:
+		return 0;
 	}
 
-	err = __st_ism330dhcx_write_with_mask(hw, sensor->batch_reg.addr,
-					   sensor->batch_reg.mask, data);
-	return err < 0 ? err : 0;
+	err = st_ism330dhcx_get_batch_val(s, req_odr, 0, &data);
+	if (err < 0)
+		return err;
+
+	return st_ism330dhcx_write_with_mask(hw,
+				      hw->odr_table[id].batching_reg.addr,
+				      hw->odr_table[id].batching_reg.mask,
+				      data);
 }
 
 /**
@@ -160,27 +203,6 @@ static int st_ism330dhcx_ts_odr(struct st_ism330dhcx_hw *hw)
 	}
 
 	return odr;
-}
-
-/**
- * Setting sensor ODR in batching mode
- *
- * @param  sensor: ST IMU sensor instance
- * @param  enable: enable or disable batching mode
- * @return  0 FIFO configured accordingly, non zero otherwise
- */
-static inline int
-st_ism330dhcx_set_sensor_batching_odr(struct st_ism330dhcx_sensor *sensor,
-				   bool enable)
-{
-	struct st_ism330dhcx_hw *hw = sensor->hw;
-	int err;
-
-	mutex_lock(&hw->page_lock);
-	err = __st_ism330dhcx_set_sensor_batching_odr(sensor, enable);
-	mutex_unlock(&hw->page_lock);
-
-	return err;
 }
 
 /**
@@ -596,7 +618,6 @@ static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
 {
 	struct st_ism330dhcx_hw *hw = sensor->hw;
 	int err;
-	int podr, puodr;
 
 	disable_irq(hw->irq);
 
@@ -609,44 +630,6 @@ static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
 		break;
 	case ST_ISM330DHCX_ID_STEP_COUNTER:
 		err = st_ism330dhcx_step_enable(sensor, enable);
-		if (err < 0)
-			goto out;
-		break;
-	case ST_ISM330DHCX_ID_TEMP:
-		/*
-		 * This is an auxiliary sensor, it need to get batched
-		 * toghether at least with a primary sensor (Acc/Gyro).
-		 */
-		if (!(hw->enable_mask & (BIT(ST_ISM330DHCX_ID_ACC) |
-					 BIT(ST_ISM330DHCX_ID_GYRO)))) {
-			struct st_ism330dhcx_sensor *acc_sensor;
-			u8 data = 0;
-
-			acc_sensor = iio_priv(hw->iio_devs[ST_ISM330DHCX_ID_ACC]);
-			if (enable) {
-				err = st_ism330dhcx_get_odr_val(ST_ISM330DHCX_ID_ACC,
-						sensor->odr, sensor->uodr,
-						&podr, &puodr, &data);
-				if (err < 0)
-					goto out;
-			}
-
-			err = st_ism330dhcx_write_with_mask(hw,
-						     acc_sensor->batch_reg.addr,
-						     acc_sensor->batch_reg.mask,
-						     data);
-			if (err < 0)
-				goto out;
-
-			err = st_ism330dhcx_write_with_mask(hw,
-						     sensor->batch_reg.addr,
-						     sensor->batch_reg.mask,
-						     data);
-			if (err < 0)
-				goto out;
-		}
-
-		err = st_ism330dhcx_sensor_set_enable(sensor, enable);
 		if (err < 0)
 			goto out;
 		break;

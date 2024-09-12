@@ -403,24 +403,27 @@ struct st_ism330dhcx_suspend_resume_entry {
  * hz: Most significant part of ODR value (in Hz).
  * uhz: Least significant part of ODR value (in micro Hz).
  * val: Register value tu set ODR.
+ * batch_val: Batching ODR register value.
  */
 struct st_ism330dhcx_odr {
 	int hz;
 	int uhz;
 	u8 val;
+	u8 batch_val;
 };
 
 /**
  * @struct st_ism330dhcx_odr_table_entry
  * @brief ODR sensor table
  *
- * odr_size: ODR table size.
+ * size: ODR table size.
  * reg: Sensor register description for ODR (address and mask).
  * odr_avl: All supported ODR values.
  */
 struct st_ism330dhcx_odr_table_entry {
-	u8 odr_size;
+	u8 size;
 	struct st_ism330dhcx_reg reg;
+	struct st_ism330dhcx_reg batching_reg;
 	struct st_ism330dhcx_odr odr_avl[ST_ISM330DHCX_ODR_LIST_SIZE];
 };
 
@@ -450,8 +453,8 @@ struct st_ism330dhcx_fs {
 #define ST_ISM330DHCX_FS_TEMP_LIST_SIZE		1
 struct st_ism330dhcx_fs_table_entry {
 	struct st_ism330dhcx_reg reg;
-	u8 size;
 	struct st_ism330dhcx_fs fs_avl[ST_ISM330DHCX_FS_LIST_SIZE];
+	u8 size;
 };
 
 #define ST_ISM330DHCX_ACC_FS_2G_GAIN	IIO_G_TO_M_S_2(61000)
@@ -785,6 +788,28 @@ static inline bool st_ism330dhcx_is_fifo_enabled(struct st_ism330dhcx_hw *hw)
 				  BIT(ST_ISM330DHCX_ID_EXT1));
 }
 
+static inline
+u16 st_ism330dhcx_check_odr_dependency(struct st_ism330dhcx_hw *hw,
+				       int odr, int uodr,
+				       enum st_ism330dhcx_sensor_id ref_id)
+{
+	struct st_ism330dhcx_sensor *ref = iio_priv(hw->iio_devs[ref_id]);
+	bool enable = odr > 0;
+	u16 ret;
+
+	if (enable) {
+		/* uodr not used */
+		if (hw->enable_mask & BIT(ref_id))
+			ret = max_t(int, ref->odr, odr);
+		else
+			ret = odr;
+	} else {
+		ret = (hw->enable_mask & BIT(ref_id)) ? ref->odr : 0;
+	}
+
+	return ret;
+}
+
 int st_ism330dhcx_probe(struct device *dev, int irq,
 			struct regmap *regmap);
 int st_ism330dhcx_shub_set_enable(struct st_ism330dhcx_sensor *sensor,
@@ -802,6 +827,8 @@ int st_ism330dhcx_get_odr_val(enum st_ism330dhcx_sensor_id id,
 			      int *podr, int *puodr, u8 *val);
 int st_ism330dhcx_set_odr(struct st_ism330dhcx_sensor *sensor, int req_odr,
 			  int req_uodr);
+int st_ism330dhcx_get_batch_val(struct st_ism330dhcx_sensor *sensor,
+				int odr, int uodr, u8 *val);
 int st_ism330dhcx_update_watermark(struct st_ism330dhcx_sensor *sensor,
 				   u16 watermark);
 ssize_t st_ism330dhcx_flush_fifo(struct device *dev,
@@ -825,8 +852,6 @@ int st_ism330dhcx_set_page_access(struct st_ism330dhcx_hw *hw,
 int st_ism330dhcx_suspend_fifo(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_set_fifo_mode(struct st_ism330dhcx_hw *hw,
 				enum st_ism330dhcx_fifo_mode fifo_mode);
-int __st_ism330dhcx_set_sensor_batching_odr(struct st_ism330dhcx_sensor *sensor,
-					    bool enable);
 int st_ism330dhcx_update_batching(struct iio_dev *iio_dev, bool enable);
 int st_ism330dhcx_reset_hwts(struct st_ism330dhcx_hw *hw);
 

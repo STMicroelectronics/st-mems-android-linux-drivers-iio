@@ -185,39 +185,52 @@ static struct st_ism330dhcx_suspend_resume_entry
  */
 static const struct st_ism330dhcx_odr_table_entry st_ism330dhcx_odr_table[] = {
 	[ST_ISM330DHCX_ID_ACC] = {
-		.odr_size = 8,
+		.size = 8,
 		.reg = {
 			.addr = ST_ISM330DHCX_CTRL1_XL_ADDR,
 			.mask = GENMASK(7, 4),
 		},
-		.odr_avl[0] = {   0, 0,       0x00 },
-		.odr_avl[1] = {  12, 500000,  0x01 },
-		.odr_avl[2] = {  26, 0,       0x02 },
-		.odr_avl[3] = {  52, 0,       0x03 },
-		.odr_avl[4] = { 104, 0,       0x04 },
-		.odr_avl[5] = { 208, 0,       0x05 },
-		.odr_avl[6] = { 416, 0,       0x06 },
-		.odr_avl[7] = { 833, 0,       0x07 },
+		.batching_reg = {
+			.addr = ST_ISM330DHCX_REG_FIFO_CTRL3_ADDR,
+			.mask = ST_ISM330DHCX_REG_BDR_XL_MASK,
+		},
+		.odr_avl[0] = {   0, 0,       0x00, 0x00 },
+		.odr_avl[1] = {  12, 500000,  0x01, 0x01 },
+		.odr_avl[2] = {  26, 0,       0x02, 0x02 },
+		.odr_avl[3] = {  52, 0,       0x03, 0x03 },
+		.odr_avl[4] = { 104, 0,       0x04, 0x04 },
+		.odr_avl[5] = { 208, 0,       0x05, 0x05 },
+		.odr_avl[6] = { 416, 0,       0x06, 0x06 },
+		.odr_avl[7] = { 833, 0,       0x07, 0x07 },
 	},
 	[ST_ISM330DHCX_ID_GYRO] = {
-		.odr_size = 8,
+		.size = 8,
 		.reg = {
 			.addr = ST_ISM330DHCX_CTRL2_G_ADDR,
 			.mask = GENMASK(7, 4),
 		},
-		.odr_avl[0] = {   0, 0,       0x00 },
-		.odr_avl[1] = {  12, 500000,  0x01 },
-		.odr_avl[2] = {  26, 0,       0x02 },
-		.odr_avl[3] = {  52, 0,       0x03 },
-		.odr_avl[4] = { 104, 0,       0x04 },
-		.odr_avl[5] = { 208, 0,       0x05 },
-		.odr_avl[6] = { 416, 0,       0x06 },
-		.odr_avl[7] = { 833, 0,       0x07 },
+		.batching_reg = {
+			.addr = ST_ISM330DHCX_REG_FIFO_CTRL3_ADDR,
+			.mask = ST_ISM330DHCX_REG_BDR_GY_MASK,
+		},
+		.odr_avl[0] = {   0, 0,       0x00, 0x00 },
+		.odr_avl[1] = {  12, 500000,  0x01, 0x01 },
+		.odr_avl[2] = {  26, 0,       0x02, 0x02 },
+		.odr_avl[3] = {  52, 0,       0x03, 0x03 },
+		.odr_avl[4] = { 104, 0,       0x04, 0x04 },
+		.odr_avl[5] = { 208, 0,       0x05, 0x05 },
+		.odr_avl[6] = { 416, 0,       0x06, 0x06 },
+		.odr_avl[7] = { 833, 0,       0x07, 0x07 },
 	},
 	[ST_ISM330DHCX_ID_TEMP] = {
-		.odr_size = 2,
-		.odr_avl[0] = {  0, 0,        0x00 },
-		.odr_avl[1] = { 12, 500000,   0x02 },
+		.size = 3,
+		.batching_reg = {
+			.addr = ST_ISM330DHCX_REG_FIFO_CTRL4_ADDR,
+			.mask = ST_ISM330DHCX_REG_ODR_T_BATCH_MASK,
+		},
+		.odr_avl[0] = {  0,      0,   0x00,  0x00 },
+		.odr_avl[1] = { 12, 500000,   0x02,  0x02 },
+		.odr_avl[2] = { 52,      0,   0x03,  0x03 },
 	},
 };
 
@@ -452,7 +465,7 @@ int st_ism330dhcx_get_odr_val(enum st_ism330dhcx_sensor_id id, int odr, int uodr
 	int sensor_odr;
 	int all_odr = ST_ISM330DHCX_ODR_EXPAND(odr, uodr);
 
-	for (i = 0; i < st_ism330dhcx_odr_table[id].odr_size; i++) {
+	for (i = 0; i < st_ism330dhcx_odr_table[id].size; i++) {
 		sensor_odr =
 		   ST_ISM330DHCX_ODR_EXPAND(st_ism330dhcx_odr_table[id].odr_avl[i].hz,
 		   st_ism330dhcx_odr_table[id].odr_avl[i].uhz);
@@ -460,7 +473,7 @@ int st_ism330dhcx_get_odr_val(enum st_ism330dhcx_sensor_id id, int odr, int uodr
 			break;
 	}
 
-	if (i == st_ism330dhcx_odr_table[id].odr_size)
+	if (i == st_ism330dhcx_odr_table[id].size)
 		return -EINVAL;
 
 	*val = st_ism330dhcx_odr_table[id].odr_avl[i].val;
@@ -470,25 +483,28 @@ int st_ism330dhcx_get_odr_val(enum st_ism330dhcx_sensor_id id, int odr, int uodr
 	return 0;
 }
 
-static u16 st_ism330dhcx_check_odr_dependency(struct st_ism330dhcx_hw *hw,
-					   int odr, int uodr,
-					   enum st_ism330dhcx_sensor_id ref_id)
+int st_ism330dhcx_get_batch_val(struct st_ism330dhcx_sensor *sensor,
+				int odr, int uodr, u8 *val)
 {
-	struct st_ism330dhcx_sensor *ref = iio_priv(hw->iio_devs[ref_id]);
-	bool enable = odr > 0;
-	u16 ret;
+	int required_odr = ST_ISM330DHCX_ODR_EXPAND(odr, uodr);
+	enum st_ism330dhcx_sensor_id id = sensor->id;
+	int sensor_odr;
+	int i;
 
-	if (enable) {
-		/* uodr not used */
-		if (hw->enable_mask & BIT(ref_id))
-			ret = max_t(int, ref->odr, odr);
-		else
-			ret = odr;
-	} else {
-		ret = (hw->enable_mask & BIT(ref_id)) ? ref->odr : 0;
+	for (i = 0; i < st_ism330dhcx_odr_table[id].size; i++) {
+		sensor_odr = ST_ISM330DHCX_ODR_EXPAND(
+				st_ism330dhcx_odr_table[id].odr_avl[i].hz,
+				st_ism330dhcx_odr_table[id].odr_avl[i].uhz);
+		if (sensor_odr >= required_odr)
+			break;
 	}
 
-	return ret;
+	if (i == st_ism330dhcx_odr_table[id].size)
+		return -EINVAL;
+
+	*val = st_ism330dhcx_odr_table[id].odr_avl[i].batch_val;
+
+	return 0;
 }
 
 /**

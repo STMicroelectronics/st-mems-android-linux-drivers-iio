@@ -136,13 +136,13 @@ static int st_ism330dhcx_get_xl_odr(struct st_ism330dhcx_hw *hw, int *xl_odr)
 	if (odr_xl == 0)
 		return 0;
 
-	for (i = 0; i < hw->odr_table[ST_ISM330DHCX_ID_ACC].odr_size; i++) {
+	for (i = 0; i < hw->odr_table[ST_ISM330DHCX_ID_ACC].size; i++) {
 		if (odr_xl ==
 		     hw->odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[i].val)
 			break;
 	}
 
-	if (i == hw->odr_table[ST_ISM330DHCX_ID_ACC].odr_size)
+	if (i == hw->odr_table[ST_ISM330DHCX_ID_ACC].size)
 		return -EINVAL;
 
 	/* for frequency values with decimal part just return the integer */
