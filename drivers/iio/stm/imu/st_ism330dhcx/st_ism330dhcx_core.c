@@ -1591,8 +1591,8 @@ int st_ism330dhcx_probe(struct device *dev, int irq, struct regmap *regmap)
 	if (err < 0)
 		return err;
 
-	for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_main_sensor_list_irq); i++) {
-		enum st_ism330dhcx_sensor_id id = st_ism330dhcx_main_sensor_list_irq[i];
+	for (i = 0; i < ARRAY_SIZE(st_ism330dhcx_main_sensor_list); i++) {
+		enum st_ism330dhcx_sensor_id id = st_ism330dhcx_main_sensor_list[i];
 
 		hw->iio_devs[id] = st_ism330dhcx_alloc_iiodev(hw, id);
 		if (!hw->iio_devs[id])

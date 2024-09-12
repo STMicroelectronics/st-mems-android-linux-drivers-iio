@@ -484,12 +484,6 @@ enum st_ism330dhcx_sensor_id {
 	ST_ISM330DHCX_ID_MAX,
 };
 
-static const enum st_ism330dhcx_sensor_id st_ism330dhcx_main_sensor_list_irq[] = {
-	 [0] = ST_ISM330DHCX_ID_GYRO,
-	 [1] = ST_ISM330DHCX_ID_ACC,
-	 [2] = ST_ISM330DHCX_ID_TEMP,
-};
-
 static const enum st_ism330dhcx_sensor_id st_ism330dhcx_main_sensor_list[] = {
 	 [0] = ST_ISM330DHCX_ID_GYRO,
 	 [1] = ST_ISM330DHCX_ID_ACC,
