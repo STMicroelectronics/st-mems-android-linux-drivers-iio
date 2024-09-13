@@ -413,7 +413,7 @@ ssize_t st_lsm6dsv16bx_get_max_watermark(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 
 	return sprintf(buf, "%d\n", sensor->max_watermark);
@@ -423,7 +423,7 @@ ssize_t st_lsm6dsv16bx_get_watermark(struct device *dev,
 				     struct device_attribute *attr,
 				     char *buf)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 
 	return sprintf(buf, "%d\n", sensor->watermark);
@@ -433,7 +433,7 @@ ssize_t st_lsm6dsv16bx_set_watermark(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t size)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
@@ -467,7 +467,7 @@ ssize_t st_lsm6dsv16bx_flush_fifo(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t size)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
 	s64 type;

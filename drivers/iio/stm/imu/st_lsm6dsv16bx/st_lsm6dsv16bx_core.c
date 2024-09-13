@@ -1090,7 +1090,8 @@ st_lsm6dsv16bx_sysfs_sampling_frequency_avail(struct device *dev,
 					      struct device_attribute *attr,
 					      char *buf)
 {
-	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
+	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	enum st_lsm6dsv16bx_sensor_id id = sensor->id;
 	int i, len = 0;
 
@@ -1113,7 +1114,8 @@ st_lsm6dsv16bx_sysfs_scale_avail(struct device *dev,
 				 struct device_attribute *attr,
 				 char *buf)
 {
-	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
+	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	enum st_lsm6dsv16bx_sensor_id id = sensor->id;
 	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
 	int i, len = 0;
@@ -1342,7 +1344,8 @@ static ssize_t
 st_lsm6dsv16bx_sysfs_get_selftest_status(struct device *dev,
 				       struct device_attribute *attr, char *buf)
 {
-	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(dev_get_drvdata(dev));
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
+	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	enum st_lsm6dsv16bx_sensor_id id = sensor->id;
 	int8_t result;
 	char *message;
@@ -1517,7 +1520,7 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 						  struct device_attribute *attr,
 						  const char *buf, size_t size)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	enum st_lsm6dsv16bx_sensor_id id = sensor->id;
 	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
@@ -1583,8 +1586,8 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 	st_lsm6dsv16bx_selftest_sensor(sensor, test);
 
 	/* restore configuration after test */
-	//st_lsm6dsv16bx_set_full_scale(sensor, gain);
-	//st_lsm6dsv16bx_set_odr(sensor, odr, uodr);
+	st_lsm6dsv16bx_set_full_scale(sensor, gain);
+	st_lsm6dsv16bx_set_odr(sensor, odr, uodr);
 
 restore_regs:
 	st_lsm6dsv16bx_restore_regs(hw);
@@ -1599,7 +1602,7 @@ ssize_t st_lsm6dsv16bx_get_module_id(struct device *dev,
 				     struct device_attribute *attr,
 				     char *buf)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
 
@@ -1610,7 +1613,7 @@ ssize_t st_lsm6dsv16bx_get_en_tdm(struct device *dev,
 				  struct device_attribute *attr,
 				  char *buf)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 
 	return sprintf(buf, "%d\n", sensor->hw->en_tdm);
@@ -1620,7 +1623,7 @@ ssize_t st_lsm6dsv16bx_set_en_tdm(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t size)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
