@@ -206,13 +206,220 @@ static struct {
 	},
 };
 
+static struct st_lsm6dsvx_suspend_resume_entry
+	st_lsm6dsvx_suspend_resume[ST_LSM6DSVX_SUSPEND_RESUME_REGS] = {
+	[ST_LSM6DSVX_IF_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_IF_CFG_ADDR,
+		.mask = ST_LSM6DSVX_PP_OD_MASK |
+			ST_LSM6DSVX_H_LACTIVE_MASK,
+	},
+	[ST_LSM6DSVX_FIFO_CTRL1_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_FIFO_CTRL1_ADDR,
+		.mask = ST_LSM6DSVX_WTM_MASK,
+	},
+	[ST_LSM6DSVX_FIFO_CTRL3_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_FIFO_CTRL3_ADDR,
+		.mask = ST_LSM6DSVX_BDR_XL_MASK |
+			ST_LSM6DSVX_BDR_GY_MASK,
+	},
+	[ST_LSM6DSVX_FIFO_CTRL4_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_FIFO_CTRL4_ADDR,
+		.mask = ST_LSM6DSVX_FIFO_MODE_MASK |
+			ST_LSM6DSVX_ODR_T_BATCH_MASK |
+			ST_LSM6DSVX_DEC_TS_BATCH_MASK,
+	},
+	[ST_LSM6DSVX_INT1_CTRL_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_INT1_CTRL_ADDR,
+		.mask = ST_LSM6DSVX_INT_FIFO_TH_MASK,
+	},
+	[ST_LSM6DSVX_INT2_CTRL_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_INT2_CTRL_ADDR,
+		.mask = ST_LSM6DSVX_INT_FIFO_TH_MASK,
+	},
+	[ST_LSM6DSVX_CTRL1_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_CTRL1_ADDR,
+		.mask = ST_LSM6DSVX_OP_MODE_MASK,
+	},
+	[ST_LSM6DSVX_CTRL2_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_CTRL2_ADDR,
+		.mask = ST_LSM6DSVX_OP_MODE_MASK,
+	},
+	[ST_LSM6DSVX_CTRL3_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_CTRL3_ADDR,
+		.mask = ST_LSM6DSVX_BDU_MASK,
+	},
+	[ST_LSM6DSVX_CTRL4_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_CTRL4_ADDR,
+		.mask = ST_LSM6DSVX_DRDY_MASK,
+	},
+	[ST_LSM6DSVX_CTRL6_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_CTRL6_ADDR,
+		.mask = ST_LSM6DSVX_FS_G_MASK,
+	},
+	[ST_LSM6DSVX_CTRL7_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_CTRL7_ADDR,
+		.mask = ST_LSM6DSVX_AH_QVAR_C_ZIN_MASK |
+			ST_LSM6DSVX_AH_QVAR_EN_MASK,
+	},
+	[ST_LSM6DSVX_CTRL8_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_CTRL8_ADDR,
+		.mask = ST_LSM6DSVX_FS_XL_MASK,
+	},
+
+	[ST_LSM6DSVX_FUNCTIONS_ENABLE_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_FUNCTIONS_ENABLE_ADDR,
+		.mask = ST_LSM6DSVX_TIMESTAMP_EN_MASK |
+			ST_LSM6DSVX_INTERRUPTS_ENABLE_MASK,
+	},
+	[ST_LSM6DSVX_TAP_CFG0_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_TAP_CFG0_ADDR,
+		.mask = ST_LSM6DSVX_LIR_MASK |
+			ST_LSM6DSVX_TAP_EN_MASK |
+			ST_LSM6DSVX_TAP_SLOPE_FDS_MASK,
+	},
+	[ST_LSM6DSVX_TAP_CFG1_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_TAP_CFG1_ADDR,
+		.mask = ST_LSM6DSVX_TAP_THS_Z_MASK |
+			ST_LSM6DSVX_TAP_PRIORITY_MASK,
+	},
+	[ST_LSM6DSVX_TAP_CFG2_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_TAP_CFG2_ADDR,
+		.mask = ST_LSM6DSVX_TAP_THS_Y_MASK,
+	},
+	[ST_LSM6DSVX_TAP_THS_6D_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_TAP_THS_6D_ADDR,
+		.mask = ST_LSM6DSVX_TAP_THS_X_MASK |
+			ST_LSM6DSVX_SIXD_THS_MASK,
+	},
+	[ST_LSM6DSVX_TAP_DUR_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_TAP_DUR_ADDR,
+		.mask = ST_LSM6DSVX_SHOCK_MASK |
+			ST_LSM6DSVX_QUIET_MASK |
+			ST_LSM6DSVX_DUR_MASK,
+	},
+	[ST_LSM6DSVX_WAKE_UP_THS_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_WAKE_UP_THS_ADDR,
+		.mask = ST_LSM6DSVX_WK_THS_MASK |
+			ST_LSM6DSVX_SINGLE_DOUBLE_TAP_MASK,
+	},
+	[ST_LSM6DSVX_WAKE_UP_DUR_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_WAKE_UP_DUR_ADDR,
+		.mask = ST_LSM6DSVX_WAKE_DUR_MASK,
+	},
+	[ST_LSM6DSVX_FREE_FALL_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_FREE_FALL_ADDR,
+		.mask = ST_LSM6DSVX_FF_THS_MASK,
+	},
+	[ST_LSM6DSVX_MD1_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_MD1_CFG_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+	[ST_LSM6DSVX_MD2_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_MD2_CFG_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+
+	/* embedded functions register map */
+	[ST_LSM6DSVX_EMB_FUNC_EN_A_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_EMB_FUNC_EN_A_ADDR,
+		.mask = ST_LSM6DSVX_SFLP_GAME_EN_MASK |
+			ST_LSM6DSVX_REG_PEDO_EN_MASK |
+			ST_LSM6DSVX_REG_TILT_EN_MASK |
+			ST_LSM6DSVX_REG_SIGN_MOTION_EN_MASK,
+	},
+	[ST_LSM6DSVX_EMB_FUNC_EN_B_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_EMB_FUNC_EN_B_ADDR,
+		.mask = ST_LSM6DSVX_FSM_EN_MASK |
+			ST_LSM6DSVX_MLC_EN_MASK,
+	},
+	[ST_LSM6DSVX_EMB_FUNC_INT1_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_EMB_FUNC_INT1_ADDR,
+		.mask = ST_LSM6DSVX_INT_STEP_DETECTOR_MASK |
+			ST_LSM6DSVX_INT_TILT_MASK |
+			ST_LSM6DSVX_INT_SIG_MOT_MASK,
+	},
+	[ST_LSM6DSVX_FSM_INT1_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_FSM_INT1_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+	[ST_LSM6DSVX_MLC_INT1_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_MLC_INT1_ADDR,
+		.mask = GENMASK(3, 0),
+	},
+	[ST_LSM6DSVX_EMB_FUNC_INT2_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_EMB_FUNC_INT2_ADDR,
+		.mask = ST_LSM6DSVX_INT_STEP_DETECTOR_MASK |
+			ST_LSM6DSVX_INT_TILT_MASK |
+			ST_LSM6DSVX_INT_SIG_MOT_MASK,
+	},
+	[ST_LSM6DSVX_FSM_INT2_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_FSM_INT1_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+	[ST_LSM6DSVX_MLC_INT2_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_MLC_INT1_ADDR,
+		.mask = GENMASK(3, 0),
+	},
+	[ST_LSM6DSVX_PAGE_RW_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_PAGE_RW_ADDR,
+		.mask = ST_LSM6DSVX_EMB_FUNC_LIR_MASK,
+	},
+	[ST_LSM6DSVX_EMB_FUNC_FIFO_EN_A_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_EMB_FUNC_FIFO_EN_A_ADDR,
+		.mask = ST_LSM6DSVX_SFLP_GAME_FIFO_EN |
+			ST_LSM6DSVX_SFLP_GRAVITY_FIFO_EN |
+			ST_LSM6DSVX_SFLP_GBIAS_FIFO_EN_MASK |
+			ST_LSM6DSVX_STEP_COUNTER_FIFO_EN_MASK,
+	},
+	[ST_LSM6DSVX_FSM_ENABLE_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_LSM6DSVX_REG_FSM_ENABLE_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+};
+
 static const struct st_lsm6dsvx_odr_table_entry
 st_lsm6dsvx_odr_table[] = {
 	[ST_LSM6DSVX_ID_ACC] = {
 		.size = 8,
 		.reg = {
 			.addr = ST_LSM6DSVX_REG_CTRL1_ADDR,
-			.mask = ST_LSM6DSVX_ODR_MASK,
+			.mask = ST_LSM6DSVX_ODR_MASK |
+				ST_LSM6DSVX_OP_MODE_MASK,
 		},
 		/*              odr           val batch */
 		.odr_avl[0] = {   7, 500000, 0x02, 0x02 },
@@ -228,7 +435,8 @@ st_lsm6dsvx_odr_table[] = {
 		.size = 8,
 		.reg = {
 			.addr = ST_LSM6DSVX_REG_CTRL2_ADDR,
-			.mask = ST_LSM6DSVX_ODR_MASK,
+			.mask = ST_LSM6DSVX_ODR_MASK |
+				ST_LSM6DSVX_OP_MODE_MASK,
 		},
 		/* G LP MODE 7 Hz batch 7 Hz */
 		.odr_avl[0] = {   7, 500000, 0x02, 0x02 },
@@ -1065,6 +1273,123 @@ int st_lsm6dsvx_get_int_reg(struct st_lsm6dsvx_hw *hw, u8 *drdy_reg)
 	return 0;
 }
 
+static int __maybe_unused st_lsm6dsvx_bk_regs(struct st_lsm6dsvx_hw *hw)
+{
+	unsigned int data;
+	bool restore = 0;
+	int i, err = 0;
+
+	mutex_lock(&hw->page_lock);
+
+	for (i = 0; i < ST_LSM6DSVX_SUSPEND_RESUME_REGS; i++) {
+		if (st_lsm6dsvx_suspend_resume[i].page != FUNC_CFG_ACCESS_0) {
+			err = regmap_update_bits(hw->regmap,
+				     ST_LSM6DSVX_REG_FUNC_CFG_ACCESS_ADDR,
+				     ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK,
+				     FIELD_PREP(ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK,
+					   st_lsm6dsvx_suspend_resume[i].page));
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to update %02x reg\n",
+					st_lsm6dsvx_suspend_resume[i].addr);
+				break;
+			}
+
+			restore = 1;
+		}
+
+		err = regmap_read(hw->regmap,
+				  st_lsm6dsvx_suspend_resume[i].addr,
+				  &data);
+		if (err < 0) {
+			dev_err(hw->dev,
+				"failed to save register %02x\n",
+				st_lsm6dsvx_suspend_resume[i].addr);
+			goto out_lock;
+		}
+
+		if (restore) {
+			err = regmap_update_bits(hw->regmap,
+				     ST_LSM6DSVX_REG_FUNC_CFG_ACCESS_ADDR,
+				     ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK,
+				     FIELD_PREP(ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK,
+						FUNC_CFG_ACCESS_0));
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to update %02x reg\n",
+					st_lsm6dsvx_suspend_resume[i].addr);
+				break;
+			}
+
+			restore = 0;
+		}
+
+		st_lsm6dsvx_suspend_resume[i].val = data;
+	}
+
+out_lock:
+	mutex_unlock(&hw->page_lock);
+
+	return err;
+}
+
+static int __maybe_unused st_lsm6dsvx_restore_regs(struct st_lsm6dsvx_hw *hw)
+{
+	bool restore = 0;
+	int i, err = 0;
+
+	mutex_lock(&hw->page_lock);
+
+	for (i = 0; i < ST_LSM6DSVX_SUSPEND_RESUME_REGS; i++) {
+		if (st_lsm6dsvx_suspend_resume[i].page != FUNC_CFG_ACCESS_0) {
+			err = regmap_update_bits(hw->regmap,
+				     ST_LSM6DSVX_REG_FUNC_CFG_ACCESS_ADDR,
+				     ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK,
+				     FIELD_PREP(ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK,
+					   st_lsm6dsvx_suspend_resume[i].page));
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to update %02x reg\n",
+					st_lsm6dsvx_suspend_resume[i].addr);
+				break;
+			}
+
+			restore = 1;
+		}
+
+		err = regmap_update_bits(hw->regmap,
+					 st_lsm6dsvx_suspend_resume[i].addr,
+					 st_lsm6dsvx_suspend_resume[i].mask,
+					 st_lsm6dsvx_suspend_resume[i].val);
+		if (err < 0) {
+			dev_err(hw->dev,
+				"failed to update %02x reg\n",
+				st_lsm6dsvx_suspend_resume[i].addr);
+			break;
+		}
+
+		if (restore) {
+			err = regmap_update_bits(hw->regmap,
+				     ST_LSM6DSVX_REG_FUNC_CFG_ACCESS_ADDR,
+				     ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK,
+				     FIELD_PREP(ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK,
+						FUNC_CFG_ACCESS_0));
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to update %02x reg\n",
+					st_lsm6dsvx_suspend_resume[i].addr);
+				break;
+			}
+
+			restore = 0;
+		}
+	}
+
+	mutex_unlock(&hw->page_lock);
+
+	return err;
+}
+
 static int
 st_lsm6dsvx_set_selftest(struct st_lsm6dsvx_sensor *sensor, int index)
 {
@@ -1363,6 +1688,8 @@ static ssize_t st_lsm6dsvx_sysfs_start_selftest(struct device *dev,
 		goto out_claim;
 	}
 
+	st_lsm6dsvx_bk_regs(hw);
+
 	ret = st_lsm6dsvx_get_int_reg(hw, &drdy_reg);
 	if (ret < 0)
 		goto out_claim;
@@ -1372,7 +1699,7 @@ static ssize_t st_lsm6dsvx_sysfs_start_selftest(struct device *dev,
 		ret = st_lsm6dsvx_write_with_mask(hw, drdy_reg,
 						  ST_LSM6DSVX_INT_FIFO_TH_MASK, 0);
 		if (ret < 0)
-			goto restore_irq;
+			goto restore_regs;
 	}
 
 	gain = sensor->gain;
@@ -1396,10 +1723,8 @@ static ssize_t st_lsm6dsvx_sysfs_start_selftest(struct device *dev,
 	st_lsm6dsvx_set_full_scale(sensor, gain);
 	st_lsm6dsvx_set_odr(sensor, odr, uodr);
 
-restore_irq:
-	st_lsm6dsvx_write_with_mask(hw, drdy_reg,
-				    ST_LSM6DSVX_INT_FIFO_TH_MASK,
-				    hw->has_hw_fifo ? 1 : 0);
+restore_regs:
+	st_lsm6dsvx_restore_regs(hw);
 
 out_claim:
 	iio_device_release_direct_mode(iio_dev);
@@ -1924,8 +2249,15 @@ static int __maybe_unused st_lsm6dsvx_suspend(struct device *dev)
 			return err;
 	}
 
-	if (st_lsm6dsvx_is_fifo_enabled(hw))
+	if (st_lsm6dsvx_is_fifo_enabled(hw)) {
 		err = st_lsm6dsvx_suspend_fifo(hw);
+		if (err < 0)
+			return err;
+	}
+
+	err = st_lsm6dsvx_bk_regs(hw);
+	if (err < 0)
+		return err;
 
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hw->irq);
@@ -1945,6 +2277,10 @@ static int __maybe_unused st_lsm6dsvx_resume(struct device *dev)
 
 	if (device_may_wakeup(dev))
 		disable_irq_wake(hw->irq);
+
+	err = st_lsm6dsvx_restore_regs(hw);
+	if (err < 0)
+		return err;
 
 	for (i = 0; i < ST_LSM6DSVX_ID_MAX; i++) {
 		if (!hw->iio_devs[i])
