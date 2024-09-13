@@ -567,6 +567,7 @@ st_lsm6dsv16bx_check_gyro_odr_dependency(struct st_lsm6dsv16bx_sensor *sensor,
 {
 	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
 	enum st_lsm6dsv16bx_sensor_id id;
+	int count = 0;
 	int odr = 0;
 	int i;
 
@@ -578,6 +579,8 @@ st_lsm6dsv16bx_check_gyro_odr_dependency(struct st_lsm6dsv16bx_sensor *sensor,
 		if (id == sensor->id)
 			continue;
 
+		count++;
+
 		/* req_uodr not used */
 		odr = st_lsm6dsv16bx_check_odr_dependency(hw, req_odr,
 							  req_uodr, id);
@@ -585,7 +588,7 @@ st_lsm6dsv16bx_check_gyro_odr_dependency(struct st_lsm6dsv16bx_sensor *sensor,
 			return 0;
 	}
 
-	return odr;
+	return (count > 0) ? odr : req_odr;
 }
 
 int st_lsm6dsv16bx_set_odr(struct st_lsm6dsv16bx_sensor *sensor,
@@ -952,7 +955,7 @@ static __maybe_unused int st_lsm6dsv16bx_reg_access(struct iio_dev *iio_dev,
 						    unsigned int *readval)
 {
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
-	int ret;
+	int ret = 0;
 
 	ret = iio_device_claim_direct_mode(iio_dev);
 	if (ret)
@@ -1226,7 +1229,6 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
 	int ret, test;
 	int odr, uodr;
-	u8 drdy_reg;
 	u32 gain;
 
 	if (id != ST_LSM6DSV16BX_ID_ACC &&
@@ -1253,16 +1255,22 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 		goto out_claim;
 	}
 
+	ret = st_lsm6dsv16bx_get_int_reg(hw);
+	if (ret < 0)
+		goto out_claim;
+
+	/* disable interrupt on FIFO watermak */
+	if (hw->has_hw_fifo) {
+		ret = st_lsm6dsv16bx_write_with_mask(hw, hw->drdy_reg,
+						ST_LSM6DSV16BX_INT_FIFO_TH_MASK,
+						0);
+		if (ret < 0)
+			goto restore_irq;
+	}
+
 	gain = sensor->gain;
 	odr = sensor->odr;
 	uodr = sensor->uodr;
-
-	ret = st_lsm6dsv16bx_write_with_mask(hw, hw->drdy_reg,
-					     ST_LSM6DSV16BX_INT_FIFO_TH_MASK,
-					     0);
-	if (ret < 0)
-		goto restore_regs;
-
 	if (id == ST_LSM6DSV16BX_ID_ACC) {
 		/* set BDU = 1, FS = 4 g, ODR = 60 Hz */
 		st_lsm6dsv16bx_set_full_scale(sensor,
@@ -1278,12 +1286,14 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 	/* run test */
 	st_lsm6dsv16bx_selftest_sensor(sensor, test);
 
-restore_regs:
 	/* restore configuration after test */
 	st_lsm6dsv16bx_set_full_scale(sensor, gain);
 	st_lsm6dsv16bx_set_odr(sensor, odr, uodr);
-	st_lsm6dsv16bx_write_with_mask(hw, drdy_reg,
-				       ST_LSM6DSV16BX_INT_FIFO_TH_MASK, 1);
+
+restore_irq:
+	st_lsm6dsv16bx_write_with_mask(hw, hw->drdy_reg,
+				       ST_LSM6DSV16BX_INT_FIFO_TH_MASK,
+				       hw->has_hw_fifo ? 1 : 0);
 
 out_claim:
 	iio_device_release_direct_mode(iio_dev);
@@ -1636,24 +1646,11 @@ static int st_lsm6dsv16bx_init_device(struct st_lsm6dsv16bx_hw *hw)
 
 	err = st_lsm6dsv16bx_get_int_reg(hw);
 	if (err < 0)
-		dev_info(hw->dev, "interrupt lines not configured\n");
-
-	/* latch interrupts */
-	err = st_lsm6dsv16bx_write_with_mask(hw, ST_LSM6DSV16BX_REG_TAP_CFG0_ADDR,
-					     ST_LSM6DSV16BX_LIR_MASK, 1);
-	if (err < 0)
 		return err;
 
 	/* enable Block Data Update */
 	err = st_lsm6dsv16bx_write_with_mask(hw, ST_LSM6DSV16BX_REG_CTRL3_ADDR,
-					     ST_LSM6DSV16BX_BDU_MASK, 1);
-	if (err < 0)
-		return err;
-
-	/* init timestamp engine */
-	err = st_lsm6dsv16bx_write_with_mask(hw,
-				       ST_LSM6DSV16BX_REG_FUNCTIONS_ENABLE_ADDR,
-				       ST_LSM6DSV16BX_TIMESTAMP_EN_MASK, 1);
+					      ST_LSM6DSV16BX_BDU_MASK, 1);
 	if (err < 0)
 		return err;
 
@@ -1709,7 +1706,8 @@ st_lsm6dsv16bx_alloc_iiodev(struct st_lsm6dsv16bx_hw *hw,
 		scnprintf(sensor->name, sizeof(sensor->name),
 			 "%s_accel", hw->settings->id.name);
 		iio_dev->info = &st_lsm6dsv16bx_acc_info;
-		iio_dev->available_scan_masks = st_lsm6dsv16bx_available_scan_masks;
+		iio_dev->available_scan_masks =
+					    st_lsm6dsv16bx_available_scan_masks;
 
 		sensor->batch_reg.addr = ST_LSM6DSV16BX_REG_FIFO_CTRL3_ADDR;
 		sensor->batch_reg.mask = ST_LSM6DSV16BX_BDR_XL_MASK;
@@ -1726,7 +1724,8 @@ st_lsm6dsv16bx_alloc_iiodev(struct st_lsm6dsv16bx_hw *hw,
 		scnprintf(sensor->name, sizeof(sensor->name),
 			 "%s_gyro", hw->settings->id.name);
 		iio_dev->info = &st_lsm6dsv16bx_gyro_info;
-		iio_dev->available_scan_masks = st_lsm6dsv16bx_available_scan_masks;
+		iio_dev->available_scan_masks =
+					    st_lsm6dsv16bx_available_scan_masks;
 
 		sensor->batch_reg.addr = ST_LSM6DSV16BX_REG_FIFO_CTRL3_ADDR;
 		sensor->batch_reg.mask = ST_LSM6DSV16BX_BDR_GY_MASK;
@@ -1744,7 +1743,7 @@ st_lsm6dsv16bx_alloc_iiodev(struct st_lsm6dsv16bx_hw *hw,
 			 "%s_temp", hw->settings->id.name);
 		iio_dev->info = &st_lsm6dsv16bx_temp_info;
 		iio_dev->available_scan_masks =
-					  st_lsm6dsv16bx_temp_available_scan_masks;
+				       st_lsm6dsv16bx_temp_available_scan_masks;
 
 		sensor->batch_reg.addr = ST_LSM6DSV16BX_REG_FIFO_CTRL4_ADDR;
 		sensor->batch_reg.mask = ST_LSM6DSV16BX_ODR_T_BATCH_MASK;
@@ -1760,7 +1759,8 @@ st_lsm6dsv16bx_alloc_iiodev(struct st_lsm6dsv16bx_hw *hw,
 		scnprintf(sensor->name, sizeof(sensor->name),
 			 "%s_gamerot", hw->settings->id.name);
 		iio_dev->info = &st_lsm6dsv16bx_sflp_info;
-		iio_dev->available_scan_masks = st_lsm6dsv16bx_available_scan_masks;
+		iio_dev->available_scan_masks =
+					    st_lsm6dsv16bx_available_scan_masks;
 
 		sensor->batch_reg.addr = ST_LSM6DSV16BX_REG_SFLP_ODR_ADDR;
 		sensor->batch_reg.mask = ST_LSM6DSV16BX_SFLP_GAME_ODR_MASK;
@@ -1871,7 +1871,8 @@ int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
 
 	/* select register bank zero */
 	err = st_lsm6dsv16bx_set_page_access(hw,
-				    ST_LSM6DSV16BX_EMB_FUNC_REG_ACCESS_MASK, 0);
+					ST_LSM6DSV16BX_EMB_FUNC_REG_ACCESS_MASK,
+					0);
 	if (err < 0)
 		return err;
 
@@ -1907,7 +1908,8 @@ int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
 	}
 
 	for (i = 0; i < ARRAY_SIZE(st_lsm6dsv16bx_main_sensor_list); i++) {
-		enum st_lsm6dsv16bx_sensor_id id = st_lsm6dsv16bx_main_sensor_list[i];
+		enum st_lsm6dsv16bx_sensor_id id =
+					     st_lsm6dsv16bx_main_sensor_list[i];
 
 		/* don't probe if sflp not supported */
 		if (!hw->settings->st_sflp_probe &&
@@ -1936,16 +1938,23 @@ int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
 			if (err)
 				return err;
 		}
-
-		err = st_lsm6dsv16bx_buffers_setup(hw);
-		if (err < 0)
-			return err;
 	}
 
-	if (st_lsm6dsv16bx_run_mlc_task(hw)) {
-		err = st_lsm6dsv16bx_mlc_probe(hw);
+	err = st_lsm6dsv16bx_allocate_sw_trigger(hw);
+	if (err < 0)
+		return err;
+
+	if (hw->has_hw_fifo) {
+		err = st_lsm6dsv16bx_hw_trigger_setup(hw);
 		if (err < 0)
 			return err;
+
+		/* MLC request interrupt line */
+		if (st_lsm6dsv16bx_run_mlc_task(hw)) {
+			err = st_lsm6dsv16bx_mlc_probe(hw);
+			if (err < 0)
+				return err;
+		}
 	}
 
 	for (i = 0; i < ST_LSM6DSV16BX_ID_MAX; i++) {

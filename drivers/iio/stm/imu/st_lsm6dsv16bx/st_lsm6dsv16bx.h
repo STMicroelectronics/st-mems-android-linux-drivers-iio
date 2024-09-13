@@ -31,6 +31,7 @@
 #define ST_ISM330BX_DEV_NAME				"ism330bx"
 
 #define ST_LSM6DSV16BX_SAMPLE_SIZE			6
+#define ST_LSM6DSV16BX_PT_SAMPLE_SIZE			2
 #define ST_LSM6DSV16BX_TS_SAMPLE_SIZE			4
 #define ST_LSM6DSV16BX_TAG_SIZE				1
 #define ST_LSM6DSV16BX_FIFO_SAMPLE_SIZE			(ST_LSM6DSV16BX_SAMPLE_SIZE + \
@@ -111,9 +112,9 @@
 
 #define ST_LSM6DSV16BX_REG_OUT_TEMP_L_ADDR		0x20
 
-#define ST_LSM6DSV16BX_REG_OUTZ_L_G_ADDR		0x22
+#define ST_LSM6DSV16BX_REG_OUTX_L_G_ADDR		0x22
 #define ST_LSM6DSV16BX_REG_OUTY_L_G_ADDR		0x24
-#define ST_LSM6DSV16BX_REG_OUTX_L_G_ADDR		0x26
+#define ST_LSM6DSV16BX_REG_OUTZ_L_G_ADDR		0x26
 #define ST_LSM6DSV16BX_REG_OUTZ_L_A_ADDR		0x28
 #define ST_LSM6DSV16BX_REG_OUTY_L_A_ADDR		0x2a
 #define ST_LSM6DSV16BX_REG_OUTX_L_A_ADDR		0x2c
@@ -623,7 +624,7 @@ static const enum st_lsm6dsv16bx_sensor_id st_lsm6dsv16bx_buffered_sensor_list[]
 	[2] = ST_LSM6DSV16BX_ID_TEMP,
 	[3] = ST_LSM6DSV16BX_ID_6X_GAME,
 	[4] = ST_LSM6DSV16BX_ID_QVAR,
-	[7] = ST_LSM6DSV16BX_ID_STEP_COUNTER,
+	[5] = ST_LSM6DSV16BX_ID_STEP_COUNTER,
 };
 
 /**
@@ -1004,7 +1005,7 @@ static inline int st_lsm6dsv16bx_set_page_access(struct st_lsm6dsv16bx_hw *hw,
 
 static inline bool st_lsm6dsv16bx_run_mlc_task(struct st_lsm6dsv16bx_hw *hw)
 {
-	return hw->settings->st_mlc_probe || hw->settings->st_fsm_probe;
+	return (hw->settings->st_mlc_probe || hw->settings->st_fsm_probe) && hw->has_hw_fifo;
 }
 
 static inline bool
@@ -1021,10 +1022,11 @@ int st_lsm6dsv16bx_sensor_set_enable(struct st_lsm6dsv16bx_sensor *sensor,
 				     bool enable);
 int st_lsm6dsv16bx_set_odr(struct st_lsm6dsv16bx_sensor *sensor,
 			int req_odr, int req_uodr);
-
 int st_lsm6dsv16bx_sflp_set_enable(struct st_lsm6dsv16bx_sensor *sensor,
 				   bool enable);
-int st_lsm6dsv16bx_buffers_setup(struct st_lsm6dsv16bx_hw *hw);
+int st_lsm6dsv16bx_allocate_sw_trigger(struct st_lsm6dsv16bx_hw *hw);
+int st_lsm6dsv16bx_hw_trigger_setup(struct st_lsm6dsv16bx_hw *hw);
+
 ssize_t st_lsm6dsv16bx_flush_fifo(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t size);
