@@ -65,7 +65,7 @@ static struct st_lsm6dsrx_power_mode_table {
 
 static struct st_lsm6dsrx_suspend_resume_entry
 	st_lsm6dsrx_suspend_resume[ST_LSM6DSRX_SUSPEND_RESUME_REGS] = {
-    [ST_LSM6DSRX_CTRL1_XL_REG] = {
+	[ST_LSM6DSRX_CTRL1_XL_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
 		.addr = ST_LSM6DSRX_CTRL1_XL_ADDR,
 		.mask = GENMASK(3, 2),
@@ -257,90 +257,32 @@ static const struct st_lsm6dsrx_settings st_lsm6dsrx_sensor_settings[] = {
 
 static const struct st_lsm6dsrx_fs_table_entry st_lsm6dsrx_fs_table[] = {
 	[ST_LSM6DSRX_ID_ACC] = {
+		.reg = {
+			.addr = ST_LSM6DSRX_CTRL1_XL_ADDR,
+			.mask = GENMASK(3, 2),
+		},
+		.fs_avl[0] = { .gain = IIO_G_TO_M_S_2(61000),  .val = 0x0, },
+		.fs_avl[1] = { .gain = IIO_G_TO_M_S_2(122000), .val = 0x2, },
+		.fs_avl[2] = { .gain = IIO_G_TO_M_S_2(244000), .val = 0x3, },
+		.fs_avl[3] = { .gain = IIO_G_TO_M_S_2(488000), .val = 0x1, },
 		.size = 4,
-		.fs_avl[0] = {
-			.reg = {
-				.addr = ST_LSM6DSRX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
-			},
-			.gain = IIO_G_TO_M_S_2(61000),
-			.val = 0x0,
-		},
-		.fs_avl[1] = {
-			.reg = {
-				.addr = ST_LSM6DSRX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
-			},
-			.gain = IIO_G_TO_M_S_2(122000),
-			.val = 0x2,
-		},
-		.fs_avl[2] = {
-			.reg = {
-				.addr = ST_LSM6DSRX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
-			},
-			.gain = IIO_G_TO_M_S_2(244000),
-			.val = 0x3,
-		},
-		.fs_avl[3] = {
-			.reg = {
-				.addr = ST_LSM6DSRX_CTRL1_XL_ADDR,
-				.mask = GENMASK(3, 2),
-			},
-			.gain = IIO_G_TO_M_S_2(488000),
-			.val = 0x1,
-		},
 	},
 	[ST_LSM6DSRX_ID_GYRO] = {
+		.reg = {
+			.addr = ST_LSM6DSRX_CTRL2_G_ADDR,
+			.mask = GENMASK(3, 0),
+		},
+		.fs_avl[0] = { .gain = IIO_DEGREE_TO_RAD(8750000),   .val = 0x0, },
+		.fs_avl[1] = { .gain = IIO_DEGREE_TO_RAD(17500000),  .val = 0x4, },
+		.fs_avl[2] = { .gain = IIO_DEGREE_TO_RAD(35000000),  .val = 0x8, },
+		.fs_avl[3] = { .gain = IIO_DEGREE_TO_RAD(70000000),  .val = 0xC, },
+		.fs_avl[4] = { .gain = IIO_DEGREE_TO_RAD(140000000), .val = 0x1, },
 		.size = 5,
-		.fs_avl[0] = {
-			.reg = {
-				.addr = ST_LSM6DSRX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = IIO_DEGREE_TO_RAD(8750000),
-			.val = 0x0,
-		},
-		.fs_avl[1] = {
-			.reg = {
-				.addr = ST_LSM6DSRX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = IIO_DEGREE_TO_RAD(17500000),
-			.val = 0x4,
-		},
-		.fs_avl[2] = {
-			.reg = {
-				.addr = ST_LSM6DSRX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = IIO_DEGREE_TO_RAD(35000000),
-			.val = 0x8,
-		},
-		.fs_avl[3] = {
-			.reg = {
-				.addr = ST_LSM6DSRX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = IIO_DEGREE_TO_RAD(70000000),
-			.val = 0x0C,
-		},
-		.fs_avl[4] = {
-			.reg = {
-				.addr = ST_LSM6DSRX_CTRL2_G_ADDR,
-				.mask = GENMASK(3, 0),
-			},
-			.gain = IIO_DEGREE_TO_RAD(140000000),
-			.val = 0x01,
-		},
 	},
 	[ST_LSM6DSRX_ID_TEMP] = {
+		.reg = { 0 },
+		.fs_avl[0] = { .gain = (1000000 / ST_LSM6DSRX_TEMP_GAIN), .val = 0x0 },
 		.size = 1,
-		.fs_avl[0] = {
-			.reg = { 0 },
-			.gain = (1000000 / ST_LSM6DSRX_TEMP_GAIN),
-			.val = 0x0
-		},
 	},
 };
 
@@ -382,6 +324,15 @@ static const struct iio_chan_spec st_lsm6dsrx_acc_channels[] = {
 				1, IIO_MOD_Z, 2, 16, 16, 's',
 				st_lsm6dsrx_chan_spec_ext_info),
 	ST_LSM6DSRX_EVENT_CHANNEL(IIO_ACCEL, flush),
+	ST_LSM6DSRX_EVENT_CHANNEL(IIO_ACCEL, freefall),
+	ST_LSM6DSRX_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_LSM6DSRX_EVENT_CHANNEL(IIO_ACCEL, 6D),
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LSM6DSRX_EVENT_CHANNEL(IIO_ACCEL, tap),
+	ST_LSM6DSRX_EVENT_CHANNEL(IIO_ACCEL, dtap),
+#endif /* LINUX_VERSION_CODE */
+
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
 };
@@ -524,10 +475,10 @@ static int st_lsm6dsrx_set_full_scale(struct st_lsm6dsrx_sensor *sensor,
 
 	val = st_lsm6dsrx_fs_table[id].fs_avl[i].val;
 	err = regmap_update_bits(hw->regmap,
-				 st_lsm6dsrx_fs_table[id].fs_avl[i].reg.addr,
-				 st_lsm6dsrx_fs_table[id].fs_avl[i].reg.mask,
+				 st_lsm6dsrx_fs_table[id].reg.addr,
+				 st_lsm6dsrx_fs_table[id].reg.mask,
 				 ST_LSM6DSRX_SHIFT_VAL(val,
-				st_lsm6dsrx_fs_table[id].fs_avl[i].reg.mask));
+					    st_lsm6dsrx_fs_table[id].reg.mask));
 	if (err < 0)
 		return err;
 
@@ -605,8 +556,8 @@ static u16 st_lsm6dsrx_check_odr_dependency(struct st_lsm6dsrx_hw *hw,
 	return ret;
 }
 
-static int st_lsm6dsrx_set_odr(struct st_lsm6dsrx_sensor *sensor, int req_odr,
-			       int req_uodr)
+int st_lsm6dsrx_set_odr(struct st_lsm6dsrx_sensor *sensor, int req_odr,
+			int req_uodr)
 {
 	enum st_lsm6dsrx_sensor_id id = sensor->id;
 	struct st_lsm6dsrx_hw *hw = sensor->hw;
@@ -644,12 +595,6 @@ static int st_lsm6dsrx_set_odr(struct st_lsm6dsrx_sensor *sensor, int req_odr,
 	case ST_LSM6DSRX_ID_STEP_DETECTOR:
 	case ST_LSM6DSRX_ID_SIGN_MOTION:
 	case ST_LSM6DSRX_ID_TILT:
-	case ST_LSM6DSRX_ID_TAP:
-	case ST_LSM6DSRX_ID_DTAP:
-	case ST_LSM6DSRX_ID_WK:
-	case ST_LSM6DSRX_ID_FF:
-	case ST_LSM6DSRX_ID_SLPCHG:
-	case ST_LSM6DSRX_ID_6D:
 	case ST_LSM6DSRX_ID_ACC: {
 		int odr;
 		int i;
@@ -836,6 +781,12 @@ static int st_lsm6dsrx_write_raw(struct iio_dev *iio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		err = st_lsm6dsrx_set_full_scale(sensor, val2);
+		if (err)
+			goto release_iio;
+
+		/* some events depends on xl full scale */
+		if (chan->type == IIO_ACCEL)
+			err = st_lsm6dsrx_update_threshold_events(sensor->hw);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		struct st_lsm6dsrx_odr oe = { 0 };
@@ -860,7 +811,11 @@ static int st_lsm6dsrx_write_raw(struct iio_dev *iio_dev,
 					if (err < 0)
 						break;
 
-					st_lsm6dsrx_update_batching(iio_dev, 1);
+					err = st_lsm6dsrx_update_batching(iio_dev, 1);
+
+					/* some events depends on xl odr */
+					if (chan->type == IIO_ACCEL)
+						st_lsm6dsrx_update_duration_events(sensor->hw);
 					}
 					break;
 				default:
@@ -875,6 +830,7 @@ static int st_lsm6dsrx_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
+release_iio:
 	iio_device_release_direct_mode(iio_dev);
 
 	return err;
@@ -1099,9 +1055,9 @@ int st_lsm6dsrx_of_get_pin(struct st_lsm6dsrx_hw *hw, int *pin)
 	return of_property_read_u32(np, "st,int-pin", pin);
 }
 
-static int st_lsm6dsrx_get_int_reg(struct st_lsm6dsrx_hw *hw, u8 *drdy_reg)
+int st_lsm6dsrx_get_int_reg(struct st_lsm6dsrx_hw *hw)
 {
-	int err = 0, int_pin;
+	int err = 0, int_pin, irq_reg;
 
 	if (st_lsm6dsrx_of_get_pin(hw, &int_pin) < 0) {
 		struct st_sensors_platform_data *pdata;
@@ -1113,10 +1069,12 @@ static int st_lsm6dsrx_get_int_reg(struct st_lsm6dsrx_hw *hw, u8 *drdy_reg)
 
 	switch (int_pin) {
 	case 1:
-		*drdy_reg = ST_LSM6DSRX_REG_INT1_CTRL_ADDR;
+		irq_reg = ST_LSM6DSRX_REG_INT1_CTRL_ADDR;
+		hw->embfunc_pg0_irq_reg = ST_LSM6DSRX_REG_MD1_CFG_ADDR;
 		break;
 	case 2:
-		*drdy_reg = ST_LSM6DSRX_REG_INT2_CTRL_ADDR;
+		irq_reg = ST_LSM6DSRX_REG_INT2_CTRL_ADDR;
+		hw->embfunc_pg0_irq_reg = ST_LSM6DSRX_REG_MD2_CFG_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -1124,6 +1082,7 @@ static int st_lsm6dsrx_get_int_reg(struct st_lsm6dsrx_hw *hw, u8 *drdy_reg)
 		break;
 	}
 
+	hw->irq_reg = irq_reg;
 	hw->int_pin = int_pin;
 
 	return err;
@@ -1403,7 +1362,6 @@ static ssize_t st_lsm6dsrx_sysfs_start_selftest(struct device *dev,
 	enum st_lsm6dsrx_sensor_id id = sensor->id;
 	struct st_lsm6dsrx_hw *hw = sensor->hw;
 	int ret, test;
-	u8 drdy_reg;
 	u32 gain;
 
 	if (id != ST_LSM6DSRX_ID_ACC &&
@@ -1433,11 +1391,11 @@ static ssize_t st_lsm6dsrx_sysfs_start_selftest(struct device *dev,
 	st_lsm6dsrx_bk_regs(hw);
 
 	/* disable FIFO watermak interrupt */
-	ret = st_lsm6dsrx_get_int_reg(hw, &drdy_reg);
+	ret = st_lsm6dsrx_get_int_reg(hw);
 	if (ret < 0)
 		goto restore_regs;
 
-	ret = st_lsm6dsrx_update_bits_locked(hw, drdy_reg,
+	ret = st_lsm6dsrx_update_bits_locked(hw, hw->irq_reg,
 					     ST_LSM6DSRX_REG_FIFO_TH_MASK, 0);
 	if (ret < 0)
 		goto restore_regs;
@@ -1561,6 +1519,11 @@ static const struct iio_info st_lsm6dsrx_acc_info = {
 	.read_raw = st_lsm6dsrx_read_raw,
 	.write_raw = st_lsm6dsrx_write_raw,
 	.write_raw_get_fmt = st_lsm6dsrx_write_raw_get_fmt,
+	.read_event_config = st_lsm6dsrx_read_event_config,
+	.write_event_config = st_lsm6dsrx_write_event_config,
+	.write_event_value = st_lsm6dsrx_write_event_value,
+	.read_event_value = st_lsm6dsrx_read_event_value,
+
 #ifdef CONFIG_DEBUG_FS
 	.debugfs_reg_access = &st_lsm6dsrx_reg_access,
 #endif /* CONFIG_DEBUG_FS */
@@ -1665,7 +1628,6 @@ static int st_lsm6dsrx_init_timestamp_engine(struct st_lsm6dsrx_hw *hw,
 
 static int st_lsm6dsrx_init_device(struct st_lsm6dsrx_hw *hw)
 {
-	u8 drdy_reg;
 	int err;
 
 	/* latch interrupts */
@@ -1692,7 +1654,7 @@ static int st_lsm6dsrx_init_device(struct st_lsm6dsrx_hw *hw)
 	if (err < 0)
 		return err;
 
-	err = st_lsm6dsrx_get_int_reg(hw, &drdy_reg);
+	err = st_lsm6dsrx_get_int_reg(hw);
 	if (err < 0)
 		return err;
 
@@ -1705,7 +1667,7 @@ static int st_lsm6dsrx_init_device(struct st_lsm6dsrx_hw *hw)
 		return err;
 
 	/* enable interrupt on FIFO watermak */
-	return regmap_update_bits(hw->regmap, drdy_reg,
+	return regmap_update_bits(hw->regmap, hw->irq_reg,
 				  ST_LSM6DSRX_REG_FIFO_TH_MASK,
 				  FIELD_PREP(ST_LSM6DSRX_REG_FIFO_TH_MASK, 1));
 }
@@ -1919,22 +1881,23 @@ int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
 			return -ENOMEM;
 	}
 
-	err = st_lsm6dsrx_shub_probe(hw);
-	if (err < 0)
-		return err;
-
 #ifdef CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES
 	/* allocate step counter before buffer setup because use FIFO */
 	err = st_lsm6dsrx_probe_embfunc(hw);
 	if (err < 0)
 		return err;
 
-	err = st_lsm6dsrx_probe_event(hw);
-	if (err < 0)
-		return err;
 #endif /* CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES */
 
+	err = st_lsm6dsrx_shub_probe(hw);
+	if (err < 0)
+		return err;
+
 	if (hw->irq > 0) {
+		err = st_lsm6dsrx_event_init(hw);
+		if (err < 0)
+			return err;
+
 		err = st_lsm6dsrx_buffers_setup(hw);
 		if (err < 0)
 			return err;
