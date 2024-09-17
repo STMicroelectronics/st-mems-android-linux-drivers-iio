@@ -232,9 +232,9 @@
 
 /* embedded function registers */
 #define ST_LSM6DSRX_REG_EMB_FUNC_EN_A_ADDR	0x04
-#define ST_LSM6DSRX_REG_PEDO_EN_MASK		BIT(3)
-#define ST_LSM6DSRX_REG_TILT_EN_MASK		BIT(4)
-#define ST_LSM6DSRX_REG_SIGN_MOTION_EN_MASK	BIT(5)
+#define ST_LSM6DSRX_PEDO_EN_MASK		BIT(3)
+#define ST_LSM6DSRX_TILT_EN_MASK		BIT(4)
+#define ST_LSM6DSRX_SIGN_MOTION_EN_MASK		BIT(5)
 
 #define ST_LSM6DSRX_EMB_FUNC_EN_B_ADDR		0x05
 #define ST_LSM6DSRX_FSM_EN_MASK			BIT(0)
@@ -390,6 +390,9 @@ enum st_lsm6dsrx_event_id {
 	ST_LSM6DSRX_EVENT_DTAP,
 #endif /* LINUX_VERSION_CODE */
 
+	ST_LSM6DSRX_EVENT_STEPC,
+	ST_LSM6DSRX_EVENT_SIGNMOT,
+
 	ST_LSM6DSRX_EVENT_MAX
 };
 
@@ -457,7 +460,10 @@ enum st_lsm6dsrx_suspend_resume_register {
 	ST_LSM6DSRX_REG_FIFO_CTRL2_REG,
 	ST_LSM6DSRX_REG_FIFO_CTRL3_REG,
 	ST_LSM6DSRX_REG_FIFO_CTRL4_REG,
+	ST_LSM6DSRX_REG_EMB_FUNC_EN_A_REG,
 	ST_LSM6DSRX_REG_EMB_FUNC_EN_B_REG,
+	ST_LSM6DSRX_REG_EMB_FUNC_FIFO_CFG_REG,
+	ST_LSM6DSRX_REG_PAGE_RW_REG,
 	ST_LSM6DSRX_REG_FSM_INT1_A_REG,
 	ST_LSM6DSRX_REG_FSM_INT1_B_REG,
 	ST_LSM6DSRX_REG_MLC_INT1_REG,
@@ -583,9 +589,6 @@ enum st_lsm6dsrx_sensor_id {
 	ST_LSM6DSRX_ID_FSM_14,
 	ST_LSM6DSRX_ID_FSM_15,
 	ST_LSM6DSRX_ID_STEP_COUNTER,
-	ST_LSM6DSRX_ID_STEP_DETECTOR,
-	ST_LSM6DSRX_ID_SIGN_MOTION,
-	ST_LSM6DSRX_ID_TILT,
 	ST_LSM6DSRX_ID_MAX,
 };
 
@@ -635,16 +638,6 @@ static const enum st_lsm6dsrx_sensor_id st_lsm6dsrx_fsm_sensor_list[] = {
 	 [13] = ST_LSM6DSRX_ID_FSM_13,
 	 [14] = ST_LSM6DSRX_ID_FSM_14,
 	 [15] = ST_LSM6DSRX_ID_FSM_15,
-};
-
-/**
- * The low power embedded function only sensor list
- */
-static const enum st_lsm6dsrx_sensor_id st_lsm6dsrx_embfunc_sensor_list[] = {
-	 [0] = ST_LSM6DSRX_ID_STEP_COUNTER,
-	 [1] = ST_LSM6DSRX_ID_STEP_DETECTOR,
-	 [2] = ST_LSM6DSRX_ID_SIGN_MOTION,
-	 [3] = ST_LSM6DSRX_ID_TILT,
 };
 
 #define ST_LSM6DSRX_ID_ALL_FSM_MLC (BIT_ULL(ST_LSM6DSRX_ID_MLC_0)  | \
@@ -816,6 +809,7 @@ struct st_lsm6dsrx_sensor {
  * @enable_ev_mask: Enabled event bitmask.
  * @requested_mask: Sensor requesting bitmask.
  * irq_reg: irq configutation register.
+ * @embfunc_irq_reg: Embedded function irq configutation register (other).
  * embfunc_pg0_irq_reg: Embedded function irq configutation register (page 0).
  * @ext_data_len: Number of i2c slave devices connected to I2C master.
  * @ts_delta_ns: Calibrated delta timestamp.
@@ -871,6 +865,7 @@ struct st_lsm6dsrx_hw {
 	u64 requested_mask;
 
 	u8 irq_reg;
+	u8 embfunc_irq_reg;
 	u8 embfunc_pg0_irq_reg;
 
 	u8 ext_data_len;
@@ -1150,18 +1145,9 @@ int st_lsm6dsrx_update_duration_events(struct st_lsm6dsrx_hw *hw);
 int st_lsm6dsrx_event_init(struct st_lsm6dsrx_hw *hw);
 int st_lsm6dsrx_event_handler(struct st_lsm6dsrx_hw *hw);
 
-#ifdef CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES
-int st_lsm6dsrx_probe_embfunc(struct st_lsm6dsrx_hw *hw);
+/* embedded functions: step counter / event detector / significant motion */
+int st_lsm6dsrx_embfunc_probe(struct st_lsm6dsrx_hw *hw);
 int st_lsm6dsrx_embfunc_handler_thread(struct st_lsm6dsrx_hw *hw);
-int st_lsm6dsrx_step_counter_set_enable(struct st_lsm6dsrx_sensor *sensor,
-					bool enable);
-#else /* CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES */
-static inline int
-st_lsm6dsrx_step_counter_set_enable(struct st_lsm6dsrx_sensor *sensor,
-				    bool enable)
-{
-	return 0;
-}
-#endif /* CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES */
+int st_lsm6dsrx_step_enable(struct st_lsm6dsrx_sensor *sensor, bool enable);
 
 #endif /* ST_LSM6DSRX_H */

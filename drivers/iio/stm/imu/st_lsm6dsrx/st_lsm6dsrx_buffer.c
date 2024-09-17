@@ -475,13 +475,11 @@ static int st_lsm6dsrx_update_fifo(struct iio_dev *iio_dev, bool enable)
 			goto out;
 	} else {
 		if (sensor->id == ST_LSM6DSRX_ID_STEP_COUNTER) {
-			err = st_lsm6dsrx_step_counter_set_enable(sensor,
-								  enable);
+			err = st_lsm6dsrx_step_enable(sensor, enable);
 			if (err < 0)
 				goto out;
 		} else {
-			err = st_lsm6dsrx_sensor_set_enable(sensor,
-							    enable);
+			err = st_lsm6dsrx_sensor_set_enable(sensor, enable);
 			if (err < 0)
 				goto out;
 

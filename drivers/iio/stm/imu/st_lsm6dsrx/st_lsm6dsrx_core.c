@@ -134,11 +134,28 @@ static struct st_lsm6dsrx_suspend_resume_entry
 		.mask = ST_LSM6DSRX_REG_DEC_TS_MASK |
 			ST_LSM6DSRX_REG_ODR_T_BATCH_MASK,
 	},
+	[ST_LSM6DSRX_REG_EMB_FUNC_EN_A_REG] = {
+		.page = FUNC_CFG_ACCESS_FUNC_CFG,
+		.addr = ST_LSM6DSRX_REG_EMB_FUNC_EN_A_ADDR,
+		.mask = ST_LSM6DSRX_PEDO_EN_MASK |
+			ST_LSM6DSRX_TILT_EN_MASK |
+			ST_LSM6DSRX_SIGN_MOTION_EN_MASK,
+	},
 	[ST_LSM6DSRX_REG_EMB_FUNC_EN_B_REG] = {
 		.page = FUNC_CFG_ACCESS_FUNC_CFG,
 		.addr = ST_LSM6DSRX_EMB_FUNC_EN_B_ADDR,
 		.mask = ST_LSM6DSRX_FSM_EN_MASK |
 			ST_LSM6DSRX_MLC_EN_MASK,
+	},
+	[ST_LSM6DSRX_REG_EMB_FUNC_FIFO_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_FUNC_CFG,
+		.addr = ST_LSM6DSRX_REG_EMB_FUNC_FIFO_CFG_ADDR,
+		.mask = ST_LSM6DSRX_PEDO_FIFO_EN_MASK,
+	},
+	[ST_LSM6DSRX_REG_PAGE_RW_REG] = {
+		.page = FUNC_CFG_ACCESS_FUNC_CFG,
+		.addr = ST_LSM6DSRX_REG_PAGE_RW_ADDR,
+		.mask = ST_LSM6DSRX_EMB_FUNC_LIR_MASK,
 	},
 	[ST_LSM6DSRX_REG_FSM_INT1_A_REG] = {
 		.page = FUNC_CFG_ACCESS_FUNC_CFG,
@@ -592,9 +609,6 @@ int st_lsm6dsrx_set_odr(struct st_lsm6dsrx_sensor *sensor, int req_odr,
 	case ST_LSM6DSRX_ID_MLC_6:
 	case ST_LSM6DSRX_ID_MLC_7:
 	case ST_LSM6DSRX_ID_STEP_COUNTER:
-	case ST_LSM6DSRX_ID_STEP_DETECTOR:
-	case ST_LSM6DSRX_ID_SIGN_MOTION:
-	case ST_LSM6DSRX_ID_TILT:
 	case ST_LSM6DSRX_ID_ACC: {
 		int odr;
 		int i;
@@ -1071,10 +1085,12 @@ int st_lsm6dsrx_get_int_reg(struct st_lsm6dsrx_hw *hw)
 	case 1:
 		irq_reg = ST_LSM6DSRX_REG_INT1_CTRL_ADDR;
 		hw->embfunc_pg0_irq_reg = ST_LSM6DSRX_REG_MD1_CFG_ADDR;
+		hw->embfunc_irq_reg = ST_LSM6DSRX_REG_EMB_FUNC_INT1_ADDR;
 		break;
 	case 2:
 		irq_reg = ST_LSM6DSRX_REG_INT2_CTRL_ADDR;
 		hw->embfunc_pg0_irq_reg = ST_LSM6DSRX_REG_MD2_CFG_ADDR;
+		hw->embfunc_irq_reg = ST_LSM6DSRX_REG_EMB_FUNC_INT2_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -1881,20 +1897,17 @@ int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
 			return -ENOMEM;
 	}
 
-#ifdef CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES
-	/* allocate step counter before buffer setup because use FIFO */
-	err = st_lsm6dsrx_probe_embfunc(hw);
-	if (err < 0)
-		return err;
-
-#endif /* CONFIG_IIO_ST_LSM6DSRX_EN_BASIC_FEATURES */
-
 	err = st_lsm6dsrx_shub_probe(hw);
 	if (err < 0)
 		return err;
 
 	if (hw->irq > 0) {
 		err = st_lsm6dsrx_event_init(hw);
+		if (err < 0)
+			return err;
+
+		/* allocate step counter before buffer setup because use FIFO */
+		err = st_lsm6dsrx_embfunc_probe(hw);
 		if (err < 0)
 			return err;
 
