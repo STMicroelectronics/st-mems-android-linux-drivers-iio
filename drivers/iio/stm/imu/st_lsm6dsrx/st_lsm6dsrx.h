@@ -295,6 +295,7 @@
 
 #define ST_LSM6DSRX_DEFAULT_KTIME		(200000000)
 #define ST_LSM6DSRX_FAST_KTIME			(5000000)
+#define ST_LSM6DSRX_FAST_TO_DEFAULT		(10)
 
 #define ST_LSM6DSRX_DATA_CHANNEL(chan_type, addr, mod, ch2, scan_idx,	\
 				rb, sb, sg, ext_inf)			\
@@ -561,6 +562,7 @@ enum st_lsm6dsrx_sensor_id {
 	ST_LSM6DSRX_ID_GYRO = 0,
 	ST_LSM6DSRX_ID_ACC,
 	ST_LSM6DSRX_ID_TEMP,
+	ST_LSM6DSRX_ID_HW = ST_LSM6DSRX_ID_TEMP,
 	ST_LSM6DSRX_ID_EXT0,
 	ST_LSM6DSRX_ID_EXT1,
 	ST_LSM6DSRX_ID_MLC,
@@ -857,7 +859,7 @@ struct st_lsm6dsrx_hw {
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
-	int timesync_c;
+	int timesync_c[ST_LSM6DSRX_ID_HW + 1];
 #endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
 
 	u64 enable_mask;

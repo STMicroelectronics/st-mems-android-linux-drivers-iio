@@ -73,12 +73,8 @@ static inline int st_lsm6dsrx_reset_hwts(struct st_lsm6dsrx_hw *hw)
 	spin_lock_irq(&hw->hwtimestamp_lock);
 	hw->hw_timestamp_global = (hw->hw_timestamp_global + (1LL << 32)) &
 				   GENMASK_ULL(63, 32);
-	spin_unlock_irq(&hw->hwtimestamp_lock);
-	hw->timesync_c = 0;
 	hw->timesync_ktime = ktime_set(0, ST_LSM6DSRX_FAST_KTIME);
-#else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
-	hw->hw_timestamp_global = (hw->hw_timestamp_global + (1LL << 32)) &
-				   GENMASK_ULL(63, 32);
+	spin_unlock_irq(&hw->hwtimestamp_lock);
 #endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
 
 	hw->ts = iio_get_time_ns(hw->iio_devs[0]);
@@ -87,6 +83,20 @@ static inline int st_lsm6dsrx_reset_hwts(struct st_lsm6dsrx_hw *hw)
 
 	return 0;
 }
+
+#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+void st_lsm6dsrx_init_timesync_counter(struct st_lsm6dsrx_sensor *sensor,
+				       struct st_lsm6dsrx_hw *hw,
+				       bool enable)
+{
+	spin_lock_irq(&hw->hwtimestamp_lock);
+	if (sensor->id <= ST_LSM6DSRX_ID_HW)
+		hw->timesync_c[sensor->id] = enable ?
+					     ST_LSM6DSRX_FAST_TO_DEFAULT : 0;
+
+	spin_unlock_irq(&hw->hwtimestamp_lock);
+}
+#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
 
 int st_lsm6dsrx_set_fifo_mode(struct st_lsm6dsrx_hw *hw,
 			      enum st_lsm6dsrx_fifo_mode fifo_mode)
@@ -262,14 +272,11 @@ static int st_lsm6dsrx_read_fifo(struct st_lsm6dsrx_hw *hw)
 
 #if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
 				spin_lock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
 
 				hw->hw_timestamp_global =
 						(hw->hw_timestamp_global &
-						 GENMASK_ULL(63, 32)) |
-						(u32)le32_to_cpu(val);
+						 GENMASK_ULL(63, 32)) | val;
 
-#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
 				spin_unlock_irq(&hw->hwtimestamp_lock);
 #endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
 
@@ -309,24 +316,22 @@ static int st_lsm6dsrx_read_fifo(struct st_lsm6dsrx_hw *hw)
 					hw->tsample = val * hw->ts_delta_ns;
 				}
 				memcpy(iio_buf, ptr, ST_LSM6DSRX_SAMPLE_SIZE);
-
-#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
-					spin_lock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
-
-				hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
-
-#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
-					spin_unlock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
-
-				memcpy(&iio_buf[ALIGN(ST_LSM6DSRX_SAMPLE_SIZE, sizeof(s64))],
-				       &hw_timestamp_push, sizeof(hw_timestamp_push));
 				hw->tsample = min_t(s64,
 					iio_get_time_ns(hw->iio_devs[0]),
 					hw->tsample);
 
-				sensor->last_fifo_timestamp = hw_timestamp_push;
+#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+				spin_lock_irq(&hw->hwtimestamp_lock);
+
+				hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
+
+				memcpy(&iio_buf[ALIGN(ST_LSM6DSRX_SAMPLE_SIZE, sizeof(s64))],
+				       &hw_timestamp_push, sizeof(hw_timestamp_push));
+
+				spin_unlock_irq(&hw->hwtimestamp_lock);
+#else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+				hw_timestamp_push = hw->tsample;
+#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
 
 				/* support decimation for ODR < 12.5 Hz */
 				if (sensor->dec_counter > 0) {
@@ -336,6 +341,7 @@ static int st_lsm6dsrx_read_fifo(struct st_lsm6dsrx_hw *hw)
 					iio_push_to_buffers_with_timestamp(iio_dev,
 								iio_buf,
 								hw->tsample);
+					sensor->last_fifo_timestamp = hw_timestamp_push;
 				}
 			}
 		}
@@ -531,6 +537,7 @@ static int st_lsm6dsrx_update_fifo(struct iio_dev *iio_dev, bool enable)
 	}
 
 #if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+	st_lsm6dsrx_init_timesync_counter(sensor, hw, enable);
 	if (hw->fifo_mode != ST_LSM6DSRX_FIFO_BYPASS) {
 		hrtimer_start(&hw->timesync_timer,
 			      ktime_set(0, 0),
