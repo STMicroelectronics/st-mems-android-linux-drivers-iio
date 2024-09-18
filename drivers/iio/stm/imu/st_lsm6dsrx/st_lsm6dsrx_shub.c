@@ -402,8 +402,8 @@ out:
  *
  * NOTE: use SLV3 i2c slave for one-shot read operation.
  */
-static int st_lsm6dsrx_shub_read(struct st_lsm6dsrx_sensor *sensor, u8 addr,
-				 u8 *data, int len)
+int st_lsm6dsrx_shub_read(struct st_lsm6dsrx_sensor *sensor, u8 addr,
+			  u8 *data, int len)
 {
 	struct st_lsm6dsrx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	struct st_lsm6dsrx_hw *hw = sensor->hw;

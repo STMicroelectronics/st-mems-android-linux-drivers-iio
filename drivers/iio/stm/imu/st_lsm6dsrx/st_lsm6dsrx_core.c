@@ -1424,14 +1424,12 @@ static ssize_t st_lsm6dsrx_sysfs_start_selftest(struct device *dev,
 	st_lsm6dsrx_bk_regs(hw);
 
 	/* disable FIFO watermak interrupt */
-	ret = st_lsm6dsrx_get_int_reg(hw);
-	if (ret < 0)
-		goto restore_regs;
-
-	ret = st_lsm6dsrx_update_bits_locked(hw, hw->irq_reg,
-					     ST_LSM6DSRX_REG_FIFO_TH_MASK, 0);
-	if (ret < 0)
-		goto restore_regs;
+	if (hw->has_hw_fifo) {
+		ret = st_lsm6dsrx_update_bits_locked(hw, hw->irq_reg,
+					ST_LSM6DSRX_REG_FIFO_TH_MASK, 0);
+		if (ret < 0)
+			goto restore_regs;
+	}
 
 	gain = sensor->gain;
 	if (id == ST_LSM6DSRX_ID_ACC) {
@@ -1651,36 +1649,13 @@ static int st_lsm6dsrx_reset_device(struct st_lsm6dsrx_hw *hw)
 	return err;
 }
 
-static int st_lsm6dsrx_init_timestamp_engine(struct st_lsm6dsrx_hw *hw,
-					     bool enable)
-{
-	int err;
-
-	/* init timestamp engine */
-	err = regmap_update_bits(hw->regmap, ST_LSM6DSRX_REG_CTRL10_C_ADDR,
-				 ST_LSM6DSRX_REG_TIMESTAMP_EN_MASK,
-				 ST_LSM6DSRX_SHIFT_VAL(true,
-				  ST_LSM6DSRX_REG_TIMESTAMP_EN_MASK));
-	if (err < 0)
-		return err;
-
-	/* enable timestamp rollover interrupt on int2 */
-	return regmap_update_bits(hw->regmap, ST_LSM6DSRX_REG_MD2_CFG_ADDR,
-				  ST_LSM6DSRX_REG_INT2_TIMESTAMP_MASK,
-				  ST_LSM6DSRX_SHIFT_VAL(enable,
-				   ST_LSM6DSRX_REG_INT2_TIMESTAMP_MASK));
-}
-
 static int st_lsm6dsrx_init_device(struct st_lsm6dsrx_hw *hw)
 {
 	int err;
 
-	/* latch interrupts */
-	err = regmap_update_bits(hw->regmap, ST_LSM6DSRX_REG_TAP_CFG0_ADDR,
-				 ST_LSM6DSRX_REG_LIR_MASK,
-				 FIELD_PREP(ST_LSM6DSRX_REG_LIR_MASK, 1));
+	err = st_lsm6dsrx_get_int_reg(hw);
 	if (err < 0)
-		return err;
+		dev_info(hw->dev, "interrupt lines not configured\n");
 
 	/* enable (B)lock (D)ata (U)pdate */
 	err = regmap_update_bits(hw->regmap, ST_LSM6DSRX_REG_CTRL3_C_ADDR,
@@ -1695,26 +1670,10 @@ static int st_lsm6dsrx_init_device(struct st_lsm6dsrx_hw *hw)
 	if (err < 0)
 		return err;
 
-	err = st_lsm6dsrx_init_timestamp_engine(hw, true);
-	if (err < 0)
-		return err;
-
-	err = st_lsm6dsrx_get_int_reg(hw);
-	if (err < 0)
-		return err;
-
 	/* Enable DRDY MASK for filters settling time */
-	err = regmap_update_bits(hw->regmap, ST_LSM6DSRX_REG_CTRL4_C_ADDR,
+	return regmap_update_bits(hw->regmap, ST_LSM6DSRX_REG_CTRL4_C_ADDR,
 				 ST_LSM6DSRX_REG_DRDY_MASK,
 				 FIELD_PREP(ST_LSM6DSRX_REG_DRDY_MASK, 1));
-
-	if (err < 0)
-		return err;
-
-	/* enable interrupt on FIFO watermak */
-	return regmap_update_bits(hw->regmap, hw->irq_reg,
-				  ST_LSM6DSRX_REG_FIFO_TH_MASK,
-				  FIELD_PREP(ST_LSM6DSRX_REG_FIFO_TH_MASK, 1));
 }
 
 static struct iio_dev *st_lsm6dsrx_alloc_iiodev(struct st_lsm6dsrx_hw *hw,
@@ -1879,6 +1838,7 @@ int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
 	hw->dev = dev;
 	hw->irq = irq;
 	hw->odr_table_entry = st_lsm6dsrx_odr_table;
+	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	err = st_lsm6dsrx_power_enable(hw);
 	if (err != 0)
@@ -1930,7 +1890,7 @@ int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
 	if (err < 0)
 		return err;
 
-	if (hw->irq > 0) {
+	if (hw->has_hw_fifo) {
 		err = st_lsm6dsrx_event_init(hw);
 		if (err < 0)
 			return err;
@@ -1939,19 +1899,25 @@ int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
 		err = st_lsm6dsrx_embfunc_probe(hw);
 		if (err < 0)
 			return err;
-
-		err = st_lsm6dsrx_buffers_setup(hw);
-		if (err < 0)
-			return err;
 	}
 
-	if (st_lsm6dsrx_run_mlc_task(hw)) {
-		err = st_lsm6dsrx_mlc_probe(hw);
+	err = st_lsm6dsrx_allocate_buffers(hw);
+	if (err < 0)
+		return err;
+
+	if (hw->has_hw_fifo) {
+		err = st_lsm6dsrx_trigger_setup(hw);
 		if (err < 0)
 			return err;
+
+		if (st_lsm6dsrx_run_mlc_task(hw)) {
+			err = st_lsm6dsrx_mlc_probe(hw);
+			if (err < 0)
+				return err;
+		}
 	}
 
-	for (i = 0; i < ST_LSM6DSRX_ID_MAX; i++) {
+	for (i = ST_LSM6DSRX_ID_GYRO; i < ST_LSM6DSRX_ID_MAX; i++) {
 		if (!hw->iio_devs[i])
 			continue;
 
@@ -1968,6 +1934,8 @@ int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
 
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev, "wakeup-source"));
+
+	dev_info(dev, "Device probed\n");
 
 	return 0;
 }

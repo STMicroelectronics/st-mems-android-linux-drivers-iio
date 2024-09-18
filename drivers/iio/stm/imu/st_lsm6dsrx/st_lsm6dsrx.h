@@ -288,6 +288,7 @@
 /* FIFO simple size and depth */
 #define ST_LSM6DSRX_SAMPLE_SIZE			6
 #define ST_LSM6DSRX_TS_SAMPLE_SIZE		4
+#define ST_LSM6DSRX_PT_SAMPLE_SIZE		2
 #define ST_LSM6DSRX_TAG_SIZE			1
 #define ST_LSM6DSRX_FIFO_SAMPLE_SIZE		(ST_LSM6DSRX_SAMPLE_SIZE + \
 						 ST_LSM6DSRX_TAG_SIZE)
@@ -597,7 +598,7 @@ enum st_lsm6dsrx_sensor_id {
 /**
  * The FIFO only sensor list used by buffer
  */
-static const enum st_lsm6dsrx_sensor_id st_lsm6dsrx_buffered_sensor_list[] = {
+static const enum st_lsm6dsrx_sensor_id st_lsm6dsrx_triggered_main_sensor_list[] = {
 	[0] = ST_LSM6DSRX_ID_GYRO,
 	[1] = ST_LSM6DSRX_ID_ACC,
 	[2] = ST_LSM6DSRX_ID_TEMP,
@@ -840,6 +841,7 @@ struct st_lsm6dsrx_sensor {
  * @tap_quiet_time: tap quiet time in ms.
  * @tap_shock_time: tap shock time in ms.
  * @dtap_duration: double tap duration time (min time) in ms.
+ * @has_hw_fifo: Indicate if the hw fifo configuration was done.
  */
 struct st_lsm6dsrx_hw {
 	struct device *dev;
@@ -902,6 +904,8 @@ struct st_lsm6dsrx_hw {
 	u32 tap_quiet_time;
 	u32 tap_shock_time;
 	u32 dtap_duration;
+
+	bool has_hw_fifo;
 };
 
 /**
@@ -934,7 +938,8 @@ static inline bool st_lsm6dsrx_is_fifo_enabled(struct st_lsm6dsrx_hw *hw)
 
 static inline bool st_lsm6dsrx_run_mlc_task(struct st_lsm6dsrx_hw *hw)
 {
-	return hw->settings->st_mlc_probe || hw->settings->st_fsm_probe;
+	return (hw->settings->st_mlc_probe || hw->settings->st_fsm_probe) &&
+	       hw->has_hw_fifo;
 }
 
 static inline int st_lsm6dsrx_manipulate_bit(int int_reg, int irq_mask,
@@ -1076,7 +1081,8 @@ int st_lsm6dsrx_sensor_set_enable(struct st_lsm6dsrx_sensor *sensor,
 int st_lsm6dsrx_set_odr(struct st_lsm6dsrx_sensor *sensor, int req_odr,
 			int req_uodr);
 int st_lsm6dsrx_get_int_reg(struct st_lsm6dsrx_hw *hw);
-int st_lsm6dsrx_buffers_setup(struct st_lsm6dsrx_hw *hw);
+int st_lsm6dsrx_trigger_setup(struct st_lsm6dsrx_hw *hw);
+int st_lsm6dsrx_allocate_buffers(struct st_lsm6dsrx_hw *hw);
 int st_lsm6dsrx_get_batch_val(struct st_lsm6dsrx_sensor *sensor, int odr,
 			      int uodr, u8 *val);
 int st_lsm6dsrx_update_watermark(struct st_lsm6dsrx_sensor *sensor,
@@ -1104,7 +1110,8 @@ int st_lsm6dsrx_of_get_pin(struct st_lsm6dsrx_hw *hw, int *pin);
 int st_lsm6dsrx_shub_probe(struct st_lsm6dsrx_hw *hw);
 int st_lsm6dsrx_shub_set_enable(struct st_lsm6dsrx_sensor *sensor,
 				bool enable);
-
+int st_lsm6dsrx_shub_read(struct st_lsm6dsrx_sensor *sensor,
+			  u8 addr, u8 *data, int len);
 #if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
 int st_lsm6dsrx_hwtimesync_init(struct st_lsm6dsrx_hw *hw);
 #else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
