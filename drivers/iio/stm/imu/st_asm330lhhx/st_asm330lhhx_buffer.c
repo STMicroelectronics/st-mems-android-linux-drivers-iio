@@ -879,7 +879,7 @@ int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw)
 			return err;
 		}
 
-		hw->iio_devs[i]->trig = iio_trigger_get(sensor->trig);
+		hw->iio_devs[id]->trig = iio_trigger_get(sensor->trig);
 	}
 
 	err = st_asm330lhhx_config_interrupt(hw, true);
