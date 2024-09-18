@@ -284,6 +284,7 @@
 /* FIFO simple size and depth */
 #define ST_LSM6DSOX_SAMPLE_SIZE			6
 #define ST_LSM6DSOX_TS_SAMPLE_SIZE		4
+#define ST_LSM6DSOX_PT_SAMPLE_SIZE		2
 #define ST_LSM6DSOX_TAG_SIZE			1
 #define ST_LSM6DSOX_FIFO_SAMPLE_SIZE		(ST_LSM6DSOX_SAMPLE_SIZE + \
 						 ST_LSM6DSOX_TAG_SIZE)
@@ -615,6 +616,15 @@ static const enum st_lsm6dsox_sensor_id st_lsm6dsox_main_sensor_list[] = {
 	 [2] = ST_LSM6DSOX_ID_TEMP,
 };
 
+static const enum st_lsm6dsox_sensor_id st_lsm6dsox_triggered_main_sensor_list[] = {
+	 [0] = ST_LSM6DSOX_ID_GYRO,
+	 [1] = ST_LSM6DSOX_ID_ACC,
+	 [2] = ST_LSM6DSOX_ID_TEMP,
+	 [3] = ST_LSM6DSOX_ID_EXT0,
+	 [4] = ST_LSM6DSOX_ID_EXT1,
+	 [5] = ST_LSM6DSOX_ID_STEP_COUNTER,
+};
+
 static const enum st_lsm6dsox_sensor_id st_lsm6dsox_mlc_sensor_list[] = {
 	 [0] = ST_LSM6DSOX_ID_MLC_0,
 	 [1] = ST_LSM6DSOX_ID_MLC_1,
@@ -786,6 +796,7 @@ struct st_lsm6dsox_sensor {
  * @st_lsm6dsox_odr_table: Sensors ODR table.
  * @preload_mlc: MLC/FSM preload flag.
  * @iio_devs: Pointers to acc/gyro iio_dev instances.
+ * @irq_reg: irq configutation register.
  * @embfunc_irq_reg: Embedded function irq configuration register (other).
  * @embfunc_pg0_irq_reg: Embedded function irq configuration register (page 0).
  * @freefall_threshold: Accelerometer threshold for free fall algorithm.
@@ -796,6 +807,7 @@ struct st_lsm6dsox_sensor {
  * @tap_quiet_time: tap quiet time in ms.
  * @tap_shock_time: tap shock time in ms.
  * @dtap_duration: double tap duration time (min time) in ms.
+ * @has_hw_fifo: Indicate if the hw fifo configuration was done.
  */
 struct st_lsm6dsox_hw {
 	char dev_name[16];
@@ -840,6 +852,7 @@ struct st_lsm6dsox_hw {
 
 	struct iio_dev *iio_devs[ST_LSM6DSOX_ID_MAX];
 
+	u8 irq_reg;
 	u8 embfunc_irq_reg;
 	u8 embfunc_pg0_irq_reg;
 
@@ -851,6 +864,8 @@ struct st_lsm6dsox_hw {
 	u32 tap_quiet_time;
 	u32 tap_shock_time;
 	u32 dtap_duration;
+
+	bool has_hw_fifo;
 };
 
 /**
@@ -906,7 +921,8 @@ st_lsm6dsox_is_fifo_enabled(struct st_lsm6dsox_hw *hw)
 
 static inline bool st_lsm6dsox_run_mlc_task(struct st_lsm6dsox_hw *hw)
 {
-	return hw->settings->st_mlc_probe || hw->settings->st_fsm_probe;
+	return (hw->settings->st_mlc_probe || hw->settings->st_fsm_probe) &&
+	       hw->has_hw_fifo;
 }
 
 static inline int st_lsm6dsox_manipulate_bit(int int_reg, int irq_mask, int en)
@@ -1007,7 +1023,8 @@ int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 		      struct regmap *regmap);
 int st_lsm6dsox_sensor_set_enable(struct st_lsm6dsox_sensor *sensor,
 				  bool enable);
-int st_lsm6dsox_buffers_setup(struct st_lsm6dsox_hw *hw);
+int st_lsm6dsox_trigger_setup(struct st_lsm6dsox_hw *hw);
+int st_lsm6dsox_allocate_buffers(struct st_lsm6dsox_hw *hw);
 int st_lsm6dsox_get_batch_val(struct st_lsm6dsox_sensor *sensor,
 			      int odr, int uodr, u8 *val);
 int st_lsm6dsox_update_watermark(struct st_lsm6dsox_sensor *sensor,
@@ -1032,11 +1049,14 @@ int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, int req_odr,
 int st_lsm6dsox_suspend_fifo(struct st_lsm6dsox_hw *hw);
 int st_lsm6dsox_set_fifo_mode(struct st_lsm6dsox_hw *hw,
 			      enum st_lsm6dsox_fifo_mode fifo_mode);
+int st_lsm6dsox_get_int_reg(struct st_lsm6dsox_hw *hw);
 int st_lsm6dsox_update_batching(struct iio_dev *iio_dev, bool enable);
 int st_lsm6dsox_of_get_pin(struct st_lsm6dsox_hw *hw, int *pin);
 int st_lsm6dsox_shub_probe(struct st_lsm6dsox_hw *hw);
 int st_lsm6dsox_shub_set_enable(struct st_lsm6dsox_sensor *sensor,
 				bool enable);
+int st_lsm6dsox_shub_read(struct st_lsm6dsox_sensor *sensor,
+			  u8 addr, u8 *data, int len);
 
 /* xl events */
 int st_lsm6dsox_read_event_config(struct iio_dev *iio_dev,

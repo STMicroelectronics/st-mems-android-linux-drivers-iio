@@ -1362,7 +1362,7 @@ int st_lsm6dsox_of_get_pin(struct st_lsm6dsox_hw *hw, int *pin)
 	return of_property_read_u32(np, "st,int-pin", pin);
 }
 
-static int st_lsm6dsox_get_int_reg(struct st_lsm6dsox_hw *hw, u8 *drdy_reg)
+int st_lsm6dsox_get_int_reg(struct st_lsm6dsox_hw *hw)
 {
 	int err = 0, int_pin;
 
@@ -1378,12 +1378,12 @@ static int st_lsm6dsox_get_int_reg(struct st_lsm6dsox_hw *hw, u8 *drdy_reg)
 	case 1:
 		hw->embfunc_pg0_irq_reg = ST_LSM6DSOX_REG_MD1_CFG_ADDR;
 		hw->embfunc_irq_reg = ST_LSM6DSOX_EMB_FUNC_INT1_ADDR;
-		*drdy_reg = ST_LSM6DSOX_REG_INT1_CTRL_ADDR;
+		hw->irq_reg = ST_LSM6DSOX_REG_INT1_CTRL_ADDR;
 		break;
 	case 2:
 		hw->embfunc_pg0_irq_reg = ST_LSM6DSOX_REG_MD2_CFG_ADDR;
 		hw->embfunc_irq_reg = ST_LSM6DSOX_EMB_FUNC_INT2_ADDR;
-		*drdy_reg = ST_LSM6DSOX_REG_INT2_CTRL_ADDR;
+		hw->irq_reg = ST_LSM6DSOX_REG_INT2_CTRL_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -1519,7 +1519,6 @@ static ssize_t st_lsm6dsox_sysfs_start_selftest(struct device *dev,
 	enum st_lsm6dsox_sensor_id id = sensor->id;
 	struct st_lsm6dsox_hw *hw = sensor->hw;
 	int ret, test;
-	u8 drdy_reg;
 	u32 gain;
 
 	if (id != ST_LSM6DSOX_ID_ACC &&
@@ -1549,15 +1548,13 @@ static ssize_t st_lsm6dsox_sysfs_start_selftest(struct device *dev,
 	st_lsm6dsox_bk_regs(hw);
 
 	/* disable FIFO watermak interrupt */
-	ret = st_lsm6dsox_get_int_reg(hw, &drdy_reg);
-	if (ret < 0)
-		goto restore_regs;
-
-	ret = st_lsm6dsox_write_with_mask_locked(hw, drdy_reg,
-						 ST_LSM6DSOX_REG_FIFO_TH_MASK,
-						 0);
-	if (ret < 0)
-		goto restore_regs;
+	if (hw->has_hw_fifo) {
+		ret = st_lsm6dsox_write_with_mask_locked(hw, hw->irq_reg,
+						   ST_LSM6DSOX_REG_FIFO_TH_MASK,
+						   0);
+		if (ret < 0)
+			goto restore_regs;
+	}
 
 	gain = sensor->gain;
 	if (id == ST_LSM6DSOX_ID_ACC) {
@@ -1771,35 +1768,11 @@ static int st_lsm6dsox_reset_device(struct st_lsm6dsox_hw *hw)
 	return err;
 }
 
-static int st_lsm6dsox_init_timestamp_engine(struct st_lsm6dsox_hw *hw,
-					     bool enable)
-{
-	int err;
-
-	/* Init timestamp engine. */
-	err = regmap_update_bits(hw->regmap, ST_LSM6DSOX_REG_CTRL10_C_ADDR,
-				 ST_LSM6DSOX_REG_TIMESTAMP_EN_MASK,
-				 ST_LSM6DSOX_SHIFT_VAL(true,
-				  ST_LSM6DSOX_REG_TIMESTAMP_EN_MASK));
-	if (err < 0)
-		return err;
-
-	/* Enable timestamp rollover interrupt on INT2. */
-	return regmap_update_bits(hw->regmap, ST_LSM6DSOX_REG_MD2_CFG_ADDR,
-				  ST_LSM6DSOX_REG_INT2_TIMESTAMP_MASK,
-				  ST_LSM6DSOX_SHIFT_VAL(enable,
-				   ST_LSM6DSOX_REG_INT2_TIMESTAMP_MASK));
-}
-
 static int st_lsm6dsox_init_device(struct st_lsm6dsox_hw *hw)
 {
-	u8 drdy_reg;
 	int err;
 
-	/* latch interrupts */
-	err = regmap_update_bits(hw->regmap, ST_LSM6DSOX_REG_TAP_CFG0_ADDR,
-				 ST_LSM6DSOX_REG_LIR_MASK,
-				 FIELD_PREP(ST_LSM6DSOX_REG_LIR_MASK, 1));
+	err = st_lsm6dsox_get_int_reg(hw);
 	if (err < 0)
 		return err;
 
@@ -1816,26 +1789,11 @@ static int st_lsm6dsox_init_device(struct st_lsm6dsox_hw *hw)
 	if (err < 0)
 		return err;
 
-	err = st_lsm6dsox_init_timestamp_engine(hw, true);
-	if (err < 0)
-		return err;
-
-	err = st_lsm6dsox_get_int_reg(hw, &drdy_reg);
-	if (err < 0)
-		return err;
 
 	/* Enable DRDY MASK for filters settling time */
-	err = regmap_update_bits(hw->regmap, ST_LSM6DSOX_REG_CTRL4_C_ADDR,
-				 ST_LSM6DSOX_REG_DRDY_MASK,
-				 FIELD_PREP(ST_LSM6DSOX_REG_DRDY_MASK, 1));
-
-	if (err < 0)
-		return err;
-
-	/* enable FIFO watermak interrupt */
-	return regmap_update_bits(hw->regmap, drdy_reg,
-				  ST_LSM6DSOX_REG_FIFO_TH_MASK,
-				  FIELD_PREP(ST_LSM6DSOX_REG_FIFO_TH_MASK, 1));
+	return regmap_update_bits(hw->regmap, ST_LSM6DSOX_REG_CTRL4_C_ADDR,
+				  ST_LSM6DSOX_REG_DRDY_MASK,
+				  FIELD_PREP(ST_LSM6DSOX_REG_DRDY_MASK, 1));
 }
 
 static struct iio_dev *st_lsm6dsox_alloc_iiodev(struct st_lsm6dsox_hw *hw,
@@ -2011,6 +1969,7 @@ int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 	hw->regmap = regmap;
 	hw->dev = dev;
 	hw->irq = irq;
+	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	err = st_lsm6dsox_power_enable(hw);
 	if (err != 0)
@@ -2066,13 +2025,9 @@ int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 	if (err < 0)
 		return err;
 
-	if (hw->irq > 0) {
+	if (hw->has_hw_fifo) {
 		err = st_lsm6dsox_embfunc_probe(hw);
 		if (err)
-			return err;
-
-		err = st_lsm6dsox_buffers_setup(hw);
-		if (err < 0)
 			return err;
 
 		err = st_lsm6dsox_event_init(hw);
@@ -2080,13 +2035,23 @@ int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 			return err;
 	}
 
-	if (st_lsm6dsox_run_mlc_task(hw)) {
-		err = st_lsm6dsox_mlc_probe(hw);
+	err = st_lsm6dsox_allocate_buffers(hw);
+	if (err < 0)
+		return err;
+
+	if (hw->has_hw_fifo) {
+		err = st_lsm6dsox_trigger_setup(hw);
 		if (err < 0)
 			return err;
+
+		if (st_lsm6dsox_run_mlc_task(hw)) {
+			err = st_lsm6dsox_mlc_probe(hw);
+			if (err < 0)
+				return err;
+		}
 	}
 
-	for (i = 0; i < ST_LSM6DSOX_ID_MAX; i++) {
+	for (i = ST_LSM6DSOX_ID_GYRO; i < ST_LSM6DSOX_ID_MAX; i++) {
 		if (!hw->iio_devs[i])
 			continue;
 
