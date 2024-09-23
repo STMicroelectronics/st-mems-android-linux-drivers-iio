@@ -240,7 +240,7 @@ st_ism330dhcx_shub_wait_complete(struct st_ism330dhcx_hw *hw,
 
 	/* check if acc is enabled */
 	accel_odr = hw->odr_table[ST_ISM330DHCX_ID_ACC].odr_avl[1].hz;
-	odr = (hw->enable_mask & BIT(ST_ISM330DHCX_ID_ACC)) ?
+	odr = (hw->enable_mask & BIT_ULL(ST_ISM330DHCX_ID_ACC)) ?
 	      acc_sensor->odr : max_t(int, sensor->odr, accel_odr);
 
 	/*
@@ -504,15 +504,15 @@ static int st_ism330dhcx_shub_config_channels(struct st_ism330dhcx_sensor *senso
 	u8 config[6] = {}, enable_mask;
 	int i, j = 0;
 
-	enable_mask = enable ? hw->enable_mask | BIT(sensor->id)
-			     : hw->enable_mask & ~BIT(sensor->id);
+	enable_mask = enable ? hw->enable_mask | BIT_ULL(sensor->id)
+			     : hw->enable_mask & ~BIT_ULL(sensor->id);
 
 	for (i = ST_ISM330DHCX_ID_EXT0; i <= ST_ISM330DHCX_ID_EXT1; i++) {
 		if (!hw->iio_devs[i])
 			continue;
 
 		cur_sensor = iio_priv(hw->iio_devs[i]);
-		if (!(enable_mask & BIT(cur_sensor->id)))
+		if (!(enable_mask & BIT_ULL(cur_sensor->id)))
 			continue;
 
 		ext_info = &cur_sensor->ext_dev_info;
@@ -582,7 +582,7 @@ static int st_ism330dhcx_shub_set_odr(struct st_ism330dhcx_sensor *sensor, u16 o
 	if (err < 0)
 		return err;
 
-	if (sensor->odr == odr && (hw->enable_mask & BIT(sensor->id)))
+	if (sensor->odr == odr && (hw->enable_mask & BIT_ULL(sensor->id)))
 		return 0;
 
 	return st_ism330dhcx_shub_write_with_mask(sensor,

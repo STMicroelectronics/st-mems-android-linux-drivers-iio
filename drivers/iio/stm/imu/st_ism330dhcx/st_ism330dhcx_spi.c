@@ -34,6 +34,20 @@ static int st_ism330dhcx_spi_probe(struct spi_device *spi)
 	return st_ism330dhcx_probe(&spi->dev, spi->irq, regmap);
 }
 
+#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
+static void st_ism330dhcx_spi_remove(struct spi_device *spi)
+{
+	st_ism330dhcx_remove(&spi->dev);
+}
+#else /* LINUX_VERSION_CODE */
+static int st_ism330dhcx_spi_remove(struct spi_device *spi)
+{
+	st_ism330dhcx_remove(&spi->dev);
+
+	return 0;
+}
+#endif /* LINUX_VERSION_CODE */
+
 static const struct of_device_id st_ism330dhcx_spi_of_match[] = {
 	{
 		.compatible = "st,ism330dhcx",
@@ -55,6 +69,7 @@ static struct spi_driver st_ism330dhcx_driver = {
 		.of_match_table = of_match_ptr(st_ism330dhcx_spi_of_match),
 	},
 	.probe = st_ism330dhcx_spi_probe,
+	.remove = st_ism330dhcx_spi_remove,
 	.id_table = st_ism330dhcx_spi_id_table,
 };
 module_spi_driver(st_ism330dhcx_driver);

@@ -17,6 +17,10 @@ Optional properties  for all bus drivers:
 - st,int-pin:        the pin on the package that will be used to signal
                      "data ready" (valid values: 1 or 2, default: 1).
 
+- st,mlc-int-pin:    the pin on the package that will be used to signal
+                     MLC/FSM event (valid values: 1 for int pin 1, 2 for
+                     int pin 2 or 3 for both int pin, default: st,int-pin).
+
 - drive-open-drain:  the interrupt/data ready line will be configured as open drain,
                      which is useful if several sensors share the same interrupt line.
 

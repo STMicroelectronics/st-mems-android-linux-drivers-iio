@@ -183,9 +183,9 @@ static int st_ism330dhcx_step_event_enable(struct st_ism330dhcx_sensor *sensor,
 		goto reset_page;
 
 	if (enable)
-		hw->enable_ev_mask |= BIT(sensor->id);
+		hw->enable_ev_mask |= BIT_ULL(sensor->id);
 	else
-		hw->enable_ev_mask &= ~BIT(sensor->id);
+		hw->enable_ev_mask &= ~BIT_ULL(sensor->id);
 
 reset_page:
 	st_ism330dhcx_set_page_access(hw, ST_ISM330DHCX_REG_FUNC_CFG_MASK,
@@ -265,9 +265,9 @@ st_ism330dhcx_signmot_event_enable(struct st_ism330dhcx_sensor *sensor,
 		goto reset_page;
 
 	if (enable)
-		hw->enable_ev_mask |= BIT(sensor->id);
+		hw->enable_ev_mask |= BIT_ULL(sensor->id);
 	else
-		hw->enable_ev_mask &= ~BIT(sensor->id);
+		hw->enable_ev_mask &= ~BIT_ULL(sensor->id);
 
 reset_page:
 	st_ism330dhcx_set_page_access(hw, ST_ISM330DHCX_REG_FUNC_CFG_MASK,
@@ -297,7 +297,7 @@ st_ism330dhcx_read_event_step_config(struct iio_dev *iio_dev,
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	struct st_ism330dhcx_hw *hw = sensor->hw;
 
-	return !!(hw->enable_ev_mask & BIT(sensor->id));
+	return !!(hw->enable_ev_mask & BIT_ULL(sensor->id));
 }
 
 /**
@@ -451,9 +451,9 @@ int st_ism330dhcx_step_enable(struct st_ism330dhcx_sensor *sensor, bool enable)
 		goto reset_page;
 
 	if (enable)
-		hw->enable_mask |= BIT(sensor->id);
+		hw->enable_mask |= BIT_ULL(sensor->id);
 	else
-		hw->enable_mask &= ~BIT(sensor->id);
+		hw->enable_mask &= ~BIT_ULL(sensor->id);
 
 reset_page:
 	st_ism330dhcx_set_page_access(hw, ST_ISM330DHCX_REG_FUNC_CFG_MASK,
@@ -513,7 +513,7 @@ int st_ism330dhcx_embfunc_handler_thread(struct st_ism330dhcx_hw *hw)
 	u8 status;
 	int err;
 
-	if (!(hw->enable_mask & BIT(ST_ISM330DHCX_ID_STEP_COUNTER)))
+	if (!(hw->enable_mask & BIT_ULL(ST_ISM330DHCX_ID_STEP_COUNTER)))
 		return IRQ_HANDLED;
 
 	err = st_ism330dhcx_read_atomic(hw,

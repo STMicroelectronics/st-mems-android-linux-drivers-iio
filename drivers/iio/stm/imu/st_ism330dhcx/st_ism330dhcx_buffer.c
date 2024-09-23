@@ -197,7 +197,7 @@ static int st_ism330dhcx_ts_odr(struct st_ism330dhcx_hw *hw)
 			continue;
 
 		sensor = iio_priv(hw->iio_devs[i]);
-		if (hw->enable_mask & BIT(sensor->id)) {
+		if (hw->enable_mask & BIT_ULL(sensor->id)) {
 			odr = max_t(int, odr, sensor->odr);
 		}
 	}
@@ -228,7 +228,7 @@ int st_ism330dhcx_update_watermark(struct st_ism330dhcx_sensor *sensor,
 
 		cur_sensor = iio_priv(hw->iio_devs[i]);
 
-		if (!(hw->enable_mask & BIT(cur_sensor->id)))
+		if (!(hw->enable_mask & BIT_ULL(cur_sensor->id)))
 			continue;
 
 		cur_watermark = (cur_sensor == sensor) ? watermark :
@@ -281,7 +281,7 @@ static inline void st_ism330dhcx_sync_hw_ts(struct st_ism330dhcx_hw *hw, s64 ts)
  */
 static struct
 iio_dev *st_ism330dhcx_get_iiodev_from_tag(struct st_ism330dhcx_hw *hw,
-					u8 tag)
+					   u8 tag)
 {
 	struct iio_dev *iio_dev;
 
@@ -296,7 +296,7 @@ iio_dev *st_ism330dhcx_get_iiodev_from_tag(struct st_ism330dhcx_hw *hw,
 		iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_TEMP];
 		break;
 	case ST_ISM330DHCX_EXT0_TAG:
-		if (hw->enable_mask & BIT(ST_ISM330DHCX_ID_EXT0))
+		if (hw->enable_mask & BIT_ULL(ST_ISM330DHCX_ID_EXT0))
 			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_EXT0];
 		else
 			iio_dev = hw->iio_devs[ST_ISM330DHCX_ID_EXT1];
@@ -831,7 +831,7 @@ static const struct iio_buffer_setup_ops st_ism330dhcx_buffer_setup_ops = {
 #endif /* LINUX_VERSION_CODE */
 };
 
-int st_ism330dhcx_allocate_sw_trigger(struct st_ism330dhcx_hw *hw)
+int st_ism330dhcx_allocate_buffers(struct st_ism330dhcx_hw *hw)
 {
 	int i;
 
@@ -867,6 +867,8 @@ static irqreturn_t st_ism330dhcx_handler_thread(int irq, void *private)
 {
 	struct st_ism330dhcx_hw *hw = (struct st_ism330dhcx_hw *)private;
 
+	st_ism330dhcx_mlc_check_status(hw);
+
 	mutex_lock(&hw->fifo_lock);
 	st_ism330dhcx_read_fifo(hw);
 	clear_bit(ST_ISM330DHCX_HW_FLUSH, &hw->state);
@@ -883,7 +885,7 @@ static irqreturn_t st_ism330dhcx_handler_thread(int irq, void *private)
  * @param  hw: ST IMU MEMS hw instance
  * @return  < 0 if error, 0 otherwise
  */
-int st_ism330dhcx_hw_trigger_setup(struct st_ism330dhcx_hw *hw)
+int st_ism330dhcx_trigger_setup(struct st_ism330dhcx_hw *hw)
 {
 	struct device_node *np = hw->dev->of_node;
 	unsigned long irq_type;

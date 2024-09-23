@@ -20,3 +20,10 @@ config IIO_ST_ISM330DHCX_I2C
 config IIO_ST_ISM330DHCX_SPI
 	tristate
 	depends on IIO_ST_ISM330DHCX
+
+config IIO_ST_ISM330DHCX_MLC_PRELOAD
+	bool "Preload some examples on MLC/FSM core"
+	depends on IIO_ST_ISM330DHCX
+	help
+	  Preload some examples on machine learning core and finite state
+	  machine. The examples code are hardcoded in to the driver.
