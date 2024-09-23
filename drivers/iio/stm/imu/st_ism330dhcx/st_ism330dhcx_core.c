@@ -311,6 +311,18 @@ static const struct st_ism330dhcx_fs_table_entry st_ism330dhcx_fs_table[] = {
 	},
 };
 
+#define IIO_CHAN_HW_TIMESTAMP(si) {					\
+	.type = IIO_COUNT,						\
+	.address = ST_ISM330DHCX_REG_TIMESTAMP0_ADDR,			\
+	.scan_index = si,						\
+	.scan_type = {							\
+		.sign = 's',						\
+		.realbits = 64,						\
+		.storagebits = 64,					\
+		.endianness = IIO_LE,					\
+	},								\
+}
+
 /**
  * Accelerometer IIO channels description
  *
@@ -340,7 +352,13 @@ static const struct iio_chan_spec st_ism330dhcx_acc_channels[] = {
 	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ACCEL, dtap),
 #endif /* LINUX_VERSION_CODE */
 
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+	IIO_CHAN_HW_TIMESTAMP(3),
+	IIO_CHAN_SOFT_TIMESTAMP(4),
+#else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 	IIO_CHAN_SOFT_TIMESTAMP(3),
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+
 };
 
 /**
@@ -362,7 +380,14 @@ static const struct iio_chan_spec st_ism330dhcx_gyro_channels[] = {
 	ST_ISM330DHCX_DATA_CHANNEL(IIO_ANGL_VEL, ST_ISM330DHCX_REG_OUTZ_L_G_ADDR,
 				1, IIO_MOD_Z, 2, 16, 16, 's'),
 	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ANGL_VEL, flush),
+
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+	IIO_CHAN_HW_TIMESTAMP(3),
+	IIO_CHAN_SOFT_TIMESTAMP(4),
+#else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 	IIO_CHAN_SOFT_TIMESTAMP(3),
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+
 };
 
 /**
@@ -390,7 +415,14 @@ static const struct iio_chan_spec st_ism330dhcx_temp_channels[] = {
 		}
 	},
 	ST_ISM330DHCX_EVENT_CHANNEL(IIO_TEMP, flush),
+
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+	IIO_CHAN_HW_TIMESTAMP(1),
+	IIO_CHAN_SOFT_TIMESTAMP(2),
+#else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 	IIO_CHAN_SOFT_TIMESTAMP(1),
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+
 };
 
 /**
@@ -1571,8 +1603,24 @@ static const struct iio_info st_ism330dhcx_temp_info = {
 	.write_raw_get_fmt = st_ism330dhcx_write_raw_get_fmt,
 };
 
-static const unsigned long st_ism330dhcx_available_scan_masks[] = { 0x7, 0x0 };
-static const unsigned long st_ism330dhcx_sc_available_scan_masks[] = { 0x1, 0x0 };
+static const unsigned long st_ism330dhcx_available_scan_masks[] = {
+
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+	GENMASK(3, 0), 0x0
+#else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+	GENMASK(2, 0), 0x0
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+
+};
+static const unsigned long st_ism330dhcx_sc_available_scan_masks[] = {
+
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+	GENMASK(1, 0), 0x0
+#else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+	BIT(0), 0x0
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+
+};
 
 static int st_ism330dhcx_check_irq_config_pin(struct st_ism330dhcx_hw *hw)
 {

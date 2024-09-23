@@ -277,6 +277,10 @@
 						 ST_ISM330DHCX_TAG_SIZE)
 #define ST_ISM330DHCX_MAX_FIFO_DEPTH		416
 
+#define ST_ISM330DHCX_DEFAULT_KTIME		(200000000)
+#define ST_ISM330DHCX_FAST_KTIME		(5000000)
+#define ST_ISM330DHCX_FAST_TO_DEFAULT		(10)
+
 #define ST_ISM330DHCX_MIN_ODR_IN_EMB_FUNC	26
 
 #define ST_ISM330DHCX_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
@@ -563,6 +567,7 @@ enum st_ism330dhcx_sensor_id {
 	ST_ISM330DHCX_ID_GYRO,
 	ST_ISM330DHCX_ID_ACC,
 	ST_ISM330DHCX_ID_TEMP,
+	ST_ISM330DHCX_ID_HW = ST_ISM330DHCX_ID_TEMP,
 	ST_ISM330DHCX_ID_EXT0,
 	ST_ISM330DHCX_ID_EXT1,
 	ST_ISM330DHCX_ID_MLC,
@@ -774,6 +779,13 @@ struct st_ism330dhcx_sensor {
  * ext_data_len: Number of i2c slave devices connected to I2C master.
  * odr: Timestamp sample ODR [Hz]
  * uodr: Timestamp sample ODR [uHz]
+ * hw_timestamp_global: hw timestamp value always monotonic.
+ * timesync_workqueue: runs the async task in private workqueue.
+ * timesync_work: actual work to be done in the async task workqueue.
+ * timesync_timer: hrtimer used to schedule period read for the async task.
+ * hwtimestamp_lock: spinlock for the 64bit timestamp value.
+ * timesync_ktime: interval value used by the hrtimer.
+ * timestamp_c: counter used for counting number of timesync updates.
  * ts_offset: Hw timestamp offset.
  * ts_delta_ns: Delta time since irq.
  * hw_ts: Latest hw timestamp from the sensor.
@@ -824,6 +836,17 @@ struct st_ism330dhcx_hw {
 
 	int odr;
 	int uodr;
+
+	s64 hw_timestamp_global;
+
+#if defined (CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+	struct workqueue_struct *timesync_workqueue;
+	struct work_struct timesync_work;
+	struct hrtimer timesync_timer;
+	spinlock_t hwtimestamp_lock;
+	ktime_t timesync_ktime;
+	int timesync_c[ST_ISM330DHCX_ID_HW + 1];
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 
 	s64 ts_offset;
 	u64 ts_delta_ns;
@@ -976,6 +999,11 @@ static inline bool st_ism330dhcx_is_fifo_enabled(struct st_ism330dhcx_hw *hw)
 				  BIT_ULL(ST_ISM330DHCX_ID_ACC)		|
 				  BIT_ULL(ST_ISM330DHCX_ID_EXT0)	|
 				  BIT_ULL(ST_ISM330DHCX_ID_EXT1));
+}
+
+static inline s64 st_ism330dhcx_get_time_ns(struct st_ism330dhcx_hw *hw)
+{
+	return iio_get_time_ns(hw->iio_devs[ST_ISM330DHCX_ID_GYRO]);
 }
 
 static inline int
@@ -1150,6 +1178,16 @@ int st_ism330dhcx_event_handler(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_embfunc_probe(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_embfunc_handler_thread(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_step_enable(struct st_ism330dhcx_sensor *sensor, bool enable);
+
+#if defined (CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+int st_ism330dhcx_hwtimesync_init(struct st_ism330dhcx_hw *hw);
+#else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+static inline int
+st_ism330dhcx_hwtimesync_init(struct st_ism330dhcx_hw *hw)
+{
+	return 0;
+}
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 
 int st_ism330dhcx_mlc_probe(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_mlc_remove(struct device *dev);

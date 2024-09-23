@@ -37,16 +37,6 @@ enum {
 };
 
 /**
- * Get Linux timestamp (SW)
- *
- * @return  timestamp in ns
- */
-static inline s64 st_ism330dhcx_get_time_ns(struct st_ism330dhcx_hw *hw)
-{
-	return iio_get_time_ns(hw->iio_devs[ST_ISM330DHCX_ID_GYRO]);
-}
-
-/**
  * Timestamp low pass filter
  *
  * @param  old: ST IMU MEMS hw instance
@@ -74,6 +64,21 @@ static inline s64 st_ism330dhcx_ewma(s64 old, s64 new, int weight)
 inline int st_ism330dhcx_reset_hwts(struct st_ism330dhcx_hw *hw)
 {
 	u8 data = 0xaa;
+	int ret;
+
+	ret = st_ism330dhcx_write_atomic(hw, ST_ISM330DHCX_REG_TIMESTAMP2_ADDR,
+					 sizeof(data),
+					 (unsigned int *)&data);
+	if (ret < 0)
+		return ret;
+
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+	spin_lock_irq(&hw->hwtimestamp_lock);
+	hw->hw_timestamp_global = (hw->hw_timestamp_global + (1LL << 32)) &
+				  GENMASK_ULL(63, 32);
+	hw->timesync_ktime = ktime_set(0, ST_ISM330DHCX_FAST_KTIME);
+	spin_unlock_irq(&hw->hwtimestamp_lock);
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 
 	hw->ts = st_ism330dhcx_get_time_ns(hw);
 	hw->ts_offset = hw->ts;
@@ -81,10 +86,21 @@ inline int st_ism330dhcx_reset_hwts(struct st_ism330dhcx_hw *hw)
 	hw->hw_ts_high = 0ULL;
 	hw->tsample = 0ULL;
 
-	return st_ism330dhcx_write_atomic(hw, ST_ISM330DHCX_REG_TIMESTAMP2_ADDR,
-					  sizeof(data),
-					  (unsigned int *)&data);
+	return 0;
 }
+
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+void st_ism330dhcx_init_timesync_counter(struct st_ism330dhcx_sensor *sensor,
+					 struct st_ism330dhcx_hw *hw,
+					 bool enable)
+{
+	spin_lock_irq(&hw->hwtimestamp_lock);
+	if (sensor->id <= ST_ISM330DHCX_ID_HW)
+		hw->timesync_c[sensor->id] = enable ? ST_ISM330DHCX_FAST_TO_DEFAULT : 0;
+
+	spin_unlock_irq(&hw->hwtimestamp_lock);
+}
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 
 /**
  * Setting FIFO mode
@@ -328,6 +344,7 @@ static int st_ism330dhcx_read_fifo(struct st_ism330dhcx_hw *hw)
 	u8 buf[6 * ST_ISM330DHCX_FIFO_SAMPLE_SIZE], tag, *ptr;
 	int i, err, word_len, fifo_len, read_len;
 	struct st_ism330dhcx_sensor *sensor;
+	__le64 hw_timestamp_push;
 	struct iio_dev *iio_dev;
 	s64 ts_irq, hw_ts_old;
 	__le16 fifo_status;
@@ -363,6 +380,16 @@ static int st_ism330dhcx_read_fifo(struct st_ism330dhcx_hw *hw)
 
 			if (tag == ST_ISM330DHCX_TS_TAG) {
 				val = get_unaligned_le32(ptr);
+
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+				spin_lock_irq(&hw->hwtimestamp_lock);
+
+				hw->hw_timestamp_global =
+					(hw->hw_timestamp_global &
+					 GENMASK_ULL(63, 32)) | val;
+
+				spin_unlock_irq(&hw->hwtimestamp_lock);
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 
 				if (hw->val_ts_old > val)
 					hw->hw_ts_high++;
@@ -416,7 +443,18 @@ static int st_ism330dhcx_read_fifo(struct st_ism330dhcx_hw *hw)
 						    st_ism330dhcx_get_time_ns(hw),
 						    hw->tsample);
 
-				sensor->last_fifo_timestamp = hw->tsample;
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+				spin_lock_irq(&hw->hwtimestamp_lock);
+
+				hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
+
+				memcpy(&iio_buf[ALIGN(ST_ISM330DHCX_SAMPLE_SIZE, sizeof(s64))],
+				       &hw_timestamp_push, sizeof(hw_timestamp_push));
+
+				spin_unlock_irq(&hw->hwtimestamp_lock);
+#else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+				hw_timestamp_push = hw->tsample;
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 
 				/* support decimation for ODR < 12.5 Hz */
 				if (sensor->dec_counter > 0) {
@@ -426,6 +464,7 @@ static int st_ism330dhcx_read_fifo(struct st_ism330dhcx_hw *hw)
 					iio_push_to_buffers_with_timestamp(iio_dev,
 								   iio_buf,
 								   hw->tsample);
+					sensor->last_fifo_timestamp = hw_timestamp_push;
 				}
 			}
 		}
@@ -621,6 +660,11 @@ static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
 
 	disable_irq(hw->irq);
 
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+	hrtimer_cancel(&hw->timesync_timer);
+	cancel_work_sync(&hw->timesync_work);
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+
 	switch (sensor->id) {
 	case ST_ISM330DHCX_ID_EXT0:
 	case ST_ISM330DHCX_ID_EXT1:
@@ -657,6 +701,15 @@ static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
 	} else if (!hw->enable_mask) {
 		err = st_ism330dhcx_set_fifo_mode(hw, ST_ISM330DHCX_FIFO_BYPASS);
 	}
+
+#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+	st_ism330dhcx_init_timesync_counter(sensor, hw, enable);
+	if (hw->fifo_mode != ST_ISM330DHCX_FIFO_BYPASS) {
+		hrtimer_start(&hw->timesync_timer,
+			      ktime_set(0, 0),
+			      HRTIMER_MODE_REL);
+	}
+#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 
 out:
 	enable_irq(hw->irq);
@@ -711,6 +764,10 @@ static irqreturn_t st_ism330dhcx_handler_irq(int irq, void *private)
 static int st_ism330dhcx_config_timestamp(struct st_ism330dhcx_hw *hw)
 {
 	int err;
+
+	err = st_ism330dhcx_hwtimesync_init(hw);
+	if (err)
+		return err;
 
 	/* init timestamp engine */
 	err = st_ism330dhcx_write_with_mask(hw,

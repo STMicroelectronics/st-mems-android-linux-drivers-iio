@@ -21,6 +21,12 @@ config IIO_ST_ISM330DHCX_SPI
 	tristate
 	depends on IIO_ST_ISM330DHCX
 
+config IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP
+	bool "Enable async hw timestamp read"
+	depends on IIO_ST_ISM330DHCX
+	help
+	  Enable async task that sends over hw timestamp events.
+
 config IIO_ST_ISM330DHCX_MLC_PRELOAD
 	bool "Preload some examples on MLC/FSM core"
 	depends on IIO_ST_ISM330DHCX
