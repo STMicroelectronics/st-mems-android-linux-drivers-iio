@@ -96,6 +96,7 @@
 #define ST_LSM6DSV16BX_REG_CTRL10_ADDR			0x19
 #define ST_LSM6DSV16BX_ST_XL_MASK			GENMASK(1, 0)
 #define ST_LSM6DSV16BX_ST_G_MASK			GENMASK(3, 2)
+#define ST_LSM6DSV16BX_XL_ST_OFFSET_MASK		BIT(4)
 
 #define ST_LSM6DSV16BX_REG_FIFO_STATUS1_ADDR		0x1b
 #define ST_LSM6DSV16BX_FIFO_DIFF_MASK			GENMASK(8, 0)
@@ -790,8 +791,6 @@ struct st_lsm6dsv16bx_sensor {
 
 			/* self test */
 			int8_t selftest_status;
-			int min_st;
-			int max_st;
 
 			struct st_lsm6dsv16bx_reg batch_reg;
 		};

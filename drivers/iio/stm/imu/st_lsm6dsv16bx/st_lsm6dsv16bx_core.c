@@ -1311,27 +1311,6 @@ static int __maybe_unused st_lsm6dsv16bx_restore_regs(struct st_lsm6dsv16bx_hw *
 	return err;
 }
 
-static int
-st_lsm6dsv16bx_set_selftest(struct st_lsm6dsv16bx_sensor *sensor, int index)
-{
-	u8 mask;
-
-	switch (sensor->id) {
-	case ST_LSM6DSV16BX_ID_ACC:
-		mask = ST_LSM6DSV16BX_ST_XL_MASK;
-		break;
-	case ST_LSM6DSV16BX_ID_GYRO:
-		mask = ST_LSM6DSV16BX_ST_G_MASK;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	return st_lsm6dsv16bx_write_with_mask(sensor->hw,
-				     ST_LSM6DSV16BX_REG_CTRL10_ADDR, mask,
-				     st_lsm6dsv16bx_selftest_table[index].value);
-}
-
 static ssize_t st_lsm6dsv16bx_sysfs_get_selftest_available(struct device *dev,
 				       struct device_attribute *attr, char *buf)
 {
@@ -1365,69 +1344,125 @@ st_lsm6dsv16bx_sysfs_get_selftest_status(struct device *dev,
 	return sprintf(buf, "%s\n", message);
 }
 
-static int st_lsm6dsv16bx_selftest_sensor(struct st_lsm6dsv16bx_sensor *sensor,
-					  int test)
+static int st_lsm6dsv16bx_discard_data(struct st_lsm6dsv16bx_sensor *sensor)
 {
-	int x_selftest = 0, y_selftest = 0, z_selftest = 0;
-	int x = 0, y = 0, z = 0, try_count = 0;
-	u8 i, status, n = 0;
-	u8 reg, bitmask;
-	int ret, delay;
+	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
+	u8 output_addr;
 	u8 raw_data[6];
+	u8 status;
+	int delay;
+	int i = 0;
+	u8 mask;
+	int ret;
 
 	switch (sensor->id) {
-	case ST_LSM6DSV16BX_ID_ACC:
-		reg = ST_LSM6DSV16BX_REG_OUTX_L_A_ADDR;
-		bitmask = ST_LSM6DSV16BX_XLDA_MASK;
-		break;
 	case ST_LSM6DSV16BX_ID_GYRO:
-		reg = ST_LSM6DSV16BX_REG_OUTX_L_G_ADDR;
-		bitmask = ST_LSM6DSV16BX_GDA_MASK;
+		mask = ST_LSM6DSV16BX_GDA_MASK;
+		output_addr = ST_LSM6DSV16BX_REG_OUTX_L_G_ADDR;
+		break;
+	case ST_LSM6DSV16BX_ID_ACC:
+		mask = ST_LSM6DSV16BX_XLDA_MASK;
+		output_addr = ST_LSM6DSV16BX_REG_OUTZ_L_A_ADDR;
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	/* set selftest normal mode */
-	ret = st_lsm6dsv16bx_set_selftest(sensor, 0);
-	if (ret < 0)
-		return ret;
+	/* calculate delay time because self test is running in polling mode */
+	delay = 1100000 / sensor->odr;
 
-	ret = st_lsm6dsv16bx_sensor_set_enable(sensor, true);
-	if (ret < 0)
+	while (i < 3) {
+		ret = st_lsm6dsv16bx_read_locked(hw,
+					     ST_LSM6DSV16BX_REG_STATUS_REG_ADDR,
+					     &status, sizeof(status));
+		if (ret < 0)
+			return ret;
+
+		if (status & mask) {
+			ret = st_lsm6dsv16bx_read_locked(hw, output_addr,
+							 raw_data,
+							 sizeof(raw_data));
+			if (ret < 0)
+				return ret;
+
+			/* discard data */
+			break;
+		}
+		usleep_range(delay, delay + 1);
+		i++;
+	}
+
+	if (i == 3) {
+		dev_err(hw->dev, "unable to read sensor data\n");
+		ret = -1;
+
 		return ret;
+	}
+
+	return 0;
+}
+
+static int st_lsm6dsv16bx_read_average(struct st_lsm6dsv16bx_sensor *sensor,
+				       u8 num, int *xyz)
+{
+	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
+	u8 output_addr;
+	u8 raw_data[6];
+	u8 status_reg;
+	u8 try_count;
+	u8 status;
+	int delay;
+	int n = 0;
+	u8 mask;
+	int ret;
+	int i;
+
+	switch (sensor->id) {
+	case ST_LSM6DSV16BX_ID_GYRO:
+		mask = ST_LSM6DSV16BX_GDA_MASK;
+		output_addr = ST_LSM6DSV16BX_REG_OUTX_L_G_ADDR;
+		status_reg = ST_LSM6DSV16BX_REG_STATUS_REG_ADDR;
+		break;
+	case ST_LSM6DSV16BX_ID_ACC:
+		mask = ST_LSM6DSV16BX_XLDA_MASK;
+		output_addr = ST_LSM6DSV16BX_REG_OUTZ_L_A_ADDR;
+		status_reg = ST_LSM6DSV16BX_REG_STATUS_REG_ADDR;
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	/* calculate delay time because self test is running in polling mode */
 	delay = 1100000 / sensor->odr;
 
-	/* power up, wait 100 ms for stable output */
-	msleep(100);
-
 	/* for 5 times, after checking status bit, read the output registers */
-	for (i = 0; i < 5; i++) {
+	for (i = 0; i < num; i++) {
 		try_count = 0;
 		while (try_count < 3) {
 			usleep_range(delay, delay + 1);
-			ret = st_lsm6dsv16bx_read_locked(sensor->hw,
-					     ST_LSM6DSV16BX_REG_STATUS_REG_ADDR,
+			ret = st_lsm6dsv16bx_read_locked(hw,
+					     status_reg,
 					     &status, sizeof(status));
 			if (ret < 0)
-				goto selftest_failure;
+				return ret;
 
-			if (status & bitmask) {
-				ret = st_lsm6dsv16bx_read_locked(sensor->hw,
-							      reg, raw_data,
+			if (status & ST_LSM6DSV16BX_XLDA_MASK) {
+				ret = st_lsm6dsv16bx_read_locked(hw,
+							      output_addr,
+							      raw_data,
 							      sizeof(raw_data));
 				if (ret < 0)
-					goto selftest_failure;
+					return ret;
 
-				/*
-				 * for 5 times, after checking status bit,
-				 * read the output registers
-				 */
-				x += ((s16)*(u16 *)&raw_data[0]) / 5;
-				y += ((s16)*(u16 *)&raw_data[2]) / 5;
-				z += ((s16)*(u16 *)&raw_data[4]) / 5;
+				if (sensor->id == ST_LSM6DSV16BX_ID_GYRO) {
+					xyz[0] += ((s16)*(u16 *)&raw_data[0]);
+					xyz[1] += ((s16)*(u16 *)&raw_data[2]);
+					xyz[2] += ((s16)*(u16 *)&raw_data[4]);
+				} else {
+					xyz[2] += ((s16)*(u16 *)&raw_data[0]);
+					xyz[1] += ((s16)*(u16 *)&raw_data[2]);
+					xyz[0] += ((s16)*(u16 *)&raw_data[4]);
+				}
 				n++;
 				break;
 			}
@@ -1436,82 +1471,195 @@ static int st_lsm6dsv16bx_selftest_sensor(struct st_lsm6dsv16bx_sensor *sensor,
 	}
 
 	if (i != n) {
-		dev_err(sensor->hw->dev,
+		dev_err(hw->dev,
 			"some samples missing (expected %d, read %d)\n",
 			i, n);
-		ret = -1;
-
-		goto selftest_failure;
+		return -1;
 	}
 
-	n = 0;
+	/* this is the average */
+	xyz[0] /= n;
+	xyz[1] /= n;
+	xyz[2] /= n;
+
+	return 0;
+}
+
+static int st_lsm6dsv16bx_selftest_gyro(struct st_lsm6dsv16bx_hw *hw, int test)
+{
+	struct st_lsm6dsv16bx_sensor *sensor;
+	int xyz_selftest[3] = { 0 };
+	int xyz[3] = { 0 };
+	int ret;
+	u8 i;
+
+	sensor = iio_priv(hw->iio_devs[ST_LSM6DSV16BX_ID_GYRO]);
+
+	/* set selftest normal mode */
+	ret = st_lsm6dsv16bx_write_with_mask(hw,
+					     ST_LSM6DSV16BX_REG_CTRL10_ADDR,
+					     ST_LSM6DSV16BX_ST_G_MASK, 0);
+	if (ret < 0)
+		return ret;
+
+	/* set BDU = 1, ODR = 60 Hz, FS = 2000 dps */
+	ret = st_lsm6dsv16bx_set_full_scale(sensor,
+				      ST_LSM6DSV16BX_GYRO_FS_2000_GAIN);
+	if (ret < 0)
+		return ret;
+
+	ret = st_lsm6dsv16bx_set_odr(sensor, 60, 0);
+	if (ret < 0)
+		return ret;
+
+	/* power up, wait 100 ms for stable output */
+	msleep(100);
+
+	ret = st_lsm6dsv16bx_discard_data(sensor);
+	if (ret < 0)
+		return ret;
+
+	/* for 5 times, after checking status bit, read the output registers */
+	ret = st_lsm6dsv16bx_read_average(sensor, 5, xyz);
+	if (ret < 0)
+		return ret;
 
 	/* set selftest mode */
-	st_lsm6dsv16bx_set_selftest(sensor, test);
+	ret = st_lsm6dsv16bx_write_with_mask(hw,
+				     ST_LSM6DSV16BX_REG_CTRL10_ADDR,
+				     ST_LSM6DSV16BX_ST_G_MASK,
+				     st_lsm6dsv16bx_selftest_table[test].value);
+	if (ret < 0)
+		return ret;
 
 	/* wait 100 ms for stable output */
 	msleep(100);
 
+	ret = st_lsm6dsv16bx_discard_data(sensor);
+	if (ret < 0)
+		return ret;
+
 	/* for 5 times, after checking status bit, read the output registers */
-	for (i = 0; i < 5; i++) {
-		try_count = 0;
-		while (try_count < 3) {
-			usleep_range(delay, delay + 1);
-			ret = st_lsm6dsv16bx_read_locked(sensor->hw,
-					     ST_LSM6DSV16BX_REG_STATUS_REG_ADDR,
-					     &status, sizeof(status));
-			if (ret < 0)
-				goto selftest_failure;
+	ret = st_lsm6dsv16bx_read_average(sensor, 5, xyz_selftest);
+	if (ret < 0)
+		return ret;
 
-			if (status & bitmask) {
-				ret = st_lsm6dsv16bx_read_locked(sensor->hw,
-							      reg, raw_data,
-							      sizeof(raw_data));
-				if (ret < 0)
-					goto selftest_failure;
+	for (i = 0; i < 3; i++) {
+		if ((abs(xyz_selftest[i] - xyz[i]) < ST_LSM6DSV16BX_SELFTEST_GYRO_MIN) ||
+		    (abs(xyz_selftest[i] - xyz[i]) > ST_LSM6DSV16BX_SELFTEST_GYRO_MAX)) {
+			sensor->selftest_status = -1;
+			dev_warn(hw->dev, "gyro selftest fails %d (%d %d)\n",
+				 i, xyz_selftest[i], xyz[i]);
 
-				x_selftest += ((s16)*(u16 *)&raw_data[0]) / 5;
-				y_selftest += ((s16)*(u16 *)&raw_data[2]) / 5;
-				z_selftest += ((s16)*(u16 *)&raw_data[4]) / 5;
-				n++;
-				break;
-			}
-			try_count++;
+			goto selftest_failure;
 		}
-	}
-
-	if (i != n) {
-		dev_err(sensor->hw->dev,
-			"some samples missing (expected %d, read %d)\n",
-			i, n);
-		ret = -1;
-
-		goto selftest_failure;
-	}
-
-	if ((abs(x_selftest - x) < sensor->min_st) ||
-	    (abs(x_selftest - x) > sensor->max_st)) {
-		sensor->selftest_status = -1;
-		goto selftest_failure;
-	}
-
-	if ((abs(y_selftest - y) < sensor->min_st) ||
-	    (abs(y_selftest - y) > sensor->max_st)) {
-		sensor->selftest_status = -1;
-		goto selftest_failure;
-	}
-
-	if ((abs(z_selftest - z) < sensor->min_st) ||
-	    (abs(z_selftest - z) > sensor->max_st)) {
-		sensor->selftest_status = -1;
-		goto selftest_failure;
 	}
 
 	sensor->selftest_status = 1;
 
 selftest_failure:
 	/* restore selftest to normal mode */
-	st_lsm6dsv16bx_set_selftest(sensor, 0);
+	ret = st_lsm6dsv16bx_write_with_mask(hw,
+					     ST_LSM6DSV16BX_REG_CTRL10_ADDR,
+					     ST_LSM6DSV16BX_ST_G_MASK, 0);
+
+	return st_lsm6dsv16bx_sensor_set_enable(sensor, false);
+}
+
+static int st_lsm6dsv16bx_selftest_accel(struct st_lsm6dsv16bx_hw *hw, int test)
+{
+	struct st_lsm6dsv16bx_sensor *sensor;
+	int xyz_selftest[3] = { 0 };
+	int xyz[3] = { 0 };
+	int ret;
+	u8 i;
+
+	sensor = iio_priv(hw->iio_devs[ST_LSM6DSV16BX_ID_ACC]);
+
+	/* set selftest normal mode */
+	ret = st_lsm6dsv16bx_write_with_mask(hw,
+					     ST_LSM6DSV16BX_REG_CTRL10_ADDR,
+					     ST_LSM6DSV16BX_ST_XL_MASK, 0);
+	if (ret < 0)
+		return ret;
+
+	/* set BDU = 1, FS = 8 g, ODR = 60 Hz */
+	ret = st_lsm6dsv16bx_set_full_scale(sensor,
+					    ST_LSM6DSV16BX_ACC_FS_8G_GAIN);
+	if (ret < 0)
+		return ret;
+
+	ret = st_lsm6dsv16bx_set_odr(sensor, 60, 0);
+	if (ret < 0)
+		return ret;
+
+	/* power up, wait 120 ms for stable output */
+	msleep(120);
+
+	ret = st_lsm6dsv16bx_discard_data(sensor);
+	if (ret < 0)
+		return ret;
+
+	/* set selftest mode */
+	ret = st_lsm6dsv16bx_write_with_mask(hw,
+				     ST_LSM6DSV16BX_REG_CTRL10_ADDR,
+				     ST_LSM6DSV16BX_ST_XL_MASK,
+				     st_lsm6dsv16bx_selftest_table[test].value);
+	if (ret < 0)
+		return ret;
+
+	/* wait 100 ms for stable output */
+	msleep(100);
+
+	ret = st_lsm6dsv16bx_discard_data(sensor);
+	if (ret < 0)
+		return ret;
+
+	/* for 5 times, after checking status bit, read the output registers */
+	ret = st_lsm6dsv16bx_read_average(sensor, 5, xyz);
+	if (ret < 0)
+		return ret;
+
+	/* set XL_ST_OFFSET = 1 */
+	ret = st_lsm6dsv16bx_write_with_mask(hw,
+					     ST_LSM6DSV16BX_REG_CTRL10_ADDR,
+					     ST_LSM6DSV16BX_XL_ST_OFFSET_MASK,
+					     1);
+	if (ret < 0)
+		return ret;
+
+	/* wait 100 ms for stable output */
+	msleep(100);
+
+	ret = st_lsm6dsv16bx_discard_data(sensor);
+	if (ret < 0)
+		return ret;
+
+	/* for 5 times, after checking status bit, read the output registers */
+	ret = st_lsm6dsv16bx_read_average(sensor, 5, xyz_selftest);
+	if (ret < 0)
+		return ret;
+
+	for (i = 0; i < 3; i++) {
+		if ((abs(xyz_selftest[i] - xyz[i]) < ST_LSM6DSV16BX_SELFTEST_ACCEL_MIN) ||
+		    (abs(xyz_selftest[i] - xyz[i]) > ST_LSM6DSV16BX_SELFTEST_ACCEL_MAX)) {
+			sensor->selftest_status = -1;
+			dev_warn(hw->dev, "accel selftest fails %d (%d %d)\n",
+				 i, xyz_selftest[i], xyz[i]);
+
+			goto selftest_failure;
+		}
+	}
+
+	sensor->selftest_status = 1;
+
+selftest_failure:
+	/* restore selftest to normal mode */
+	ret = st_lsm6dsv16bx_write_with_mask(hw, ST_LSM6DSV16BX_REG_CTRL10_ADDR,
+					     ST_LSM6DSV16BX_XL_ST_OFFSET_MASK,
+					     0);
+	ret = st_lsm6dsv16bx_write_with_mask(hw, ST_LSM6DSV16BX_REG_CTRL10_ADDR,
+					     ST_LSM6DSV16BX_ST_XL_MASK, 0);
 
 	return st_lsm6dsv16bx_sensor_set_enable(sensor, false);
 }
@@ -1571,19 +1719,12 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 	odr = sensor->odr;
 	uodr = sensor->uodr;
 	if (id == ST_LSM6DSV16BX_ID_ACC) {
-		/* set BDU = 1, FS = 4 g, ODR = 60 Hz */
-		st_lsm6dsv16bx_set_full_scale(sensor,
-					      ST_LSM6DSV16BX_ACC_FS_4G_GAIN);
-		st_lsm6dsv16bx_set_odr(sensor, 60, 0);
+		/* run test */
+		st_lsm6dsv16bx_selftest_accel(hw, test);
 	} else {
-		/* set BDU = 1, ODR = 240 Hz, FS = 2000 dps */
-		st_lsm6dsv16bx_set_full_scale(sensor,
-					      ST_LSM6DSV16BX_GYRO_FS_2000_GAIN);
-		st_lsm6dsv16bx_set_odr(sensor, 240, 0);
+		/* run test */
+		st_lsm6dsv16bx_selftest_gyro(hw, test);
 	}
-
-	/* run test */
-	st_lsm6dsv16bx_selftest_sensor(sensor, test);
 
 	/* restore configuration after test */
 	st_lsm6dsv16bx_set_full_scale(sensor, gain);
@@ -2012,8 +2153,6 @@ st_lsm6dsv16bx_alloc_iiodev(struct st_lsm6dsv16bx_hw *hw,
 		sensor->odr = st_lsm6dsv16bx_odr_table[id].odr_avl[1].hz;
 		sensor->uodr = st_lsm6dsv16bx_odr_table[id].odr_avl[1].uhz;
 		sensor->gain = hw->fs_table[id].fs_avl[0].gain;
-		sensor->min_st = ST_LSM6DSV16BX_SELFTEST_ACCEL_MIN;
-		sensor->max_st = ST_LSM6DSV16BX_SELFTEST_ACCEL_MAX;
 		break;
 	case ST_LSM6DSV16BX_ID_GYRO:
 		iio_dev->channels = st_lsm6dsv16bx_gyro_channels;
@@ -2030,8 +2169,6 @@ st_lsm6dsv16bx_alloc_iiodev(struct st_lsm6dsv16bx_hw *hw,
 		sensor->odr = st_lsm6dsv16bx_odr_table[id].odr_avl[1].hz;
 		sensor->uodr = st_lsm6dsv16bx_odr_table[id].odr_avl[1].uhz;
 		sensor->gain = hw->fs_table[id].fs_avl[1].gain;
-		sensor->min_st = ST_LSM6DSV16BX_SELFTEST_GYRO_MIN;
-		sensor->max_st = ST_LSM6DSV16BX_SELFTEST_GYRO_MAX;
 		break;
 	case ST_LSM6DSV16BX_ID_TEMP:
 		iio_dev->channels = st_lsm6dsv16bx_temp_channels;
