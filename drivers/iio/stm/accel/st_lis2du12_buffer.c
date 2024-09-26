@@ -35,14 +35,13 @@ static inline s64 st_lis2du12_ewma(s64 old, s64 new, int weight)
 static int st_lis2du12_set_fifo_mode(struct st_lis2du12_hw *hw,
 				     enum st_lis2du12_fifo_mode mode)
 {
-	int err;
+	int ret;
 
-	err = regmap_update_bits(hw->regmap,
-				 ST_LIS2DU12_FIFO_CTRL_ADDR,
-				 ST_LIS2DU12_FIFOMODE_MASK,
-				 FIELD_PREP(ST_LIS2DU12_FIFOMODE_MASK, mode));
-	if (err < 0)
-		return err;
+	ret = st_lis2du12_write_locked_delayed(hw, ST_LIS2DU12_FIFO_CTRL_ADDR,
+					       ST_LIS2DU12_FIFOMODE_MASK,
+					       mode);
+	if (ret < 0)
+		return ret;
 
 	hw->fifo_mode = mode;
 
@@ -113,10 +112,10 @@ static int st_lis2du12_update_fifo(struct iio_dev *iio_dev, bool enable)
 		u8 round = enable ? false : true;
 
 		/* configure rounding accordingly */
-		err = regmap_update_bits(hw->regmap,
-					 ST_LIS2DU12_FIFO_CTRL_ADDR,
-					 ST_LIS2DU12_ROUNDING_XYZ_MASK,
-					 FIELD_PREP(ST_LIS2DU12_ROUNDING_XYZ_MASK, round));
+		err = st_lis2du12_write_locked_delayed(hw,
+						ST_LIS2DU12_FIFO_CTRL_ADDR,
+						ST_LIS2DU12_ROUNDING_XYZ_MASK,
+						round);
 		if (err < 0)
 			return err;
 
@@ -228,7 +227,6 @@ static int st_lis2du12_read_fifo(struct st_lis2du12_hw *hw)
 				hw->ts += delta_ts;
 				continue;
 			}
-
 			hw->ts = min_t(s64,
 				       st_lis2du12_get_timestamp(hw),
 				       hw->ts);

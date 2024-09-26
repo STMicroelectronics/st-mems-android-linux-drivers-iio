@@ -754,11 +754,22 @@ int st_lis2du12_handler_embfunc_thread(struct st_lis2du12_hw *hw)
 	if (!st_lis2du12_interrupts_enabled(hw))
 		return IRQ_HANDLED;
 
+	/* When latched mode is enabled, the user should not continuously
+	 * poll the ALL_INT_SRC or the dedicated source registers,
+	 * because by reading them, the embedded functions are internally
+	 * reset. When latched mode is enabled, the user must wait 150 μs
+	 * from the generation of the embedded functions interrupt or
+	 * wait for the next DRDY signal before reading the ALL_INT_SRC
+	 * or the dedicated source registers.
+	 */
+	usleep_range(150, 151);
+
 	if (hw->enable_mask & (BIT(ST_LIS2DU12_ID_TAP) |
 			       BIT(ST_LIS2DU12_ID_TAP_TAP))) {
 		struct iio_dev *iio_dev;
 		enum iio_chan_type type;
 		int tap_src;
+
 
 		err = regmap_read(hw->regmap, ST_LIS2DU12_TAP_SRC_ADDR,
 				  &tap_src);

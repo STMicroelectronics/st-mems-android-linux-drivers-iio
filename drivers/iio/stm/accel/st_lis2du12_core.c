@@ -86,6 +86,7 @@ static const struct iio_chan_spec st_lis2du12_temp_channels[] = {
 static int st_lis2du12_set_fs(struct st_lis2du12_sensor *sensor,
 			      u16 gain)
 {
+	struct st_lis2du12_hw *hw = sensor->hw;
 	int i, err;
 
 	for (i = 0; i < ARRAY_SIZE(st_lis2du12_fs_table); i++)
@@ -95,11 +96,9 @@ static int st_lis2du12_set_fs(struct st_lis2du12_sensor *sensor,
 	if (i == ARRAY_SIZE(st_lis2du12_fs_table))
 		return -EINVAL;
 
-	err = regmap_update_bits(sensor->hw->regmap,
-				 ST_LIS2DU12_CTRL5_ADDR,
-				 ST_LIS2DU12_FS_MASK,
-				 FIELD_PREP(ST_LIS2DU12_FS_MASK,
-					    st_lis2du12_fs_table[i].val));
+	err = st_lis2du12_write_locked_delayed(hw, ST_LIS2DU12_CTRL5_ADDR,
+					       ST_LIS2DU12_FS_MASK,
+					       st_lis2du12_fs_table[i].val);
 	if (err < 0)
 		return err;
 
@@ -171,13 +170,18 @@ static int st_lis2du12_set_odr(struct st_lis2du12_sensor *sensor,
 	if (ret < 0)
 		return ret;
 
-	err = regmap_update_bits(sensor->hw->regmap,
-				 ST_LIS2DU12_CTRL5_ADDR,
-				 ST_LIS2DU12_ODR_MASK,
-				 FIELD_PREP(ST_LIS2DU12_ODR_MASK,
-					    st_lis2du12_odr_table[ret].val));
+	mutex_lock(&hw->lock);
+	err = st_lis2du12_write_delayed(sensor->hw,
+					ST_LIS2DU12_CTRL5_ADDR,
+					ST_LIS2DU12_ODR_MASK,
+					st_lis2du12_odr_table[ret].val);
+	if (ret < 0)
+		goto unlock;
 
-	return err < 0 ? err : 0;
+unlock:
+	mutex_unlock(&hw->lock);
+
+	return 0;
 }
 
 static int st_lis2du12_check_whoami(struct st_lis2du12_hw *hw)
@@ -296,7 +300,7 @@ static int st_lis2du12_init_hw(struct st_lis2du12_hw *hw)
 	err = regmap_update_bits(hw->regmap,
 				 ST_LIS2DU12_INTERRUPT_CFG_ADDR,
 				 ST_LIS2DU12_INT_SHORT_EN_MASK,
-				 FIELD_PREP(ST_LIS2DU12_INT_SHORT_EN_MASK, 0x1));
+				 FIELD_PREP(ST_LIS2DU12_INT_SHORT_EN_MASK, 1));
 	if (err < 0)
 		return err;
 

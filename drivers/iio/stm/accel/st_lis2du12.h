@@ -151,6 +151,7 @@
 #define ST_LIS2DU12_STSIGN_MASK			GENMASK(7, 5)
 
 #define ST_LIS2DU12_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
+#define HZ_TO_US(__hz)				(1000000 / __hz)
 
 /* Temperature in uC */
 #define ST_LIS2DU12_TEMP_GAIN			22
@@ -317,6 +318,8 @@ struct st_lis2du12_hw {
 	u8 std_level;
 	u64 samples;
 
+	u16 odr;
+
 	s64 delta_ts;
 	s64 ts_irq;
 	s64 ts;
@@ -349,6 +352,63 @@ st_lis2du12_read_locked(struct st_lis2du12_hw *hw, unsigned int addr,
 
 	mutex_lock(&hw->lock);
 	err = regmap_bulk_read(hw->regmap, addr, val, len);
+	mutex_unlock(&hw->lock);
+
+	return err;
+}
+
+static inline int st_lis2du12_write_delayed(struct st_lis2du12_hw *hw,
+					    unsigned int reg,
+					    unsigned int mask,
+					    unsigned int val)
+{
+	int delay;
+	int err;
+
+	err = regmap_update_bits(hw->regmap, reg, mask,
+				 ST_LIS2DU12_SHIFT_VAL(val, mask));
+	if (err < 0)
+		return err;
+
+	/* check if in accel in PD */
+	if (hw->odr == 0) {
+		switch (reg) {
+		case ST_LIS2DU12_CTRL5_ADDR:
+			if (val == 0)
+				return 0;
+
+			/* in PD delay increase to 20 ms */
+			delay = 20000;
+			break;
+		case ST_LIS2DU12_FIFO_CTRL_ADDR:
+			delay = 1600;
+			break;
+		default:
+			/* no delay for other registers */
+			return 0;
+		}
+	} else {
+		/* when change ODR wait (ODR + 10% ODR) */
+		delay = HZ_TO_US(hw->odr) +
+			HZ_TO_US(hw->odr) / 10;
+	}
+
+	hw->odr = val;
+
+	usleep_range(delay, delay + 100);
+
+	return 0;
+}
+
+static inline int st_lis2du12_write_locked_delayed(struct st_lis2du12_hw *hw,
+						   unsigned int reg,
+						   unsigned int mask,
+						   unsigned int val)
+{
+	int err;
+
+	mutex_lock(&hw->lock);
+	err = st_lis2du12_write_delayed(hw, reg, mask, val);
 	mutex_unlock(&hw->lock);
 
 	return err;
