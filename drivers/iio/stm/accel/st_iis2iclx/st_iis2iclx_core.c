@@ -212,45 +212,18 @@ static const struct st_iis2iclx_odr_table_entry st_iis2iclx_odr_table[] = {
 static const struct st_iis2iclx_fs_table_entry st_iis2iclx_fs_table[] = {
 	[ST_IIS2ICLX_ID_ACC] = {
 		.size = ST_IIS2ICLX_FS_ACC_LIST_SIZE,
-		.fs_avl[0] = {
-			.reg = {
-				.addr = ST_IIS2ICLX_REG_CTRL1_XL_ADDR,
-				.mask = ST_IIS2ICLX_FS_XL_MASK,
-			},
-			.gain = ST_IIS2ICLX_ACC_FS_05G_GAIN,
-			.val = 0x0,
+		.reg = {
+			.addr = ST_IIS2ICLX_REG_CTRL1_XL_ADDR,
+			.mask = ST_IIS2ICLX_FS_XL_MASK,
 		},
-		.fs_avl[1] = {
-			.reg = {
-				.addr = ST_IIS2ICLX_REG_CTRL1_XL_ADDR,
-				.mask = ST_IIS2ICLX_FS_XL_MASK,
-			},
-			.gain = ST_IIS2ICLX_ACC_FS_1G_GAIN,
-			.val = 0x2,
-		},
-		.fs_avl[2] = {
-			.reg = {
-				.addr = ST_IIS2ICLX_REG_CTRL1_XL_ADDR,
-				.mask = ST_IIS2ICLX_FS_XL_MASK,
-			},
-			.gain = ST_IIS2ICLX_ACC_FS_2G_GAIN,
-			.val = 0x3,
-		},
-		.fs_avl[3] = {
-			.reg = {
-				.addr = ST_IIS2ICLX_REG_CTRL1_XL_ADDR,
-				.mask = ST_IIS2ICLX_FS_XL_MASK,
-			},
-			.gain = ST_IIS2ICLX_ACC_FS_3G_GAIN,
-			.val = 0x1,
-		},
+		.fs_avl[0] = { ST_IIS2ICLX_ACC_FS_05G_GAIN, 0x0 },
+		.fs_avl[1] = { ST_IIS2ICLX_ACC_FS_1G_GAIN,  0x2 },
+		.fs_avl[2] = { ST_IIS2ICLX_ACC_FS_2G_GAIN,  0x3 },
+		.fs_avl[3] = { ST_IIS2ICLX_ACC_FS_3G_GAIN,  0x1 },
 	},
 	[ST_IIS2ICLX_ID_TEMP] = {
 		.size = ST_IIS2ICLX_FS_TEMP_LIST_SIZE,
-		.fs_avl[0] = {
-			.gain = ST_IIS2ICLX_TEMP_FS_GAIN,
-			.val = 0x0
-		},
+		.fs_avl[0] = { ST_IIS2ICLX_TEMP_FS_GAIN, 0x0 },
 	},
 };
 
@@ -649,8 +622,8 @@ int st_iis2iclx_set_wake_up_thershold(struct st_iis2iclx_hw *hw, int th_ug)
 	int tmp, err;
 
 	err = st_iis2iclx_read_with_mask(hw,
-		st_iis2iclx_fs_table[ST_IIS2ICLX_ID_ACC].fs_avl[0].reg.addr,
-		st_iis2iclx_fs_table[ST_IIS2ICLX_ID_ACC].fs_avl[0].reg.mask,
+		st_iis2iclx_fs_table[ST_IIS2ICLX_ID_ACC].reg.addr,
+		st_iis2iclx_fs_table[ST_IIS2ICLX_ID_ACC].reg.mask,
 		&fs_xl);
 	if (err < 0)
 		return err;
@@ -859,10 +832,10 @@ static int st_iis2iclx_set_full_scale(struct st_iis2iclx_sensor *sensor,
 
 	val = st_iis2iclx_fs_table[id].fs_avl[i].val;
 	err = regmap_update_bits(hw->regmap,
-			st_iis2iclx_fs_table[id].fs_avl[i].reg.addr,
-			st_iis2iclx_fs_table[id].fs_avl[i].reg.mask,
-			ST_IIS2ICLX_SHIFT_VAL(val,
-			    st_iis2iclx_fs_table[id].fs_avl[i].reg.mask));
+				 st_iis2iclx_fs_table[id].reg.addr,
+				 st_iis2iclx_fs_table[id].reg.mask,
+				 ST_IIS2ICLX_SHIFT_VAL(val,
+					    st_iis2iclx_fs_table[id].reg.mask));
 	if (err < 0)
 		return err;
 

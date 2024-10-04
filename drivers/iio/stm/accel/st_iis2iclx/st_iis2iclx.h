@@ -392,7 +392,6 @@ struct st_iis2iclx_odr_table_entry {
  * @val: FS register value.
  */
 struct st_iis2iclx_fs {
-	struct st_iis2iclx_reg reg;
 	u32 gain;
 	u8 val;
 };
@@ -400,12 +399,14 @@ struct st_iis2iclx_fs {
 /**
  * struct st_iis2iclx_fs_table_entry - Full Scale sensor table
  *
- * @size: Full Scale sensor table size.
+ * @reg: Full Scale device register.
  * @fs_avl: Full Scale list entries.
+ * @size: Full Scale sensor table size.
  */
 struct st_iis2iclx_fs_table_entry {
-	u8 size;
+	struct st_iis2iclx_reg reg;
 	struct st_iis2iclx_fs fs_avl[ST_IIS2ICLX_FS_LIST_SIZE];
+	u8 size;
 };
 
 enum st_iis2iclx_sensor_id {

@@ -133,7 +133,7 @@ st_iis2iclx_ext_dev_settings st_iis2iclx_ext_dev_table[] = {
 		.wai_addr = 0x0f,
 		.wai_val = 0x3d,
 		.odr_table = {
-			.size = 5,
+			.size = 6,
 			.reg = {
 				.addr = 0x20,
 				.mask = GENMASK(4, 2),
@@ -147,38 +147,11 @@ st_iis2iclx_ext_dev_settings st_iis2iclx_ext_dev_table[] = {
 		},
 		.fs_table = {
 			.size = 4,
-			.fs_avl[0] = {
-				.reg = {
-					.addr = 0x21,
-					.mask = GENMASK(6, 5),
-				},
-				.gain = 6842,
-				.val = 0x0,
-			},
-			.fs_avl[1] = {
-				.reg = {
-					.addr = 0x21,
-					.mask = GENMASK(6, 5),
-				},
-				.gain = 3421,
-				.val = 0x1,
-			},
-			.fs_avl[2] = {
-				.reg = {
-					.addr = 0x21,
-					.mask = GENMASK(6, 5),
-				},
-				.gain = 2281,
-				.val = 0x2,
-			},
-			.fs_avl[3] = {
-				.reg = {
-					.addr = 0x21,
-					.mask = GENMASK(6, 5),
-				},
-				.gain = 1711,
-				.val = 0x3,
-			},
+			.reg = { .addr = 0x21, .mask = GENMASK(6, 5) },
+			.fs_avl[0] = { .gain = 6842, .val = 0x0 },
+			.fs_avl[1] = { .gain = 3421, .val = 0x1 },
+			.fs_avl[2] = { .gain = 2281, .val = 0x2 },
+			.fs_avl[3] = { .gain = 1711, .val = 0x3 },
 		},
 		.temp_comp_reg = {
 			.addr = 0x20,
@@ -227,10 +200,7 @@ st_iis2iclx_ext_dev_settings st_iis2iclx_ext_dev_table[] = {
 		.fs_table = {
 			.size = 1,
 			/* hPa micro scale */
-			.fs_avl[0] = {
-				.gain = 1000000UL/4096UL,
-				.val = 0x0,
-			},
+			.fs_avl[0] = { .gain = 1000000UL/4096UL, .val = 0x0 },
 		},
 		.bdu_reg = {
 			.addr = 0x10,
@@ -265,10 +235,7 @@ st_iis2iclx_ext_dev_settings st_iis2iclx_ext_dev_table[] = {
 		.fs_table = {
 			.size = 1,
 			/* hPa micro scale */
-			.fs_avl[0] = {
-				.gain = 1000000UL/4096UL,
-				.val = 0x0,
-			},
+			.fs_avl[0] = { .gain = 1000000UL/4096UL, .val = 0x0 },
 		},
 		.bdu_reg = {
 			.addr = 0x10,
