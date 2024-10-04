@@ -559,11 +559,7 @@ static irqreturn_t st_iis2iclx_handler_thread(int irq, void *private)
 	clear_bit(ST_IIS2ICLX_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
-#ifdef CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES
 	return st_iis2iclx_event_handler(hw);
-#else /* CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES */
-	return IRQ_HANDLED;
-#endif /* CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES */
 }
 
 static int st_iis2iclx_fifo_preenable(struct iio_dev *iio_dev)
@@ -580,6 +576,54 @@ static const struct iio_buffer_setup_ops st_iis2iclx_fifo_ops = {
 	.preenable = st_iis2iclx_fifo_preenable,
 	.postdisable = st_iis2iclx_fifo_postdisable,
 };
+
+static int st_iis2iclx_config_interrupt(struct st_iis2iclx_hw *hw,
+					bool enable)
+{
+	int err;
+
+	err = st_iis2iclx_get_int_reg(hw);
+	if (err < 0)
+		return err;
+
+	/* latch interrupts */
+	err = regmap_update_bits(hw->regmap,
+				 ST_IIS2ICLX_REG_TAP_CFG0_ADDR,
+				 ST_IIS2ICLX_LIR_MASK,
+				 FIELD_PREP(ST_IIS2ICLX_LIR_MASK,
+					    enable ? 1 : 0));
+	if (err < 0)
+		return err;
+
+	/* enable FIFO watermak interrupt */
+	return regmap_update_bits(hw->regmap, hw->drdy_reg,
+				  ST_IIS2ICLX_INT_FIFO_TH_MASK,
+				  FIELD_PREP(ST_IIS2ICLX_INT_FIFO_TH_MASK,
+					     enable ? 1 : 0));
+}
+
+static int st_iis2iclx_config_timestamp(struct st_iis2iclx_hw *hw)
+{
+	int err;
+
+	err = st_iis2iclx_hwtimesync_init(hw);
+	if (err)
+		return err;
+
+	/* init timestamp engine */
+	err = regmap_update_bits(hw->regmap,
+				 ST_IIS2ICLX_REG_CTRL10_C_ADDR,
+				 ST_IIS2ICLX_TIMESTAMP_EN_MASK,
+				 ST_IIS2ICLX_SHIFT_VAL(1,
+					    ST_IIS2ICLX_TIMESTAMP_EN_MASK));
+	if (err < 0)
+		return err;
+
+	return regmap_update_bits(hw->regmap,
+				  ST_IIS2ICLX_REG_FIFO_CTRL4_ADDR,
+				  ST_IIS2ICLX_DEC_TS_MASK,
+				  FIELD_PREP(ST_IIS2ICLX_DEC_TS_MASK, 1));
+}
 
 int st_iis2iclx_buffers_setup(struct st_iis2iclx_hw *hw)
 {
@@ -665,12 +709,9 @@ int st_iis2iclx_buffers_setup(struct st_iis2iclx_hw *hw)
 
 	}
 
-	err = st_iis2iclx_hwtimesync_init(hw);
-	if (err)
+	err = st_iis2iclx_config_interrupt(hw, true);
+	if (err < 0)
 		return err;
 
-	return regmap_update_bits(hw->regmap,
-				  ST_IIS2ICLX_REG_FIFO_CTRL4_ADDR,
-				  ST_IIS2ICLX_DEC_TS_MASK,
-				  FIELD_PREP(ST_IIS2ICLX_DEC_TS_MASK, 1));
+	return st_iis2iclx_config_timestamp(hw);
 }

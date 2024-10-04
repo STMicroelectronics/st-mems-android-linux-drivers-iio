@@ -20,6 +20,7 @@
 #include <linux/property.h>
 #include <linux/regmap.h>
 #include <linux/spinlock.h>
+#include <linux/version.h>
 
 #include "../../common/stm_iio_types.h"
 
@@ -95,6 +96,24 @@
 #define ST_IIS2ICLX_REG_CTRL10_C_ADDR		0x19
 #define ST_IIS2ICLX_TIMESTAMP_EN_MASK		BIT(5)
 
+#define ST_IIS2ICLX_REG_ALL_INT_SRC_ADDR	0x1a
+#define ST_IIS2ICLX_WU_IA_MASK			BIT(1)
+#define ST_IIS2ICLX_SLEEP_CHANGE_MASK		BIT(5)
+
+#define ST_IIS2ICLX_REG_WAKE_UP_SRC_ADDR	0x1b
+#define ST_IIS2ICLX_WAKE_UP_EVENT_MASK		GENMASK(3, 1)
+#define ST_IIS2ICLX_WAKE_UP_SRC_WU_IA_MASK	BIT(3)
+#define ST_IIS2ICLX_X_WU_MASK			BIT(2)
+#define ST_IIS2ICLX_Y_WU_MASK			BIT(1)
+
+#define ST_IIS2ICLX_REG_TAP_SRC_ADDR		0x1c
+#define ST_IIS2ICLX_Y_TAP_MASK			BIT(1)
+#define ST_IIS2ICLX_X_TAP_MASK			BIT(2)
+#define ST_IIS2ICLX_TAP_SIGN_MASK		BIT(3)
+#define ST_IIS2ICLX_DOUBLE_TAP_IA_MASK		BIT(4)
+#define ST_IIS2ICLX_SINGLE_TAP_IA_MASK		BIT(5)
+#define ST_IIS2ICLX_XY_TAP_IA_MASK		GENMASK(2, 1)
+
 #define ST_IIS2ICLX_REG_STATUS_ADDR		0x1e
 #define ST_IIS2ICLX_STATUS_XLDA			BIT(0)
 
@@ -112,18 +131,39 @@
 
 #define ST_IIS2ICLX_REG_TAP_CFG0_ADDR		0x56
 #define ST_IIS2ICLX_LIR_MASK			BIT(0)
+#define ST_IIS2ICLX_TAP_Y_EN_MASK		BIT(2)
+#define ST_IIS2ICLX_TAP_X_EN_MASK		BIT(3)
+#define ST_IIS2ICLX_SLOPE_FDS_MASK		BIT(4)
+#define ST_IIS2ICLX_INT_CLR_ON_READ_MASK	BIT(6)
+#define ST_IIS2ICLX_TAP_EN_MASK			GENMASK(3, 2)
 
-#define ST_IIS2ICLX_REG_THS_6D_ADDR		0x59
-#define ST_IIS2ICLX_SIXD_THS_MASK		GENMASK(6, 5)
+#define ST_IIS2ICLX_REG_TAP_CFG1_ADDR		0x57
+#define ST_IIS2ICLX_TAP_THS_X_MASK		GENMASK(4, 0)
+#define ST_IIS2ICLX_TAP_PRIORITY_MASK		BIT(5)
+
+#define ST_IIS2ICLX_REG_TAP_CFG2_ADDR		0x58
+#define ST_IIS2ICLX_TAP_THS_Y_MASK		GENMASK(4, 0)
+#define ST_IIS2ICLX_INTERRUPTS_ENABLE_MASK	BIT(7)
+
+#define ST_IIS2ICLX_REG_INT_DUR2_ADDR		0x5a
+#define ST_IIS2ICLX_SHOCK_MASK			GENMASK(1, 0)
+#define ST_IIS2ICLX_QUIET_MASK			GENMASK(3, 2)
+#define ST_IIS2ICLX_DUR_MASK			GENMASK(7, 4)
 
 #define ST_IIS2ICLX_REG_WAKE_UP_THS_ADDR	0x5b
 #define ST_IIS2ICLX_WAKE_UP_THS_MASK		GENMASK(5, 0)
+#define ST_IIS2ICLX_SINGLE_DOUBLE_TAP_MASK	BIT(7)
 
 #define ST_IIS2ICLX_REG_WAKE_UP_DUR_ADDR	0x5c
 #define ST_IIS2ICLX_WAKE_UP_DUR_MASK		GENMASK(6, 5)
 
 #define ST_IIS2ICLX_REG_MD1_CFG_ADDR		0x5e
 #define ST_IIS2ICLX_REG_MD2_CFG_ADDR		0x5f
+#define ST_IIS2ICLX_INT_EMB_FUNC_MASK		BIT(1)
+#define ST_IIS2ICLX_INT_DOUBLE_TAP_MASK		BIT(3)
+#define ST_IIS2ICLX_INT_WU_MASK			BIT(5)
+#define ST_IIS2ICLX_INT_SINGLE_TAP_MASK		BIT(6)
+#define ST_IIS2ICLX_INT_SLEEP_CHANGE_MASK	BIT(7)
 
 #define ST_IIS2ICLX_REG_INTERNAL_FREQ_FINE	0x63
 
@@ -239,6 +279,43 @@ static const struct iio_event_spec st_iis2iclx_thr_event = {
 	.mask_separate = BIT(IIO_EV_INFO_ENABLE),
 };
 
+static const struct iio_event_spec st_iis2iclx_wakeup_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_RISING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) | BIT(IIO_EV_INFO_ENABLE) |
+			 BIT(IIO_EV_INFO_PERIOD),
+};
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+static const struct iio_event_spec st_iis2iclx_tap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_SINGLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT),
+};
+
+static const struct iio_event_spec st_iis2iclx_dtap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_DOUBLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT) |
+			       BIT(IIO_EV_INFO_TAP2_MIN_DELAY),
+};
+#endif /* LINUX_VERSION_CODE */
+
+enum st_iis2iclx_event_id {
+	ST_IIS2ICLX_EVENT_WAKEUP,
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_IIS2ICLX_EVENT_TAP,
+	ST_IIS2ICLX_EVENT_DTAP,
+#endif /* LINUX_VERSION_CODE */
+
+	ST_IIS2ICLX_EVENT_MAX
+};
+
 #define ST_IIS2ICLX_EVENT_CHANNEL(ctype, etype)		\
 {							\
 	.type = ctype,					\
@@ -307,6 +384,13 @@ enum st_iis2iclx_suspend_resume_register {
 	ST_IIS2ICLX_REG_CTRL8_XL_REG,
 	ST_IIS2ICLX_REG_CTRL10_C_REG,
 	ST_IIS2ICLX_REG_TAP_CFG0_REG,
+	ST_IIS2ICLX_REG_TAP_CFG1_REG,
+	ST_IIS2ICLX_REG_TAP_CFG2_REG,
+	ST_IIS2ICLX_REG_INT_DUR2_REG,
+	ST_IIS2ICLX_REG_WAKE_UP_THS_REG,
+	ST_IIS2ICLX_REG_WAKE_UP_DUR_REG,
+	ST_IIS2ICLX_REG_MD1_CFG_REG,
+	ST_IIS2ICLX_REG_MD2_CFG_REG,
 	ST_IIS2ICLX_REG_INT1_CTRL_REG,
 	ST_IIS2ICLX_REG_INT2_CTRL_REG,
 	ST_IIS2ICLX_REG_FIFO_CTRL1_REG,
@@ -439,11 +523,6 @@ enum st_iis2iclx_sensor_id {
 	ST_IIS2ICLX_ID_FSM_13,
 	ST_IIS2ICLX_ID_FSM_14,
 	ST_IIS2ICLX_ID_FSM_15,
-	ST_IIS2ICLX_ID_EVENT,
-	ST_IIS2ICLX_ID_SC = ST_IIS2ICLX_ID_EVENT,
-	ST_IIS2ICLX_ID_TRIGGER,
-	ST_IIS2ICLX_ID_WK = ST_IIS2ICLX_ID_TRIGGER,
-	ST_IIS2ICLX_ID_6D,
 	ST_IIS2ICLX_ID_MAX,
 };
 
@@ -508,6 +587,9 @@ static const enum st_iis2iclx_sensor_id st_iis2iclx_fsm_sensor_list[] = {
 
 /* this is the minimal ODR for wake-up sensors and dependencies */
 #define ST_IIS2ICLX_MIN_ODR_IN_WAKEUP		26
+#define ST_IIS2ICLX_MIN_ODR_IN_FREEFALL		26
+#define ST_IIS2ICLX_MIN_ODR_IN_TAP		416
+#define ST_IIS2ICLX_MIN_ODR_IN_DTAP		416
 
 enum st_iis2iclx_fifo_mode {
 	ST_IIS2ICLX_FIFO_BYPASS = 0x0,
@@ -558,45 +640,30 @@ struct st_iis2iclx_sensor {
 	struct st_iis2iclx_ext_dev_info ext_dev_info;
 	struct iio_trigger *trig;
 
-	union {
-		/* sensor with odrs, gain and offset */
-		struct {
-			u32 gain;
-			u32 offset;
-			u32 decimator;
-			u32 dec_counter;
-			u32 discard_samples;
-			int odr;
-			int uodr;
+	/* sensor with odrs, gain and offset */
+	u32 gain;
+	u32 offset;
+	u32 decimator;
+	u32 dec_counter;
+	u32 discard_samples;
+	int odr;
+	int uodr;
 
 #ifdef ST_IIS2ICLX_DEBUG_DISCHARGE
-			u32 discharged_samples;
+	u32 discharged_samples;
 #endif /* ST_IIS2ICLX_DEBUG_DISCHARGE */
 
-			u16 max_watermark;
-			u16 watermark;
-			s64 last_fifo_timestamp;
+	u16 max_watermark;
+	u16 watermark;
+	s64 last_fifo_timestamp;
 
-			/* self test */
-			int8_t selftest_status;
+	/* self test */
+	int8_t selftest_status;
 
-			/* mlc / fsm registers */
-			u8 status_reg;
-			u8 outreg_addr;
-			enum st_iis2iclx_fsm_mlc_enable_id status;
-		};
-
-		/* sensor specific data configuration */
-		struct {
-			u32 conf[6];
-
-			/* ensure natural alignment of timestamp */
-			struct {
-				u8 event;
-				s64 ts __aligned(8);
-			} scan;
-		};
-	};
+	/* mlc / fsm registers */
+	u8 status_reg;
+	u8 outreg_addr;
+	enum st_iis2iclx_fsm_mlc_enable_id status;
 };
 
 /**
@@ -612,6 +679,7 @@ struct st_iis2iclx_sensor {
  * @fifo_mode: FIFO operating mode supported by the device.
  * @state: hw operational state.
  * @enable_mask: Enabled sensor bitmask.
+ * @enable_ev_mask: Enabled event bitmask.
  * @ext_data_len: SHUB external sensor data len.
  * @hw_timestamp_global: hw timestamp value always monotonic where the most
  *                       significant 8byte are incremented at every disable/enable.
@@ -640,6 +708,14 @@ struct st_iis2iclx_sensor {
  * @preload_mlc: Indicate to preload firmware for MLC/FSM.
  * @enable_drdy_mask: Indicate if drdy mask is enabled.
  * @xl_odr_div: Configured accel odr bandwidth.
+ * @drdy_reg: Interrupt configuration register.
+ * @embfunc_pg0_irq_reg: Embedded function irq configuration register (page 0).
+ * @wk_th_mg: Wake-up threshold in mg.
+ * @wk_dur_ms: Wake-up duration in ms.
+ * @tap_threshold: tap/dtap treshold in mg.
+ * @tap_quiet_time: tap quiet time in ms.
+ * @tap_shock_time: tap shock time in ms.
+ * @dtap_duration: tap duration time in ms.
  */
 struct st_iis2iclx_hw {
 	struct device *dev;
@@ -654,6 +730,7 @@ struct st_iis2iclx_hw {
 	enum st_iis2iclx_fifo_mode fifo_mode;
 	unsigned long state;
 	u64 enable_mask;
+	u64 enable_ev_mask;
 	u64 requested_mask;
 	u8 ext_data_len;
 	s64 hw_timestamp_global;
@@ -679,6 +756,7 @@ struct st_iis2iclx_hw {
 	u32 module_id;
 
 	const struct st_iis2iclx_odr_table_entry *odr_table_entry;
+	const struct st_iis2iclx_fs_table_entry *fs_table;
 	struct iio_dev *iio_devs[ST_IIS2ICLX_ID_MAX];
 
 	struct regulator *vdd_supply;
@@ -690,17 +768,15 @@ struct st_iis2iclx_hw {
 	bool preload_mlc;
 	bool enable_drdy_mask;
 	int xl_odr_div;
-};
 
-/**
- * struct st_iis2iclx_6D_th - 6D threshold table
- *
- * @deg: Threshold in degrees.
- * @val: Register value.
- */
-struct st_iis2iclx_6D_th {
-	u8 deg;
-	u8 val;
+	u8 drdy_reg;
+	u8 embfunc_pg0_irq_reg;
+	u32 wk_th_mg;
+	u32 wk_dur_ms;
+	u32 tap_threshold;
+	u32 tap_quiet_time;
+	u32 tap_shock_time;
+	u32 dtap_duration;
 };
 
 /**
@@ -733,6 +809,17 @@ struct st_iis2iclx_xl_lpf_bw_config_t {
 };
 
 extern const struct dev_pm_ops st_iis2iclx_pm_ops;
+
+static inline int st_iis2iclx_manipulate_bit(int int_reg, int irq_mask, int en)
+{
+	int bit_position = __ffs(irq_mask);
+	int bit_mask = 1 << bit_position;
+
+	int_reg &= ~bit_mask;
+	int_reg |= (en << bit_position);
+
+	return int_reg;
+}
 
 static inline int __st_iis2iclx_write_with_mask(struct st_iis2iclx_hw *hw,
 						unsigned int addr,
@@ -785,6 +872,26 @@ st_iis2iclx_read_locked(struct st_iis2iclx_hw *hw, unsigned int addr,
 	mutex_unlock(&hw->page_lock);
 
 	return err;
+}
+
+static inline int
+__maybe_unused st_iis2iclx_read_with_mask(struct st_iis2iclx_hw *hw,
+					  u8 addr, u8 mask, u8 *val)
+{
+	u8 data;
+	int err;
+
+	err = regmap_bulk_read(hw->regmap, addr, &data, sizeof(data));
+	if (err < 0) {
+		dev_err(hw->dev, "failed to read %02x register\n", addr);
+
+		goto out;
+	}
+
+	*val = (data & mask) >> __ffs(mask);
+
+out:
+	return (err < 0) ? err : 0;
 }
 
 static inline int
@@ -881,6 +988,9 @@ static inline bool st_iis2iclx_mlc_running(struct st_iis2iclx_hw *hw)
 
 int st_iis2iclx_probe(struct device *dev, int irq, struct regmap *regmap);
 void st_iis2iclx_remove(struct device *dev);
+int st_iis2iclx_set_odr(struct st_iis2iclx_sensor *sensor,
+			int req_odr, int req_uodr);
+int st_iis2iclx_get_int_reg(struct st_iis2iclx_hw *hw);
 int st_iis2iclx_sensor_set_enable(struct st_iis2iclx_sensor *sensor,
 				  bool enable);
 int st_iis2iclx_buffers_setup(struct st_iis2iclx_hw *hw);
@@ -914,16 +1024,32 @@ int st_iis2iclx_shub_probe(struct st_iis2iclx_hw *hw);
 int st_iis2iclx_shub_set_enable(struct st_iis2iclx_sensor *sensor, bool enable);
 int st_iis2iclx_of_get_pin(struct st_iis2iclx_hw *hw, int *pin);
 
-#ifdef CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES
+/* xl events */
+int st_iis2iclx_read_event_config(struct iio_dev *iio_dev,
+				  const struct iio_chan_spec *chan,
+				  enum iio_event_type type,
+				  enum iio_event_direction dir);
+int st_iis2iclx_write_event_config(struct iio_dev *iio_dev,
+				   const struct iio_chan_spec *chan,
+				   enum iio_event_type type,
+				   enum iio_event_direction dir,
+				   int enable);
+int st_iis2iclx_read_event_value(struct iio_dev *iio_dev,
+				 const struct iio_chan_spec *chan,
+				 enum iio_event_type type,
+				 enum iio_event_direction dir,
+				 enum iio_event_info info,
+				 int *val, int *val2);
+int st_iis2iclx_write_event_value(struct iio_dev *iio_dev,
+				  const struct iio_chan_spec *chan,
+				  enum iio_event_type type,
+				  enum iio_event_direction dir,
+				  enum iio_event_info info,
+				  int val, int val2);
+int st_iis2iclx_event_init(struct st_iis2iclx_hw *hw);
 int st_iis2iclx_event_handler(struct st_iis2iclx_hw *hw);
-int st_iis2iclx_probe_event(struct st_iis2iclx_hw *hw);
-int st_iis2iclx_set_wake_up_thershold(struct st_iis2iclx_hw *hw, int th_ug);
-int st_iis2iclx_set_wake_up_duration(struct st_iis2iclx_hw *hw, int dur_ms);
-int st_iis2iclx_set_freefall_threshold(struct st_iis2iclx_hw *hw, int th_mg);
-int st_iis2iclx_set_6D_threshold(struct st_iis2iclx_hw *hw, int deg);
-int st_iis2iclx_read_with_mask(struct st_iis2iclx_hw *hw, u8 addr,
-			       u8 mask, u8 *val);
-#endif /* CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES */
+int st_iis2iclx_update_threshold_events(struct st_iis2iclx_hw *hw);
+int st_iis2iclx_update_duration_events(struct st_iis2iclx_hw *hw);
 
 #if defined(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
 int st_iis2iclx_hwtimesync_init(struct st_iis2iclx_hw *hw);

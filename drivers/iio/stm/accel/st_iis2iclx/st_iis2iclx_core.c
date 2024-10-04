@@ -108,7 +108,50 @@ static struct st_iis2iclx_suspend_resume_entry
 	[ST_IIS2ICLX_REG_TAP_CFG0_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
 		.addr = ST_IIS2ICLX_REG_TAP_CFG0_ADDR,
-		.mask = ST_IIS2ICLX_LIR_MASK,
+		.mask = ST_IIS2ICLX_LIR_MASK |
+			ST_IIS2ICLX_TAP_EN_MASK |
+			ST_IIS2ICLX_SLOPE_FDS_MASK |
+			ST_IIS2ICLX_INT_CLR_ON_READ_MASK,
+	},
+	[ST_IIS2ICLX_REG_TAP_CFG1_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_IIS2ICLX_REG_TAP_CFG1_ADDR,
+		.mask = ST_IIS2ICLX_TAP_THS_X_MASK |
+			ST_IIS2ICLX_TAP_PRIORITY_MASK,
+	},
+	[ST_IIS2ICLX_REG_TAP_CFG2_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_IIS2ICLX_REG_TAP_CFG2_ADDR,
+		.mask = ST_IIS2ICLX_TAP_THS_Y_MASK |
+			ST_IIS2ICLX_INTERRUPTS_ENABLE_MASK,
+	},
+	[ST_IIS2ICLX_REG_INT_DUR2_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_IIS2ICLX_REG_INT_DUR2_ADDR,
+		.mask = ST_IIS2ICLX_SHOCK_MASK |
+			ST_IIS2ICLX_QUIET_MASK |
+			ST_IIS2ICLX_DUR_MASK,
+	},
+	[ST_IIS2ICLX_REG_WAKE_UP_THS_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_IIS2ICLX_REG_WAKE_UP_THS_ADDR,
+		.mask = ST_IIS2ICLX_WAKE_UP_THS_MASK |
+			ST_IIS2ICLX_SINGLE_DOUBLE_TAP_MASK,
+	},
+	[ST_IIS2ICLX_REG_WAKE_UP_DUR_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_IIS2ICLX_REG_WAKE_UP_DUR_ADDR,
+		.mask = ST_IIS2ICLX_WAKE_UP_DUR_MASK,
+	},
+	[ST_IIS2ICLX_REG_MD1_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_IIS2ICLX_REG_MD1_CFG_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+	[ST_IIS2ICLX_REG_MD2_CFG_REG] = {
+		.page = FUNC_CFG_ACCESS_0,
+		.addr = ST_IIS2ICLX_REG_MD2_CFG_ADDR,
+		.mask = GENMASK(7, 0),
 	},
 	[ST_IIS2ICLX_REG_INT1_CTRL_REG] = {
 		.page = FUNC_CFG_ACCESS_0,
@@ -227,27 +270,6 @@ static const struct st_iis2iclx_fs_table_entry st_iis2iclx_fs_table[] = {
 	},
 };
 
-#ifdef CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES
-static const struct st_iis2iclx_6D_th st_iis2iclx_6D_threshold[] = {
-	[0] = {
-		.val = 0x00,
-		.deg = 80,
-	},
-	[1] = {
-		.val = 0x01,
-		.deg = 70,
-	},
-	[2] = {
-		.val = 0x02,
-		.deg = 60,
-	},
-	[3] = {
-		.val = 0x03,
-		.deg = 50,
-	},
-};
-#endif /* CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES */
-
 static const struct st_iis2iclx_xl_lpf_bw_config_t st_iis2iclx_xl_bw = {
 	.reg = ST_IIS2ICLX_REG_CTRL8_XL_ADDR,
 	.mask = ST_IIS2ICLX_HPCF_XL_MASK,
@@ -334,6 +356,13 @@ static const struct iio_chan_spec st_iis2iclx_acc_channels[] = {
 				 1, IIO_MOD_Y, 1, 16, 16, 's',
 				 st_iis2iclx_ext_info),
 	ST_IIS2ICLX_EVENT_CHANNEL(IIO_ACCEL, flush),
+	ST_IIS2ICLX_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_IIS2ICLX_EVENT_CHANNEL(IIO_ACCEL, tap),
+	ST_IIS2ICLX_EVENT_CHANNEL(IIO_ACCEL, dtap),
+#endif /* LINUX_VERSION_CODE */
+
 	IIO_CHAN_HW_TIMESTAMP(2),
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
@@ -387,25 +416,6 @@ static inline int st_iis2iclx_get_odr_divider_index(int odr_div)
 	return i;
 }
 
-int __maybe_unused st_iis2iclx_read_with_mask(struct st_iis2iclx_hw *hw,
-					      u8 addr, u8 mask, u8 *val)
-{
-	u8 data;
-	int err;
-
-	err = regmap_bulk_read(hw->regmap, addr, &data, sizeof(data));
-	if (err < 0) {
-		dev_err(hw->dev, "failed to read %02x register\n", addr);
-
-		goto out;
-	}
-
-	*val = (data & mask) >> __ffs(mask);
-
-out:
-	return (err < 0) ? err : 0;
-}
-
 int st_iis2iclx_of_get_pin(struct st_iis2iclx_hw *hw, int *pin)
 {
 	if (!dev_fwnode(hw->dev))
@@ -414,7 +424,7 @@ int st_iis2iclx_of_get_pin(struct st_iis2iclx_hw *hw, int *pin)
 	return device_property_read_u32(hw->dev, "st,int-pin", pin);
 }
 
-static int st_iis2iclx_get_int_reg(struct st_iis2iclx_hw *hw, u8 *drdy_reg)
+int st_iis2iclx_get_int_reg(struct st_iis2iclx_hw *hw)
 {
 	int err = 0, int_pin;
 
@@ -428,10 +438,12 @@ static int st_iis2iclx_get_int_reg(struct st_iis2iclx_hw *hw, u8 *drdy_reg)
 
 	switch (int_pin) {
 	case 1:
-		*drdy_reg = ST_IIS2ICLX_REG_INT1_CTRL_ADDR;
+		hw->drdy_reg = ST_IIS2ICLX_REG_INT1_CTRL_ADDR;
+		hw->embfunc_pg0_irq_reg = ST_IIS2ICLX_REG_MD1_CFG_ADDR;
 		break;
 	case 2:
-		*drdy_reg = ST_IIS2ICLX_REG_INT2_CTRL_ADDR;
+		hw->drdy_reg = ST_IIS2ICLX_REG_INT2_CTRL_ADDR;
+		hw->embfunc_pg0_irq_reg = ST_IIS2ICLX_REG_MD2_CFG_ADDR;
 		break;
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
@@ -605,140 +617,6 @@ st_iis2iclx_sysfs_get_selftest_status(struct device *dev,
 
 	return sprintf(buf, "%s\n", message);
 }
-
-#ifdef CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES
-/*
- * st_iis2iclx_set_wake_up_thershold - set wake-up threshold in ug
- * @hw - ST MEMS hw instance
- * @th_ug - wake-up threshold in ug (micro g)
- *
- * wake-up thershold register val = (th_ug * 2 ^ 6) / (1000000 * FS_XL)
- */
-int st_iis2iclx_set_wake_up_thershold(struct st_iis2iclx_hw *hw, int th_ug)
-{
-	struct st_iis2iclx_sensor *sensor;
-	struct iio_dev *iio_dev;
-	u8 val, fs_xl, max_th;
-	int tmp, err;
-
-	err = st_iis2iclx_read_with_mask(hw,
-		st_iis2iclx_fs_table[ST_IIS2ICLX_ID_ACC].reg.addr,
-		st_iis2iclx_fs_table[ST_IIS2ICLX_ID_ACC].reg.mask,
-		&fs_xl);
-	if (err < 0)
-		return err;
-
-	tmp = (th_ug * 64) / (fs_xl * 1000000);
-	val = (u8)tmp;
-	max_th = ST_IIS2ICLX_WAKE_UP_THS_MASK >>
-		  __ffs(ST_IIS2ICLX_WAKE_UP_THS_MASK);
-	if (val > max_th)
-		val = max_th;
-
-	err = st_iis2iclx_write_with_mask_locked(hw,
-				ST_IIS2ICLX_REG_WAKE_UP_THS_ADDR,
-				ST_IIS2ICLX_WAKE_UP_THS_MASK, val);
-	if (err < 0)
-		return err;
-
-	iio_dev = hw->iio_devs[ST_IIS2ICLX_ID_WK];
-	sensor = iio_priv(iio_dev);
-	sensor->conf[0] = th_ug;
-
-	return 0;
-}
-
-/*
- * st_iis2iclx_set_wake_up_duration - set wake-up duration in ms
- * @hw - ST MEMS hw instance
- * @dur_ms - wake-up duration in ms
- *
- * wake-up duration register val is related to XL ODR
- */
-int st_iis2iclx_set_wake_up_duration(struct st_iis2iclx_hw *hw, int dur_ms)
-{
-	struct st_iis2iclx_sensor *sensor;
-	struct iio_dev *iio_dev;
-	int i, tmp, sensor_odr, err;
-	u8 val, odr_xl, max_dur;
-
-	err = st_iis2iclx_read_with_mask(hw,
-			st_iis2iclx_odr_table[ST_IIS2ICLX_ID_ACC].reg.addr,
-			st_iis2iclx_odr_table[ST_IIS2ICLX_ID_ACC].reg.mask,
-			&odr_xl);
-	if (err < 0)
-		return err;
-
-	if (odr_xl == 0)
-		odr_xl = st_iis2iclx_odr_table[ST_IIS2ICLX_ID_ACC].odr_avl[ST_IIS2ICLX_DEFAULT_XL_ODR_INDEX].val;
-
-	for (i = 0; i < st_iis2iclx_odr_table[ST_IIS2ICLX_ID_ACC].size; i++) {
-		if (odr_xl ==
-		     st_iis2iclx_odr_table[ST_IIS2ICLX_ID_ACC].odr_avl[i].val)
-			break;
-	}
-
-	if (i == st_iis2iclx_odr_table[ST_IIS2ICLX_ID_ACC].size)
-		return -EINVAL;
-
-
-	sensor_odr = ST_IIS2ICLX_ODR_EXPAND(
-		st_iis2iclx_odr_table[ST_IIS2ICLX_ID_ACC].odr_avl[i].hz,
-		st_iis2iclx_odr_table[ST_IIS2ICLX_ID_ACC].odr_avl[i].uhz);
-
-	tmp = dur_ms / (1000000 / (sensor_odr / 1000));
-	val = (u8)tmp;
-	max_dur = ST_IIS2ICLX_WAKE_UP_DUR_MASK >>
-		  __ffs(ST_IIS2ICLX_WAKE_UP_DUR_MASK);
-	if (val > max_dur)
-		val = max_dur;
-
-	err = st_iis2iclx_write_with_mask_locked(hw,
-				ST_IIS2ICLX_REG_WAKE_UP_DUR_ADDR,
-				ST_IIS2ICLX_WAKE_UP_DUR_MASK, val);
-	if (err < 0)
-		return err;
-
-	iio_dev = hw->iio_devs[ST_IIS2ICLX_ID_WK];
-	sensor = iio_priv(iio_dev);
-	sensor->conf[1] = dur_ms;
-
-	return 0;
-}
-
-/*
- * st_iis2iclx_set_6D_threshold - set 6D threshold detection in degrees
- * @hw - ST MEMS hw instance
- * @deg - 6D threshold in degrees
- */
-int st_iis2iclx_set_6D_threshold(struct st_iis2iclx_hw *hw, int deg)
-{
-	struct st_iis2iclx_sensor *sensor;
-	struct iio_dev *iio_dev;
-	int i, err;
-
-	for (i = 0; i < ARRAY_SIZE(st_iis2iclx_6D_threshold); i++) {
-		if (deg >= st_iis2iclx_6D_threshold[i].deg)
-			break;
-	}
-
-	if (i == ARRAY_SIZE(st_iis2iclx_6D_threshold))
-		return -EINVAL;
-
-	err = st_iis2iclx_write_with_mask_locked(hw,
-				ST_IIS2ICLX_REG_THS_6D_ADDR,
-				ST_IIS2ICLX_SIXD_THS_MASK,
-				st_iis2iclx_6D_threshold[i].val);
-	if (err < 0)
-		return err;
-
-	iio_dev = hw->iio_devs[ST_IIS2ICLX_ID_6D];
-	sensor = iio_priv(iio_dev);
-	sensor->conf[3] = deg;
-
-	return 0;
-}
-#endif /* CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES */
 
 static __maybe_unused int st_iis2iclx_reg_access(struct iio_dev *iio_dev,
 						 unsigned int reg,
@@ -1094,8 +972,8 @@ unlock:
 	return ret;
 }
 
-static int st_iis2iclx_set_odr(struct st_iis2iclx_sensor *sensor,
-			       int req_odr, int req_uodr)
+int st_iis2iclx_set_odr(struct st_iis2iclx_sensor *sensor,
+			int req_odr, int req_uodr)
 {
 	enum st_iis2iclx_sensor_id id_req = sensor->id;
 	enum st_iis2iclx_sensor_id id = sensor->id;
@@ -1130,9 +1008,6 @@ static int st_iis2iclx_set_odr(struct st_iis2iclx_sensor *sensor,
 	case ST_IIS2ICLX_ID_FSM_13:
 	case ST_IIS2ICLX_ID_FSM_14:
 	case ST_IIS2ICLX_ID_FSM_15:
-	case ST_IIS2ICLX_ID_WK:
-	case ST_IIS2ICLX_ID_SC:
-	case ST_IIS2ICLX_ID_6D:
 	case ST_IIS2ICLX_ID_TEMP:
 	case ST_IIS2ICLX_ID_ACC: {
 		int odr;
@@ -1287,6 +1162,10 @@ static int st_iis2iclx_write_raw(struct iio_dev *iio_dev,
 			return err;
 
 		err = st_iis2iclx_set_full_scale(s, val2);
+
+		/* some events depends on xl full scale */
+		if (chan->type == IIO_ACCEL)
+			err = st_iis2iclx_update_threshold_events(s->hw);
 		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
@@ -1313,6 +1192,10 @@ static int st_iis2iclx_write_raw(struct iio_dev *iio_dev,
 						break;
 
 					st_iis2iclx_update_batching(iio_dev, 1);
+
+					/* some events depends on xl odr */
+					if (chan->type == IIO_ACCEL)
+						st_iis2iclx_update_duration_events(s->hw);
 					break;
 				default:
 					break;
@@ -1594,7 +1477,6 @@ static ssize_t st_iis2iclx_sysfs_start_selftest(struct device *dev,
 	enum st_iis2iclx_sensor_id id = sensor->id;
 	struct st_iis2iclx_hw *hw = sensor->hw;
 	int ret, test;
-	u8 drdy_reg;
 	u32 gain;
 
 	if (id != ST_IIS2ICLX_ID_ACC)
@@ -1622,12 +1504,7 @@ static ssize_t st_iis2iclx_sysfs_start_selftest(struct device *dev,
 
 	st_iis2iclx_bk_regs(hw);
 
-	/* disable FIFO watermak interrupt */
-	ret = st_iis2iclx_get_int_reg(hw, &drdy_reg);
-	if (ret < 0)
-		goto restore_regs;
-
-	ret = st_iis2iclx_update_bits_locked(hw, drdy_reg,
+	ret = st_iis2iclx_update_bits_locked(hw, hw->drdy_reg,
 					     ST_IIS2ICLX_INT_FIFO_TH_MASK, 0);
 	if (ret < 0)
 		goto restore_regs;
@@ -1750,6 +1627,10 @@ static const struct iio_info st_iis2iclx_acc_info = {
 	.read_raw = st_iis2iclx_read_raw,
 	.write_raw = st_iis2iclx_write_raw,
 	.write_raw_get_fmt = st_iis2iclx_write_raw_get_fmt,
+	.read_event_config = st_iis2iclx_read_event_config,
+	.write_event_config = st_iis2iclx_write_event_config,
+	.write_event_value = st_iis2iclx_write_event_value,
+	.read_event_value = st_iis2iclx_read_event_value,
 
 #ifdef CONFIG_DEBUG_FS
 	.debugfs_reg_access = &st_iis2iclx_reg_access,
@@ -1897,16 +1778,7 @@ static int st_iis2iclx_reset_device(struct st_iis2iclx_hw *hw)
 
 static int st_iis2iclx_init_device(struct st_iis2iclx_hw *hw)
 {
-	u8 drdy_reg;
 	int err;
-
-	/* latch interrupts */
-	err = regmap_update_bits(hw->regmap,
-				 ST_IIS2ICLX_REG_TAP_CFG0_ADDR,
-				 ST_IIS2ICLX_LIR_MASK,
-				 FIELD_PREP(ST_IIS2ICLX_LIR_MASK, 1));
-	if (err < 0)
-		return err;
 
 	/* enable Block Data Update */
 	err = regmap_update_bits(hw->regmap, ST_IIS2ICLX_REG_CTRL3_C_ADDR,
@@ -1915,16 +1787,7 @@ static int st_iis2iclx_init_device(struct st_iis2iclx_hw *hw)
 	if (err < 0)
 		return err;
 
-	/* init timestamp engine */
-	err = regmap_update_bits(hw->regmap,
-				 ST_IIS2ICLX_REG_CTRL10_C_ADDR,
-				 ST_IIS2ICLX_TIMESTAMP_EN_MASK,
-				 ST_IIS2ICLX_SHIFT_VAL(true,
-					ST_IIS2ICLX_TIMESTAMP_EN_MASK));
-	if (err < 0)
-		return err;
-
-	err = st_iis2iclx_get_int_reg(hw, &drdy_reg);
+	err = st_iis2iclx_get_int_reg(hw);
 	if (err < 0)
 		return err;
 
@@ -1935,39 +1798,11 @@ static int st_iis2iclx_init_device(struct st_iis2iclx_hw *hw)
 		return err;
 
 	/* Enable DRDY MASK for filters settling time */
-	err = regmap_update_bits(hw->regmap, ST_IIS2ICLX_REG_CTRL4_C_ADDR,
-				 ST_IIS2ICLX_DRDY_MASK,
-				 FIELD_PREP(ST_IIS2ICLX_DRDY_MASK,
-					    hw->enable_drdy_mask ? 1 : 0));
-
-	if (err < 0)
-		return err;
-
-	/* enable FIFO watermak interrupt */
-	return regmap_update_bits(hw->regmap, drdy_reg,
-				  ST_IIS2ICLX_INT_FIFO_TH_MASK,
-				  FIELD_PREP(ST_IIS2ICLX_INT_FIFO_TH_MASK, 1));
+	return regmap_update_bits(hw->regmap, ST_IIS2ICLX_REG_CTRL4_C_ADDR,
+				  ST_IIS2ICLX_DRDY_MASK,
+				  FIELD_PREP(ST_IIS2ICLX_DRDY_MASK,
+					     hw->enable_drdy_mask ? 1 : 0));
 }
-
-#ifdef CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES
-static int st_iis2iclx_post_init_device(struct st_iis2iclx_hw *hw)
-{
-	int err;
-
-	/* Set default wake-up thershold to 93750 ug */
-	err = st_iis2iclx_set_wake_up_thershold(hw, 93750);
-	if (err < 0)
-		return err;
-
-	/* Set default wake-up duration to 0 */
-	err = st_iis2iclx_set_wake_up_duration(hw, 0);
-	if (err < 0)
-		return err;
-
-	/* setting default 6D threshold to 60 degrees */
-	return st_iis2iclx_set_6D_threshold(hw, 60);
-}
-#endif /* CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES */
 
 static struct iio_dev *st_iis2iclx_alloc_iiodev(struct st_iis2iclx_hw *hw,
 						enum st_iis2iclx_sensor_id id)
@@ -2117,6 +1952,8 @@ int st_iis2iclx_probe(struct device *dev, int irq, struct regmap *regmap)
 	hw->dev = dev;
 	hw->irq = irq;
 	hw->odr_table_entry = st_iis2iclx_odr_table;
+	hw->fs_table = st_iis2iclx_fs_table;
+
 	hw->hw_timestamp_global = 0;
 
 	err = st_iis2iclx_power_enable(hw);
@@ -2175,11 +2012,15 @@ int st_iis2iclx_probe(struct device *dev, int irq, struct regmap *regmap)
 		err = st_iis2iclx_buffers_setup(hw);
 		if (err < 0)
 			return err;
-	}
 
-	err = st_iis2iclx_mlc_probe(hw);
-	if (err < 0)
-		return err;
+		err = st_iis2iclx_event_init(hw);
+		if (err < 0)
+			return err;
+
+		err = st_iis2iclx_mlc_probe(hw);
+		if (err < 0)
+			return err;
+	}
 
 	for (i = ST_IIS2ICLX_ID_ACC; i < ST_IIS2ICLX_ID_MAX; i++) {
 		if (!hw->iio_devs[i])
@@ -2190,19 +2031,11 @@ int st_iis2iclx_probe(struct device *dev, int irq, struct regmap *regmap)
 			return err;
 	}
 
-	err = st_iis2iclx_mlc_init_preload(hw);
-	if (err)
-		goto remove_mlc;
-
-#ifdef CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES
-	err = st_iis2iclx_probe_event(hw);
-	if (err < 0)
-		goto remove_mlc;
-
-	err = st_iis2iclx_post_init_device(hw);
-	if (err < 0)
-		goto remove_mlc;
-#endif /* CONFIG_IIO_ST_IIS2ICLX_EN_BASIC_FEATURES */
+	if (hw->irq > 0) {
+		err = st_iis2iclx_mlc_init_preload(hw);
+		if (err)
+			goto remove_mlc;
+	}
 
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev, "wakeup-source"));

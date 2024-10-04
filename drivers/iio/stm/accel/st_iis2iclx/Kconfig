@@ -25,12 +25,6 @@ config IIO_ST_IIS2ICLX_SPI
 	select REGMAP_SPI
 	depends on IIO_ST_IIS2ICLX
 
-config IIO_ST_IIS2ICLX_EN_BASIC_FEATURES
-	bool "Enable internal basic features event detection"
-	depends on IIO_ST_IIS2ICLX
-	help
-	  Enable internal basic features event detection sensor
-
 config IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP
 	bool "Enable async hw timestamp read"
 	depends on IIO_ST_IIS2ICLX
