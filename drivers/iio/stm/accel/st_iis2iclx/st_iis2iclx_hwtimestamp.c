@@ -17,6 +17,12 @@
 #include "st_iis2iclx.h"
 
 #define ST_IIS2ICLX_TSYNC_OFFSET_NS		(300 * 1000LL)
+#define ST_IIS2ICLX_TSYNC_DECREMENT(_id)	do { \
+							if ((hw->enable_mask & BIT(_id)) && \
+							    (hw->timesync_c[_id] > 0)) { \
+								hw->timesync_c[_id]--; \
+							} \
+						} while (0)
 
 static void st_iis2iclx_read_hw_timestamp(struct st_iis2iclx_hw *hw)
 {
@@ -44,6 +50,14 @@ static void st_iis2iclx_read_hw_timestamp(struct st_iis2iclx_hw *hw)
 	spin_lock_irq(&hw->hwtimestamp_lock);
 	timestamp_hw_global = (hw->hw_timestamp_global & GENMASK_ULL(63, 32)) |
 			      (u32)le32_to_cpu(timestamp_hw);
+
+	ST_IIS2ICLX_TSYNC_DECREMENT(ST_IIS2ICLX_ID_ACC);
+	ST_IIS2ICLX_TSYNC_DECREMENT(ST_IIS2ICLX_ID_TEMP);
+
+	if (hw->timesync_c[ST_IIS2ICLX_ID_ACC] == 0 &&
+	    hw->timesync_c[ST_IIS2ICLX_ID_TEMP] == 0) {
+		hw->timesync_ktime = ktime_set(0, ST_IIS2ICLX_DEFAULT_KTIME);
+	}
 	spin_unlock_irq(&hw->hwtimestamp_lock);
 
 	tmp = cpu_to_le32((u32)timestamp_hw_global);
@@ -64,11 +78,6 @@ static void st_iis2iclx_read_hw_timestamp(struct st_iis2iclx_hw *hw)
 		iio_push_event(hw->iio_devs[ST_IIS2ICLX_ID_TEMP], eventMSB,
 			       timestamp_cpu);
 	}
-
-	if (hw->timesync_c < 6)
-		hw->timesync_c++;
-	else
-		hw->timesync_ktime = ktime_set(0, ST_IIS2ICLX_DEFAULT_KTIME);
 }
 
 static void st_iis2iclx_timesync_fn(struct work_struct *work)
@@ -92,7 +101,7 @@ static enum hrtimer_restart st_iis2iclx_timer_fn(struct hrtimer *timer)
 
 int st_iis2iclx_hwtimesync_init(struct st_iis2iclx_hw *hw)
 {
-	hw->timesync_c = 0;
+	memset(hw->timesync_c, 0, sizeof(hw->timesync_c));
 	hw->timesync_ktime = ktime_set(0, ST_IIS2ICLX_DEFAULT_KTIME);
 	hrtimer_init(&hw->timesync_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	hw->timesync_timer.function = st_iis2iclx_timer_fn;

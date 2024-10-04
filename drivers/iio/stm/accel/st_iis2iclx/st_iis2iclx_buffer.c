@@ -64,12 +64,8 @@ inline int st_iis2iclx_reset_hwts(struct st_iis2iclx_hw *hw)
 	spin_lock_irq(&hw->hwtimestamp_lock);
 	hw->hw_timestamp_global = (hw->hw_timestamp_global + (1LL << 32)) &
 				  GENMASK_ULL(63, 32);
-	spin_unlock_irq(&hw->hwtimestamp_lock);
-	hw->timesync_c = 0;
 	hw->timesync_ktime = ktime_set(0, ST_IIS2ICLX_FAST_KTIME);
-#else /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
-	hw->hw_timestamp_global = (hw->hw_timestamp_global + (1LL << 32)) &
-				  GENMASK_ULL(63, 32);
+	spin_unlock_irq(&hw->hwtimestamp_lock);
 #endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 
 	hw->irq_ts = st_iis2iclx_get_time_ns(hw->iio_devs[0]);
@@ -79,6 +75,20 @@ inline int st_iis2iclx_reset_hwts(struct st_iis2iclx_hw *hw)
 	hw->tsample = 0ULL;
 
 	return 0;
+}
+
+void st_iis2iclx_init_timesync_counter(struct st_iis2iclx_sensor *sensor,
+				       struct st_iis2iclx_hw *hw,
+				       bool enable)
+{
+#if defined(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
+	spin_lock_irq(&hw->hwtimestamp_lock);
+	if (sensor->id <= ST_IIS2ICLX_ID_HW)
+		hw->timesync_c[sensor->id] = enable ?
+					     ST_IIS2ICLX_FAST_TO_DEFAULT : 0;
+
+	spin_unlock_irq(&hw->hwtimestamp_lock);
+#endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 }
 
 int st_iis2iclx_set_fifo_mode(struct st_iis2iclx_hw *hw,
@@ -314,24 +324,22 @@ static int st_iis2iclx_read_fifo(struct st_iis2iclx_hw *hw)
 				}
 
 				memcpy(iio_buf, ptr, ST_IIS2ICLX_SAMPLE_SIZE);
+				hw->tsample = min_t(s64,
+				       st_iis2iclx_get_time_ns(hw->iio_devs[0]),
+				       hw->tsample);
 
 #if defined(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
 				spin_lock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 
 				hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
-
-#if defined(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
-				spin_unlock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
-
 				memcpy(&iio_buf[ALIGN(ST_IIS2ICLX_SAMPLE_SIZE,
 						      sizeof(s64))],
 				       &hw_timestamp_push, sizeof(hw_timestamp_push));
 
-				hw->tsample = min_t(s64,
-				       st_iis2iclx_get_time_ns(hw->iio_devs[0]),
-				       hw->tsample);
+				spin_unlock_irq(&hw->hwtimestamp_lock);
+#else /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
+				hw_timestamp_push = hw->tsample;
+#endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 
 				/* LPF sample discard */
 				if (sensor->discard_samples) {
@@ -525,6 +533,7 @@ static int st_iis2iclx_update_fifo(struct iio_dev *iio_dev, bool enable)
 	}
 
 #if defined(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
+	st_iis2iclx_init_timesync_counter(sensor, hw, enable);
 	if (hw->fifo_mode != ST_IIS2ICLX_FIFO_BYPASS) {
 		hrtimer_start(&hw->timesync_timer, ktime_set(0, 0),
 			      HRTIMER_MODE_REL);

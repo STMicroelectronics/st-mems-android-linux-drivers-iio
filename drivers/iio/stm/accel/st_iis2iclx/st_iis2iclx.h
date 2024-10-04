@@ -237,6 +237,7 @@
 
 #define ST_IIS2ICLX_DEFAULT_KTIME		200000000
 #define ST_IIS2ICLX_FAST_KTIME			5000000
+#define ST_IIS2ICLX_FAST_TO_DEFAULT		10
 
 /* full scales */
 #define ST_IIS2ICLX_FS_LIST_SIZE		6
@@ -496,6 +497,7 @@ struct st_iis2iclx_fs_table_entry {
 enum st_iis2iclx_sensor_id {
 	ST_IIS2ICLX_ID_ACC,
 	ST_IIS2ICLX_ID_TEMP,
+	ST_IIS2ICLX_ID_HW = ST_IIS2ICLX_ID_TEMP,
 	ST_IIS2ICLX_ID_EXT0,
 	ST_IIS2ICLX_ID_EXT1,
 	ST_IIS2ICLX_ID_MLC,
@@ -741,7 +743,7 @@ struct st_iis2iclx_hw {
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
-	int timesync_c;
+	int timesync_c[ST_IIS2ICLX_ID_HW + 1];
 #endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 
 	s64 ts_offset;
