@@ -332,7 +332,7 @@ enum st_iis2iclx_suspend_resume_register {
  * FUNC_CFG_ACCESS_FUNC_CFG Enable access to the embedded functions
  *                          configuration registers.
  */
-enum st_asm330lhh_page_sel_register {
+enum st_iis2iclx_page_sel_register {
 	FUNC_CFG_ACCESS_0 = 0,
 	FUNC_CFG_ACCESS_SHUB_REG,
 	FUNC_CFG_ACCESS_FUNC_CFG,

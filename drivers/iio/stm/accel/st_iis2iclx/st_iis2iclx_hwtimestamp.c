@@ -101,7 +101,7 @@ int st_iis2iclx_hwtimesync_init(struct st_iis2iclx_hw *hw)
 	hw->hw_timestamp_global = 0;
 
 	hw->timesync_workqueue =
-			   create_singlethread_workqueue("st_asm330_workqueue");
+			 create_singlethread_workqueue("st_iis2iclx_workqueue");
 	if (!hw->timesync_workqueue)
 		return -ENOMEM;
 
