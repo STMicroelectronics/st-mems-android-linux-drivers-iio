@@ -391,8 +391,8 @@ out:
  * @param  len: Data read len.
  * @return  0 if OK, < 0 if ERROR
  */
-static int st_iis2iclx_shub_read(struct st_iis2iclx_sensor *sensor,
-				 u8 addr, u8 *data, int len)
+int st_iis2iclx_shub_read(struct st_iis2iclx_sensor *sensor,
+			  u8 addr, u8 *data, int len)
 {
 	struct st_iis2iclx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	struct st_iis2iclx_hw *hw = sensor->hw;

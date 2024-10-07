@@ -230,6 +230,7 @@
 /* fifo simple size and depth */
 #define ST_IIS2ICLX_SAMPLE_SIZE			6
 #define ST_IIS2ICLX_TS_SAMPLE_SIZE		4
+#define ST_IIS2ICLX_PT_SAMPLE_SIZE		2
 #define ST_IIS2ICLX_TAG_SIZE			1
 #define ST_IIS2ICLX_FIFO_SAMPLE_SIZE		(ST_IIS2ICLX_SAMPLE_SIZE + \
 						 ST_IIS2ICLX_TAG_SIZE)
@@ -528,6 +529,14 @@ enum st_iis2iclx_sensor_id {
 	ST_IIS2ICLX_ID_MAX,
 };
 
+static const enum st_iis2iclx_sensor_id
+st_iis2iclx_triggered_main_sensor_list[] = {
+	[0] = ST_IIS2ICLX_ID_ACC,
+	[1] = ST_IIS2ICLX_ID_TEMP,
+	[2] = ST_IIS2ICLX_ID_EXT0,
+	[3] = ST_IIS2ICLX_ID_EXT1,
+};
+
 static const enum st_iis2iclx_sensor_id st_iis2iclx_mlc_sensor_list[] = {
 	 [0] = ST_IIS2ICLX_ID_MLC_0,
 	 [1] = ST_IIS2ICLX_ID_MLC_1,
@@ -710,6 +719,7 @@ struct st_iis2iclx_sensor {
  * @preload_mlc: Indicate to preload firmware for MLC/FSM.
  * @enable_drdy_mask: Indicate if drdy mask is enabled.
  * @xl_odr_div: Configured accel odr bandwidth.
+ * @has_hw_fifo: Indicate if the hw fifo configuration was done.
  * @drdy_reg: Interrupt configuration register.
  * @embfunc_pg0_irq_reg: Embedded function irq configuration register (page 0).
  * @wk_th_mg: Wake-up threshold in mg.
@@ -770,6 +780,7 @@ struct st_iis2iclx_hw {
 	bool preload_mlc;
 	bool enable_drdy_mask;
 	int xl_odr_div;
+	bool has_hw_fifo;
 
 	u8 drdy_reg;
 	u8 embfunc_pg0_irq_reg;
@@ -992,10 +1003,10 @@ int st_iis2iclx_probe(struct device *dev, int irq, struct regmap *regmap);
 void st_iis2iclx_remove(struct device *dev);
 int st_iis2iclx_set_odr(struct st_iis2iclx_sensor *sensor,
 			int req_odr, int req_uodr);
-int st_iis2iclx_get_int_reg(struct st_iis2iclx_hw *hw);
 int st_iis2iclx_sensor_set_enable(struct st_iis2iclx_sensor *sensor,
 				  bool enable);
-int st_iis2iclx_buffers_setup(struct st_iis2iclx_hw *hw);
+int st_iis2iclx_trigger_setup(struct st_iis2iclx_hw *hw);
+int st_iis2iclx_allocate_buffers(struct st_iis2iclx_hw *hw);
 int st_iis2iclx_get_odr_from_reg(enum st_iis2iclx_sensor_id id,
 				 u8 reg_val, u16 *podr, u32 *puodr);
 int st_iis2iclx_get_batch_val(struct st_iis2iclx_sensor *sensor,
@@ -1024,7 +1035,10 @@ int st_iis2iclx_update_batching(struct iio_dev *iio_dev, bool enable);
 int st_iis2iclx_reset_hwts(struct st_iis2iclx_hw *hw);
 int st_iis2iclx_shub_probe(struct st_iis2iclx_hw *hw);
 int st_iis2iclx_shub_set_enable(struct st_iis2iclx_sensor *sensor, bool enable);
+int st_iis2iclx_shub_read(struct st_iis2iclx_sensor *sensor,
+			  u8 addr, u8 *data, int len);
 int st_iis2iclx_of_get_pin(struct st_iis2iclx_hw *hw, int *pin);
+int st_iis2iclx_get_int_reg(struct st_iis2iclx_hw *hw);
 
 /* xl events */
 int st_iis2iclx_read_event_config(struct iio_dev *iio_dev,

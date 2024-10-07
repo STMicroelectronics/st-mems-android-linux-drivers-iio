@@ -1969,6 +1969,7 @@ int st_iis2iclx_probe(struct device *dev, int irq, struct regmap *regmap)
 	hw->irq = irq;
 	hw->odr_table_entry = st_iis2iclx_odr_table;
 	hw->fs_table = st_iis2iclx_fs_table;
+	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	hw->hw_timestamp_global = 0;
 
@@ -2024,8 +2025,12 @@ int st_iis2iclx_probe(struct device *dev, int irq, struct regmap *regmap)
 	if (err < 0)
 		return err;
 
+	err = st_iis2iclx_allocate_buffers(hw);
+	if (err < 0)
+		return err;
+
 	if (hw->irq > 0) {
-		err = st_iis2iclx_buffers_setup(hw);
+		err = st_iis2iclx_trigger_setup(hw);
 		if (err < 0)
 			return err;
 
