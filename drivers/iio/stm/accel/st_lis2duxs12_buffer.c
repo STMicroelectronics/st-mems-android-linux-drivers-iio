@@ -544,11 +544,11 @@ static irqreturn_t st_lis2duxs12_handler_thread(int irq, void *private)
 	clear_bit(ST_LIS2DUXS12_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
-#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
 	err = st_lis2duxs12_event_handler(hw);
 	if (err < 0)
 		return err;
 
+#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
 	err = st_lis2duxs12_embedded_function_handler(hw);
 	if (err < 0)
 		return err;

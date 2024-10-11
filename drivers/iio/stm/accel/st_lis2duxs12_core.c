@@ -210,6 +210,16 @@ static const struct iio_chan_spec st_lis2duxs12_acc_channels[] = {
 				   1, IIO_MOD_Z, 2, 16, 16, 's',
 				   st_lis2duxs12_chan_spec_ext_info),
 	ST_LIS2DUXS12_EVENT_CHANNEL(IIO_ACCEL, flush),
+
+	ST_LIS2DUXS12_EVENT_CHANNEL(IIO_ACCEL, freefall),
+	ST_LIS2DUXS12_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_LIS2DUXS12_EVENT_CHANNEL(IIO_ACCEL, 6D),
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LIS2DUXS12_EVENT_CHANNEL(IIO_ACCEL, tap),
+	ST_LIS2DUXS12_EVENT_CHANNEL(IIO_ACCEL, dtap),
+#endif /* LINUX_VERSION_CODE */
+
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
@@ -419,8 +429,8 @@ st_lis2duxs12_check_odr_dependency(struct st_lis2duxs12_hw *hw,
 	return ret;
 }
 
-static int st_lis2duxs12_set_odr(struct st_lis2duxs12_sensor *sensor,
-				 int req_odr, int req_uodr)
+int st_lis2duxs12_set_odr(struct st_lis2duxs12_sensor *sensor,
+			  int req_odr, int req_uodr)
 {
 	enum st_lis2duxs12_sensor_id id = ST_LIS2DUXS12_ID_ACC;
 	struct st_lis2duxs12_hw *hw = sensor->hw;
@@ -632,6 +642,10 @@ static int st_lis2duxs12_write_raw(struct iio_dev *iio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		err = st_lis2duxs12_set_full_scale(sensor, val2);
+
+		/* some events depends on xl full scale */
+		if (chan->type == IIO_ACCEL)
+			err = st_lis2duxs12_update_threshold_events(sensor->hw);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		struct st_lis2duxs12_odr oe = { 0 };
@@ -650,6 +664,9 @@ static int st_lis2duxs12_write_raw(struct iio_dev *iio_dev,
 
 					st_lis2duxs12_set_std_level(sensor->hw,
 								 oe.hz);
+
+					/* some events depends on xl odr */
+					err = st_lis2duxs12_update_duration_events(sensor->hw);
 					}
 					break;
 				default:
@@ -1084,9 +1101,15 @@ static const struct iio_info st_lis2duxs12_acc_info = {
 	.attrs = &st_lis2duxs12_acc_attribute_group,
 	.read_raw = st_lis2duxs12_read_raw,
 	.write_raw = st_lis2duxs12_write_raw,
+	.read_event_config = st_lis2duxs12_read_event_config,
+	.write_event_config = st_lis2duxs12_write_event_config,
+	.write_event_value = st_lis2duxs12_write_event_value,
+	.read_event_value = st_lis2duxs12_read_event_value,
+
 #ifdef CONFIG_DEBUG_FS
 	.debugfs_reg_access = &st_lis2duxs12_reg_access,
 #endif /* CONFIG_DEBUG_FS */
+
 };
 
 static struct attribute *st_lis2duxs12_temp_attributes[] = {
@@ -1409,11 +1432,9 @@ int st_lis2duxs12_probe(struct device *dev, int irq,
 			return err;
 	}
 
-#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
-	err = st_lis2duxs12_basicfunc_probe(hw);
+	err = st_lis2duxs12_event_init(hw);
 	if (err < 0)
 		return err;
-#endif /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
 
 	err = st_lis2duxs12_mlc_probe(hw);
 	if (err < 0)

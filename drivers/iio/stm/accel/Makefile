@@ -38,10 +38,10 @@ obj-$(CONFIG_IIO_ST_LIS2HH12_I2C) += st_lis2hh12_i2c.o
 obj-$(CONFIG_IIO_ST_LIS2HH12_SPI) += st_lis2hh12_spi.o
 
 st_lis2duxs12-y := st_lis2duxs12_core.o st_lis2duxs12_buffer.o \
-                  st_lis2duxs12_mlc.o st_lis2duxs12_qvar.o
+                   st_lis2duxs12_mlc.o st_lis2duxs12_qvar.o \
+                   st_lis2duxs12_events.o
 
-st_lis2duxs12-$(CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES) += st_lis2duxs12_basicfunc.o \
-                                                               st_lis2duxs12_embfunc.o
+st_lis2duxs12-$(CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES) += st_lis2duxs12_embfunc.o
 
 obj-$(CONFIG_IIO_ST_LIS2DUXS12) += st_lis2duxs12.o
 obj-$(CONFIG_IIO_ST_LIS2DUXS12_I2C) += st_lis2duxs12_i2c.o

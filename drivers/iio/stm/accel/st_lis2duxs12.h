@@ -15,6 +15,7 @@
 #include <linux/delay.h>
 #include <linux/regmap.h>
 #include <linux/bitfield.h>
+#include <linux/version.h>
 
 #include "../common/stm_iio_types.h"
 
@@ -104,6 +105,9 @@
 
 #define ST_LIS2DUXS12_WAKE_UP_SRC_ADDR		0x21
 #define ST_LIS2DUXS12_WK_MASK			GENMASK(2, 0)
+#define ST_LIS2DUXS12_X_WU_MASK			BIT(2)
+#define ST_LIS2DUXS12_Y_WU_MASK			BIT(1)
+#define ST_LIS2DUXS12_Z_WU_MASK			BIT(0)
 #define ST_LIS2DUXS12_WU_IA_MASK		BIT(3)
 #define ST_LIS2DUXS12_SLEEP_STATE_MASK		BIT(4)
 #define ST_LIS2DUXS12_FF_IA_MASK		BIT(5)
@@ -118,6 +122,13 @@
 #define ST_LIS2DUXS12_SIXD_SRC_ADDR		0x23
 #define ST_LIS2DUXS12_X_Y_Z_MASK		GENMASK(5, 0)
 #define ST_LIS2DUXS12_D6D_IA_MASK		BIT(6)
+#define ST_LIS2DUXS12_ZH_MASK			BIT(5)
+#define ST_LIS2DUXS12_ZL_MASK			BIT(4)
+#define ST_LIS2DUXS12_YH_MASK			BIT(3)
+#define ST_LIS2DUXS12_YL_MASK			BIT(2)
+#define ST_LIS2DUXS12_XH_MASK			BIT(1)
+#define ST_LIS2DUXS12_XL_MASK			BIT(0)
+
 
 #define ST_LIS2DUXS12_ALL_INT_SRC_ADDR		0x24
 #define ST_LIS2DUXS12_FF_IA_ALL_MASK		BIT(0)
@@ -344,6 +355,47 @@ static const struct iio_event_spec st_lis2duxs12_thr_event = {
 	.mask_separate = BIT(IIO_EV_INFO_ENABLE),
 };
 
+static const struct iio_event_spec st_lis2duxs12_wakeup_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_RISING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE) |
+			 BIT(IIO_EV_INFO_PERIOD),
+};
+
+static const struct iio_event_spec st_lis2duxs12_freefall_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_FALLING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+static const struct iio_event_spec st_lis2duxs12_6D_event = {
+	.type = IIO_EV_TYPE_CHANGE,
+	.dir = IIO_EV_DIR_EITHER,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+static const struct iio_event_spec st_lis2duxs12_tap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_SINGLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT),
+};
+
+static const struct iio_event_spec st_lis2duxs12_dtap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_DOUBLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT) |
+			       BIT(IIO_EV_INFO_TAP2_MIN_DELAY),
+};
+#endif /* LINUX_VERSION_CODE */
+
 #define ST_LIS2DUXS12_EVENT_CHANNEL(ctype, etype)	\
 {							\
 	.type = ctype,					\
@@ -353,6 +405,19 @@ static const struct iio_event_spec st_lis2duxs12_thr_event = {
 	.event_spec = &st_lis2duxs12_##etype##_event,	\
 	.num_event_specs = 1,				\
 }
+
+enum st_lis2duxs12_event_id {
+	ST_LIS2DUXS12_EVENT_FF,
+	ST_LIS2DUXS12_EVENT_WAKEUP,
+	ST_LIS2DUXS12_EVENT_6D,
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LIS2DUXS12_EVENT_TAP,
+	ST_LIS2DUXS12_EVENT_DTAP,
+#endif /* LINUX_VERSION_CODE */
+
+	ST_LIS2DUXS12_EVENT_MAX
+};
 
 #define ST_LIS2DUXS12_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
 #define ST_LIS2DUXS12_DESHIFT_VAL(val, mask)	(((val) & (mask)) >> __ffs(mask))
@@ -495,13 +560,6 @@ enum st_lis2duxs12_sensor_id {
 	ST_LIS2DUXS12_ID_SIGN_MOTION,
 	ST_LIS2DUXS12_ID_TILT,
 	ST_LIS2DUXS12_ID_QVAR,
-	ST_LIS2DUXS12_ID_FF,
-	ST_LIS2DUXS12_ID_SC,
-	ST_LIS2DUXS12_ID_WK,
-	ST_LIS2DUXS12_ID_6D,
-	ST_LIS2DUXS12_ID_TAP,
-	ST_LIS2DUXS12_ID_DTAP,
-	ST_LIS2DUXS12_ID_TTAP,
 	ST_LIS2DUXS12_ID_MLC,
 	ST_LIS2DUXS12_ID_MLC_0,
 	ST_LIS2DUXS12_ID_MLC_1,
@@ -569,9 +627,6 @@ st_lis2duxs12_sensor_id st_lis2duxs12_fsm_sensor_list[] = {
 					BIT(ST_LIS2DUXS12_ID_SIGN_MOTION)   | \
 					BIT(ST_LIS2DUXS12_ID_TILT))
 
-#define ST_LIS2DUXS12_BASIC_FUNC_ENABLED (GENMASK(ST_LIS2DUXS12_ID_TTAP, \
-						  ST_LIS2DUXS12_ID_FF))
-
 /* HW devices that can wakeup the target */
 #define ST_LIS2DUXS12_WAKE_UP_SENSORS (BIT(ST_LIS2DUXS12_ID_ACC)    | \
 				       BIT(ST_LIS2DUXS12_ID_MLC_0)  | \
@@ -588,7 +643,11 @@ st_lis2duxs12_sensor_id st_lis2duxs12_fsm_sensor_list[] = {
 				       BIT(ST_LIS2DUXS12_ID_FSM_7))
 
 /* this is the minimal ODR for wake-up sensors and dependencies */
-#define ST_LIS2DUXS12_MIN_ODR_IN_WAKEUP		25
+#define ST_LIS2DUXS12_MIN_ODR_IN_WAKEUP			200
+#define ST_LIS2DUXS12_MIN_ODR_IN_FREEFALL		200
+#define ST_LIS2DUXS12_MIN_ODR_IN_6D			200
+#define ST_LIS2DUXS12_MIN_ODR_IN_TAP			400
+#define ST_LIS2DUXS12_MIN_ODR_IN_DTAP			400
 
 enum st_lis2duxs12_fifo_mode {
 	ST_LIS2DUXS12_FIFO_BYPASS = 0x0,
@@ -687,6 +746,7 @@ struct st_lis2duxs12_hw {
 
 	u32 enable_mask;
 	u32 requested_mask;
+	u32 enable_ev_mask;
 
 	s64 ts_offset;
 	s64 hw_ts;
@@ -712,6 +772,15 @@ struct st_lis2duxs12_hw {
 
 	struct iio_dev *iio_devs[ST_LIS2DUXS12_ID_MAX];
 	const struct st_lis2duxs12_settings *settings;
+
+	u32 freefall_threshold;
+	u32 wk_th_mg;
+	u32 wk_dur_ms;
+	u32 sixD_threshold;
+	u32 tap_threshold;
+	u32 tap_quiet_time;
+	u32 tap_shock_time;
+	u32 dtap_duration;
 };
 
 extern const struct dev_pm_ops st_lis2duxs12_pm_ops;
@@ -721,6 +790,18 @@ st_lis2duxs12_is_fifo_enabled(struct st_lis2duxs12_hw *hw)
 {
 	return hw->enable_mask & (BIT(ST_LIS2DUXS12_ID_ACC) |
 				  BIT(ST_LIS2DUXS12_ID_TEMP));
+}
+
+static inline int st_lis2duxs12_manipulate_bit(int int_reg,
+					       int irq_mask, int en)
+{
+	int bit_position = __ffs(irq_mask);
+	int bit_mask = 1 << bit_position;
+
+	int_reg &= ~bit_mask;
+	int_reg |= (en << bit_position);
+
+	return int_reg;
 }
 
 static inline int
@@ -885,6 +966,8 @@ st_lis2duxs12_update_page_bits_locked(struct st_lis2duxs12_hw *hw,
 
 int st_lis2duxs12_probe(struct device *dev, int irq,
 			enum st_lis2duxs12_hw_id hw_id, struct regmap *regmap);
+int st_lis2duxs12_set_odr(struct st_lis2duxs12_sensor *sensor,
+			  int req_odr, int req_uodr);
 int st_lis2duxs12_remove(struct device *dev);
 int st_lis2duxs12_sensor_set_enable(struct st_lis2duxs12_sensor *sensor,
 				    bool enable);
@@ -912,6 +995,33 @@ int st_lis2duxs12_mlc_remove(struct device *dev);
 int st_lis2duxs12_mlc_check_status(struct st_lis2duxs12_hw *hw);
 int st_lis2duxs12_mlc_init_preload(struct st_lis2duxs12_hw *hw);
 
+/* xl events */
+int st_lis2duxs12_read_event_config(struct iio_dev *iio_dev,
+				    const struct iio_chan_spec *chan,
+				    enum iio_event_type type,
+				    enum iio_event_direction dir);
+int st_lis2duxs12_write_event_config(struct iio_dev *iio_dev,
+				     const struct iio_chan_spec *chan,
+				     enum iio_event_type type,
+				     enum iio_event_direction dir,
+				     int enable);
+int st_lis2duxs12_read_event_value(struct iio_dev *iio_dev,
+				   const struct iio_chan_spec *chan,
+				   enum iio_event_type type,
+				   enum iio_event_direction dir,
+				   enum iio_event_info info,
+				   int *val, int *val2);
+int st_lis2duxs12_write_event_value(struct iio_dev *iio_dev,
+				    const struct iio_chan_spec *chan,
+				    enum iio_event_type type,
+				    enum iio_event_direction dir,
+				    enum iio_event_info info,
+				    int val, int val2);
+int st_lis2duxs12_event_init(struct st_lis2duxs12_hw *hw);
+int st_lis2duxs12_event_handler(struct st_lis2duxs12_hw *hw);
+int st_lis2duxs12_update_threshold_events(struct st_lis2duxs12_hw *hw);
+int st_lis2duxs12_update_duration_events(struct st_lis2duxs12_hw *hw);
+
 #ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
 int st_lis2duxs12_reset_step_counter(struct iio_dev *iio_dev);
 int st_lis2duxs12_embedded_function_probe(struct st_lis2duxs12_hw *hw);
@@ -919,8 +1029,6 @@ int st_lis2duxs12_step_counter_set_enable(struct st_lis2duxs12_sensor *sensor,
 					  bool enable);
 int st_lis2duxs12_embfunc_sensor_set_enable(struct st_lis2duxs12_sensor *sensor,
 					    bool enable);
-int st_lis2duxs12_basicfunc_probe(struct st_lis2duxs12_hw *hw);
-int st_lis2duxs12_event_handler(struct st_lis2duxs12_hw *hw);
 int st_lis2duxs12_embedded_function_handler(struct st_lis2duxs12_hw *hw);
 #else /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
 static inline int

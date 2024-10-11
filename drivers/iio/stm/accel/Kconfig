@@ -229,10 +229,9 @@ config IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
         bool "Enable internal basic features event detection"
         depends on IIO_ST_LIS2DUXS12
         help
-         Enable internal event detection features like: free fall, sleep
-         change, wake-up, 6D orientation, tap, double tap, triple tap,
-         step counter, step detection and significant motion. If this feature is
-         enabled it is necessary to extend the iio_chan_type_name_spec array in
+         Enable internal event detection features like: step counter,
+         step detection and significant motion. If this feature is enabled
+         it is necessary to extend the iio_chan_type_name_spec array in
          industrialio-core.c by adding the custom sensor-types used by this driver.
 
 config IIO_ST_H3LIS331DL
@@ -299,11 +298,10 @@ config IIO_ST_LIS2DU12_EN_BASIC_FEATURES
         bool "Enable internal basic features event detection"
         depends on IIO_ST_LIS2DU12
         help
-         Enable internal event detection features like: free fall, sleep
-         change, wake-up, 6D orientation, tap, double tap, triple tap,
-         step counter, step detection and significant motion. If this feature is
-         enabled it is necessary to extend the iio_chan_type_name_spec array in
-         industrialio-core.c by adding the custom sensor-types used by this driver.
+         Enable internal event detection features like: step counter, step detection
+         and significant motion. If this feature is enabled it is necessary to extend
+         the iio_chan_type_name_spec array in industrialio-core.c by adding the custom
+         sensor-types used by this driver.
 
 source "drivers/iio/stm/accel/st_iis2iclx/Kconfig"
 

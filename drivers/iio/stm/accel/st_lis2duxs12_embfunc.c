@@ -51,10 +51,10 @@ static const unsigned long st_lis2duxs12_emb_available_scan_masks[] = {
 };
 
 static int
-st_lis2duxs12_read_event_config(struct iio_dev *iio_dev,
-				const struct iio_chan_spec *chan,
-				enum iio_event_type type,
-				enum iio_event_direction dir)
+st_lis2duxs12_read_embfunc_event_config(struct iio_dev *iio_dev,
+					const struct iio_chan_spec *chan,
+					enum iio_event_type type,
+					enum iio_event_direction dir)
 {
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	struct st_lis2duxs12_hw *hw = sensor->hw;
@@ -63,11 +63,11 @@ st_lis2duxs12_read_event_config(struct iio_dev *iio_dev,
 }
 
 static int
-st_lis2duxs12_write_event_config(struct iio_dev *iio_dev,
-				 const struct iio_chan_spec *chan,
-				 enum iio_event_type type,
-				 enum iio_event_direction dir,
-				 int state)
+st_lis2duxs12_write_embfunc_event_config(struct iio_dev *iio_dev,
+					 const struct iio_chan_spec *chan,
+					 enum iio_event_type type,
+					 enum iio_event_direction dir,
+					 int state)
 {
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	int err;
@@ -132,8 +132,8 @@ static const struct attribute_group st_lis2duxs12_sd_attribute_group = {
 
 static const struct iio_info st_lis2duxs12_sd_info = {
 	.attrs = &st_lis2duxs12_sd_attribute_group,
-	.read_event_config = st_lis2duxs12_read_event_config,
-	.write_event_config = st_lis2duxs12_write_event_config,
+	.read_event_config = st_lis2duxs12_read_embfunc_event_config,
+	.write_event_config = st_lis2duxs12_write_embfunc_event_config,
 };
 
 static struct attribute *st_lis2duxs12_sm_attributes[] = {
