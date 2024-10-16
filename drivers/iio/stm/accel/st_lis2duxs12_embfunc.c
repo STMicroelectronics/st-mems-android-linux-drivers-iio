@@ -4,84 +4,158 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2022 STMicroelectronics Inc.
+ * Copyright 2024 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/iio/events.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
-#include <linux/irq.h>
-#include <linux/module.h>
+#include <linux/iio/trigger_consumer.h>
+#include <linux/iio/triggered_buffer.h>
+#include <linux/iio/trigger.h>
+#include <linux/iio/buffer.h>
+#include <linux/version.h>
 
 #include "st_lis2duxs12.h"
 
-static const struct
-iio_chan_spec st_lis2duxs12_step_counter_channels[] = {
+#define ST_LIS2DUXS12_STEP_CHANNEL(addr)				\
+{									\
+	.type = IIO_STEPS,						\
+	.address = addr,						\
+	.info_mask_separate = BIT(IIO_CHAN_INFO_PROCESSED) |		\
+			      BIT(IIO_CHAN_INFO_ENABLE),		\
+	.scan_index = 0,						\
+	.scan_type = {							\
+		.sign = 'u',						\
+		.realbits = 16,						\
+		.storagebits = 16,					\
+		.endianness = IIO_LE,					\
+	},								\
+	.event_spec = st_lis2duxs12_step_events,			\
+	.num_event_specs = ARRAY_SIZE(st_lis2duxs12_step_events),	\
+}
+
+static const struct iio_event_spec st_lis2duxs12_step_events[] = {
 	{
-		.type = STM_IIO_STEP_COUNTER,
-		.scan_index = 0,
-		.scan_type = {
-			.sign = 'u',
-			.realbits = 16,
-			.storagebits = 16,
-			.endianness = IIO_LE,
-		},
+		/* step detector */
+		.type = IIO_EV_TYPE_CHANGE,
+		.dir = IIO_EV_DIR_NONE,
+		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
 	},
-	ST_LIS2DUXS12_EVENT_CHANNEL(STM_IIO_STEP_COUNTER, flush),
+	{
+		/* significan motion */
+		.type = IIO_EV_TYPE_CHANGE,
+		.dir = IIO_EV_DIR_RISING,
+		.mask_separate = BIT(IIO_EV_INFO_ENABLE),
+	},
+};
+
+static const struct iio_chan_spec st_lis2duxs12_step_channels[] = {
+	ST_LIS2DUXS12_STEP_CHANNEL(ST_LIS2DUXS12_STEP_COUNTER_L_ADDR),
 	IIO_CHAN_SOFT_TIMESTAMP(1),
 };
 
-static const struct
-iio_chan_spec st_lis2duxs12_step_detector_channels[] = {
-	ST_LIS2DUXS12_EVENT_CHANNEL(IIO_STEPS, thr),
-};
-
-static const struct
-iio_chan_spec st_lis2duxs12_sign_motion_channels[] = {
-	ST_LIS2DUXS12_EVENT_CHANNEL(STM_IIO_SIGN_MOTION, thr),
-};
-
-static const struct iio_chan_spec st_lis2duxs12_tilt_channels[] = {
-	ST_LIS2DUXS12_EVENT_CHANNEL(STM_IIO_TILT, thr),
-};
-
-static const unsigned long st_lis2duxs12_emb_available_scan_masks[] = {
-	BIT(0), 0x0
-};
-
-static int
-st_lis2duxs12_read_embfunc_event_config(struct iio_dev *iio_dev,
-					const struct iio_chan_spec *chan,
-					enum iio_event_type type,
-					enum iio_event_direction dir)
+/**
+ * Reset Step Counter register value
+ *
+ * @param  iio_dev: IIO device
+ * @return  < 0 if error, 0 otherwise
+ */
+int st_lis2duxs12_reset_step_counter(struct iio_dev *iio_dev)
 {
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	struct st_lis2duxs12_hw *hw = sensor->hw;
-
-	return !!(hw->enable_mask & BIT(sensor->id));
-}
-
-static int
-st_lis2duxs12_write_embfunc_event_config(struct iio_dev *iio_dev,
-					 const struct iio_chan_spec *chan,
-					 enum iio_event_type type,
-					 enum iio_event_direction dir,
-					 int state)
-{
-	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
+	struct st_lis2duxs12_sensor *sensor_acc;
+	struct iio_dev *iio_dev_acc;
+	bool release_acc = false;
+	u16 odr_acc = hw->xl_odr;
 	int err;
 
 	err = iio_device_claim_direct_mode(iio_dev);
 	if (err)
 		return err;
 
-	err = st_lis2duxs12_embfunc_sensor_set_enable(sensor, state);
+	mutex_lock(&hw->page_lock);
+
+	/*
+	 * the step count is not reset to zero when the accelerometer is
+	 * configured in power-down
+	 */
+	if (!(hw->enable_mask & BIT(ST_LIS2DUXS12_ID_ACC))) {
+		iio_dev_acc = hw->iio_devs[ST_LIS2DUXS12_ID_ACC];
+
+		/* claim and lock accel iio device during reset step counter */
+		err = iio_device_claim_direct_mode(iio_dev_acc);
+		if (err)
+			goto unlock;
+
+		release_acc = true;
+		sensor_acc = iio_priv(iio_dev_acc);
+
+		/* set accel odr to 400 Hz to speed up reset operation */
+		err = __st_lis2duxs12_write_with_mask(hw,
+			     hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].reg.addr,
+			     hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].reg.mask,
+			     0x0a);
+		if (err)
+			goto unlock;
+
+		odr_acc = 400;
+	}
+
+	err = st_lis2duxs12_set_emb_access(hw, true);
+	if (err < 0)
+		goto unlock;
+
+	err = __st_lis2duxs12_write_with_mask(hw,
+					      ST_LIS2DUXS12_EMB_FUNC_EN_A_ADDR,
+					      ST_LIS2DUXS12_PEDO_EN_MASK,
+					      1);
+	if (err < 0)
+		goto unlock;
+
+	err = __st_lis2duxs12_write_with_mask(hw,
+					      ST_LIS2DUXS12_EMB_FUNC_SRC_ADDR,
+					      ST_LIS2DUXS12_PEDO_RST_STEP_MASK,
+					      1);
+
+	st_lis2duxs12_set_emb_access(hw, false);
+
+	/* wait at least one odr */
+	if (odr_acc == 0)
+		goto unlock;
+
+	usleep_range(1000000 / odr_acc, 1100000 / odr_acc);
+
+unlock:
+	__st_lis2duxs12_write_with_mask(hw, ST_LIS2DUXS12_EMB_FUNC_EN_A_ADDR,
+					ST_LIS2DUXS12_PEDO_EN_MASK, 0);
+	if (release_acc) {
+		iio_device_release_direct_mode(iio_dev_acc);
+		__st_lis2duxs12_write_with_mask(hw,
+			hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].reg.addr,
+			hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].reg.mask,
+			0);
+	}
+
+	mutex_unlock(&hw->page_lock);
+
 	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }
 
+/**
+ * Reset step counter value
+ *
+ * @param  dev: IIO Device.
+ * @param  attr: IIO Channel attribute.
+ * @param  buf: User buffer.
+ * @param  size: User buffer size.
+ * @return  buffer len, negative for ERROR
+ */
 static ssize_t
 st_lis2duxs12_sysfs_reset_step_counter(struct device *dev,
 				       struct device_attribute *attr,
@@ -95,78 +169,15 @@ st_lis2duxs12_sysfs_reset_step_counter(struct device *dev,
 	return err < 0 ? err : size;
 }
 
-static IIO_DEVICE_ATTR(reset_counter, 0200, NULL,
-		       st_lis2duxs12_sysfs_reset_step_counter, 0);
-
-static IIO_DEVICE_ATTR(hwfifo_stepc_watermark_max, 0444,
-		       st_lis2duxs12_get_max_watermark, NULL, 0);
-static IIO_DEVICE_ATTR(hwfifo_stepc_flush, 0200, NULL,
-		       st_lis2duxs12_flush_fifo, 0);
-static IIO_DEVICE_ATTR(hwfifo_stepc_watermark, 0644,
-		       st_lis2duxs12_get_watermark,
-		       st_lis2duxs12_set_watermark, 0);
-
-static struct attribute *st_lis2duxs12_sc_attributes[] = {
-	&iio_dev_attr_hwfifo_stepc_watermark_max.dev_attr.attr,
-	&iio_dev_attr_hwfifo_stepc_watermark.dev_attr.attr,
-	&iio_dev_attr_reset_counter.dev_attr.attr,
-	&iio_dev_attr_hwfifo_stepc_flush.dev_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group st_lis2duxs12_sc_attribute_group = {
-	.attrs = st_lis2duxs12_sc_attributes,
-};
-
-static const struct iio_info st_lis2duxs12_sc_info = {
-	.attrs = &st_lis2duxs12_sc_attribute_group,
-};
-
-static struct attribute *st_lis2duxs12_sd_attributes[] = {
-	NULL,
-};
-
-static const struct attribute_group st_lis2duxs12_sd_attribute_group = {
-	.attrs = st_lis2duxs12_sd_attributes,
-};
-
-static const struct iio_info st_lis2duxs12_sd_info = {
-	.attrs = &st_lis2duxs12_sd_attribute_group,
-	.read_event_config = st_lis2duxs12_read_embfunc_event_config,
-	.write_event_config = st_lis2duxs12_write_embfunc_event_config,
-};
-
-static struct attribute *st_lis2duxs12_sm_attributes[] = {
-	NULL,
-};
-
-static const struct attribute_group st_lis2duxs12_sm_attribute_group = {
-	.attrs = st_lis2duxs12_sm_attributes,
-};
-
-static const struct iio_info st_lis2duxs12_sm_info = {
-	.attrs = &st_lis2duxs12_sm_attribute_group,
-	.read_event_config = st_lis2duxs12_read_event_config,
-	.write_event_config = st_lis2duxs12_write_event_config,
-};
-
-static struct attribute *st_lis2duxs12_tilt_attributes[] = {
-	NULL,
-};
-
-static const struct attribute_group st_lis2duxs12_tilt_attribute_group = {
-	.attrs = st_lis2duxs12_tilt_attributes,
-};
-
-static const struct iio_info st_lis2duxs12_tilt_info = {
-	.attrs = &st_lis2duxs12_tilt_attribute_group,
-	.read_event_config = st_lis2duxs12_read_event_config,
-	.write_event_config = st_lis2duxs12_write_event_config,
-};
-
-static int
-st_lis2duxs12_ef_pg1_sensor_set_enable(struct st_lis2duxs12_sensor *sensor,
-				       u8 mask, u8 irq_mask, bool enable)
+/**
+ * Pedometer enable
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Enable/Disable sensor
+ * @return  < 0 if error, 0 otherwise
+ */
+static int st_lis2duxs12_pedometer_enable(struct st_lis2duxs12_sensor *sensor,
+					  bool enable)
 {
 	struct st_lis2duxs12_hw *hw = sensor->hw;
 	int err;
@@ -176,31 +187,16 @@ st_lis2duxs12_ef_pg1_sensor_set_enable(struct st_lis2duxs12_sensor *sensor,
 		return err;
 
 	mutex_lock(&hw->page_lock);
-	err = st_lis2duxs12_set_emb_access(hw, 1);
+	err = st_lis2duxs12_set_emb_access(hw, true);
 	if (err < 0)
 		goto unlock;
 
 	err = __st_lis2duxs12_write_with_mask(hw,
-					ST_LIS2DUXS12_EMB_FUNC_EN_A_ADDR,
-					mask, enable);
-	if (err < 0)
-		goto reset_page;
+					  ST_LIS2DUXS12_EMB_FUNC_EN_A_ADDR,
+					  ST_LIS2DUXS12_PEDO_EN_MASK,
+					  enable);
 
-	err = __st_lis2duxs12_write_with_mask(hw, hw->emb_int_reg,
-					      irq_mask, enable);
-
-reset_page:
-	st_lis2duxs12_set_emb_access(hw, 0);
-
-	if (err < 0)
-		goto unlock;
-
-	if (((hw->enable_mask & ST_LIS2DUXS12_EMB_FUNC_ENABLED) && enable) ||
-	    (!(hw->enable_mask & ST_LIS2DUXS12_EMB_FUNC_ENABLED) && !enable)) {
-		err = __st_lis2duxs12_write_with_mask(hw, hw->md_int_reg,
-					ST_LIS2DUXS12_INT_EMB_FUNC_MASK,
-					enable);
-	}
+	st_lis2duxs12_set_emb_access(hw, false);
 
 unlock:
 	mutex_unlock(&hw->page_lock);
@@ -209,132 +205,427 @@ unlock:
 }
 
 /**
- * Enable Embedded Function sensor [EMB_FUN]
+ * Enable Step detection event detection
  *
- * @param  sensor: ST ACC sensor instance
+ * @param  sensor: ST IMU sensor instance
  * @param  enable: Enable/Disable sensor
  * @return  < 0 if error, 0 otherwise
  */
-int st_lis2duxs12_embfunc_sensor_set_enable(struct st_lis2duxs12_sensor *sensor,
-					    bool enable)
+static int
+st_lis2duxs12_step_event_enable(struct st_lis2duxs12_sensor *sensor,
+				bool enable)
 {
+	struct st_lis2duxs12_hw *hw = sensor->hw;
 	int err;
 
-	switch (sensor->id) {
-	case ST_LIS2DUXS12_ID_STEP_DETECTOR:
-		err = st_lis2duxs12_ef_pg1_sensor_set_enable(sensor,
-				ST_LIS2DUXS12_PEDO_EN_MASK,
-				ST_LIS2DUXS12_INT_STEP_DETECTOR_MASK,
-				enable);
-		break;
-	case ST_LIS2DUXS12_ID_SIGN_MOTION:
-		err = st_lis2duxs12_ef_pg1_sensor_set_enable(sensor,
-				ST_LIS2DUXS12_SIGN_MOTION_EN_MASK,
-				ST_LIS2DUXS12_INT_SIG_MOT_MASK,
-				enable);
-		break;
-	case ST_LIS2DUXS12_ID_TILT:
-		err = st_lis2duxs12_ef_pg1_sensor_set_enable(sensor,
-					ST_LIS2DUXS12_TILT_EN_MASK,
-					ST_LIS2DUXS12_INT_TILT_MASK,
+	err = st_lis2duxs12_pedometer_enable(sensor, enable);
+	if (err < 0)
+		return err;
+
+	mutex_lock(&hw->page_lock);
+	err = st_lis2duxs12_set_emb_access(hw, true);
+	if (err < 0)
+		goto unlock;
+
+	err = __st_lis2duxs12_write_with_mask(hw, hw->emb_int_reg,
+					   ST_LIS2DUXS12_INT_STEP_DETECTOR_MASK,
+					   enable);
+	st_lis2duxs12_set_emb_access(hw, false);
+
+unlock:
+	mutex_unlock(&hw->page_lock);
+
+	return err;
+}
+
+/**
+ * Significant motion enable
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Enable/Disable sensor
+ * @return  < 0 if error, 0 otherwise
+ */
+static int st_lis2duxs12_signmot_enable(struct st_lis2duxs12_sensor *sensor,
+					bool enable)
+{
+	struct st_lis2duxs12_hw *hw = sensor->hw;
+	int err;
+
+	err = st_lis2duxs12_sensor_set_enable(sensor, enable);
+	if (err < 0)
+		return err;
+
+	mutex_lock(&hw->page_lock);
+	err = st_lis2duxs12_set_emb_access(hw, true);
+	if (err < 0)
+		goto unlock;
+
+	err = __st_lis2duxs12_write_with_mask(hw,
+					      ST_LIS2DUXS12_EMB_FUNC_EN_A_ADDR,
+					      ST_LIS2DUXS12_SIGN_MOTION_EN_MASK,
+					      enable);
+
+	st_lis2duxs12_set_emb_access(hw, false);
+
+unlock:
+	mutex_unlock(&hw->page_lock);
+
+	return err;
+}
+
+/**
+ * Enable significant motion event detection
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Enable/Disable sensor
+ * @return  < 0 if error, 0 otherwise
+ */
+static int
+st_lis2duxs12_signmot_event_enable(struct st_lis2duxs12_sensor *sensor,
+				   bool enable)
+{
+	struct st_lis2duxs12_hw *hw = sensor->hw;
+	int err;
+
+	err = st_lis2duxs12_signmot_enable(sensor, enable);
+	if (err < 0)
+		return err;
+
+	mutex_lock(&hw->page_lock);
+	err = st_lis2duxs12_set_emb_access(hw, true);
+	if (err < 0)
+		goto unlock;
+
+	err = __st_lis2duxs12_write_with_mask(hw, hw->emb_int_reg,
+					      ST_LIS2DUXS12_INT_SIG_MOT_MASK,
+					      enable);
+	st_lis2duxs12_set_emb_access(hw, false);
+
+unlock:
+	mutex_unlock(&hw->page_lock);
+
+	return err;
+}
+
+/**
+ * Enable Step sensor
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Enable/Disable sensor
+ * @return  < 0 if error, 0 otherwise
+ */
+int st_lis2duxs12_step_enable(struct st_lis2duxs12_sensor *sensor,
+			      bool enable)
+{
+	struct st_lis2duxs12_hw *hw = sensor->hw;
+	int err;
+
+	err = st_lis2duxs12_pedometer_enable(sensor, enable);
+	if (err < 0)
+		return err;
+
+	mutex_lock(&hw->page_lock);
+	err = st_lis2duxs12_set_emb_access(hw, true);
+	if (err < 0)
+		goto unlock;
+
+	/* store step counter on FIFO */
+	err = __st_lis2duxs12_write_with_mask(hw,
+					ST_LIS2DUXS12_EMB_FUNC_FIFO_EN_ADDR,
+					ST_LIS2DUXS12_STEP_COUNTER_FIFO_EN_MASK,
 					enable);
-		break;
-	default:
-		err = -EINVAL;
-		break;
+	if (err < 0)
+		goto reset_page;
+
+	if (enable)
+		hw->enable_mask |= BIT(sensor->id);
+	else
+		hw->enable_mask &= ~BIT(sensor->id);
+
+reset_page:
+	st_lis2duxs12_set_emb_access(hw, false);
+
+unlock:
+	mutex_unlock(&hw->page_lock);
+
+	return err;
+}
+
+static int
+st_lis2duxs12_read_step_counter(struct st_lis2duxs12_sensor *sensor,
+				u8 addr, int *val)
+{
+	struct st_lis2duxs12_hw *hw = sensor->hw;
+	__le16 data;
+	int err;
+
+	mutex_lock(&hw->page_lock);
+	err = st_lis2duxs12_set_emb_access(hw, true);
+	if (err < 0)
+		goto unlock;
+
+	err = regmap_bulk_read(hw->regmap, addr, &data, sizeof(data));
+	if (err < 0)
+		goto reset_page;
+
+	*val = (s16)le16_to_cpu(data);
+
+reset_page:
+	st_lis2duxs12_set_emb_access(hw, false);
+
+unlock:
+	mutex_unlock(&hw->page_lock);
+
+	return err < 0 ? err : IIO_VAL_INT;
+}
+
+/**
+ * Read sensor event configuration
+ *
+ * @param  iio_dev: IIO Device.
+ * @param  chan: IIO Channel.
+ * @param  type: Event Type.
+ * @param  dir: Event Direction.
+ * @return  1 if Enabled, 0 Disabled
+ */
+static int
+st_lis2duxs12_read_event_step_config(struct iio_dev *iio_dev,
+				     const struct iio_chan_spec *chan,
+				     enum iio_event_type type,
+				     enum iio_event_direction dir)
+{
+	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
+	struct st_lis2duxs12_hw *hw = sensor->hw;
+	int err = -EINVAL;
+
+	if (chan->type == IIO_STEPS) {
+		switch (type) {
+		case IIO_EV_TYPE_CHANGE:
+			switch (dir) {
+			/*
+			 * this is the step detect event, use the dir
+			 * IIO_EV_TYPE_CHANGE because don't exist a specific
+			 * iio_event_type related to this events
+			 */
+			case IIO_EV_DIR_NONE:
+				return !!(hw->enable_ev_mask &
+					  BIT(ST_LIS2DUXS12_EVENT_STEPC));
+
+			/*
+			 * this is the significant motion event, use the dir
+			 * IIO_EV_DIR_RISING because don't exist a specific
+			 * iio_event_type related to this events
+			 */
+			case IIO_EV_DIR_RISING:
+				return !!(hw->enable_ev_mask &
+					  BIT(ST_LIS2DUXS12_EVENT_SIGNMOT));
+
+			default:
+				return -EINVAL;
+			}
+			break;
+
+		default:
+			return -EINVAL;
+		}
+	} else {
+		return -EINVAL;
 	}
 
 	return err;
 }
 
-int st_lis2duxs12_step_counter_set_enable(struct st_lis2duxs12_sensor *sensor,
-					  bool enable)
-{
-	struct st_lis2duxs12_hw *hw = sensor->hw;
-	bool run_enable = false;
-	int err;
-
-	mutex_lock(&hw->page_lock);
-	err = st_lis2duxs12_set_emb_access(hw, 1);
-	if (err < 0)
-		goto unlock;
-
-	err = __st_lis2duxs12_write_with_mask(hw,
-					ST_LIS2DUXS12_EMB_FUNC_EN_A_ADDR,
-					ST_LIS2DUXS12_PEDO_EN_MASK,
-					enable);
-	if (err < 0)
-		goto reset_page;
-
-	err = __st_lis2duxs12_write_with_mask(hw,
-				ST_LIS2DUXS12_EMB_FUNC_FIFO_EN_ADDR,
-				ST_LIS2DUXS12_STEP_COUNTER_FIFO_EN_MASK,
-				enable);
-	if (err < 0)
-		goto reset_page;
-
-	run_enable = true;
-
-reset_page:
-	st_lis2duxs12_set_emb_access(hw, 0);
-
-unlock:
-	mutex_unlock(&hw->page_lock);
-
-	if (run_enable)
-		err = st_lis2duxs12_sensor_set_enable(sensor, enable);
-
-	return err;
-}
-
-int st_lis2duxs12_reset_step_counter(struct iio_dev *iio_dev)
+/**
+ * Write sensor event configuration
+ *
+ * @param  iio_dev: IIO Device.
+ * @param  chan: IIO Channel.
+ * @param  type: Event Type.
+ * @param  dir: Event Direction.
+ * @param  state: New event state.
+ * @return  0 if OK, negative for ERROR
+ */
+static int
+st_lis2duxs12_write_event_step_config(struct iio_dev *iio_dev,
+				      const struct iio_chan_spec *chan,
+				      enum iio_event_type type,
+				      enum iio_event_direction dir,
+				      int state)
 {
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	struct st_lis2duxs12_hw *hw = sensor->hw;
-	__le16 data;
-	int err;
+	int err = -EINVAL;
 
-	err = iio_device_claim_direct_mode(iio_dev);
-	if (err)
-		return err;
+	if (chan->type == IIO_STEPS) {
+		switch (type) {
+		case IIO_EV_TYPE_CHANGE:
+			switch (dir) {
+			/*
+			 * this is the step detect event, use the dir
+			 * IIO_EV_TYPE_CHANGE because don't exist a specific
+			 * iio_event_type related to this events
+			 */
+			case IIO_EV_DIR_NONE:
+				err = st_lis2duxs12_step_event_enable(sensor,
+								      state);
+				if (err < 0)
+					return err;
 
-	err = st_lis2duxs12_step_counter_set_enable(sensor, true);
-	if (err < 0)
-		goto unlock_iio_dev;
+				if (state)
+					hw->enable_ev_mask |=
+						BIT(ST_LIS2DUXS12_EVENT_STEPC);
+				else
+					hw->enable_ev_mask &=
+					       ~BIT(ST_LIS2DUXS12_EVENT_STEPC);
 
-	mutex_lock(&hw->page_lock);
-	err = st_lis2duxs12_set_emb_access(hw, 1);
-	if (err < 0)
-		goto unlock_page;
+				break;
 
-	err = __st_lis2duxs12_write_with_mask(hw,
-				ST_LIS2DUXS12_EMB_FUNC_SRC_ADDR,
-				ST_LIS2DUXS12_PEDO_RST_STEP_MASK, 1);
-	if (err < 0)
-		goto reset_page;
+			/*
+			 * this is the significant motion event, use the dir
+			 * IIO_EV_DIR_RISING because don't exist a specific
+			 * iio_event_type related to this events
+			 */
+			case IIO_EV_DIR_RISING:
+				err = st_lis2duxs12_signmot_event_enable(sensor,
+									 state);
+				if (err < 0)
+					return err;
 
-	msleep(100);
+				if (state)
+					hw->enable_ev_mask |=
+					      BIT(ST_LIS2DUXS12_EVENT_SIGNMOT);
+				else
+					hw->enable_ev_mask &=
+					     ~BIT(ST_LIS2DUXS12_EVENT_SIGNMOT);
+				break;
 
-	regmap_bulk_read(hw->regmap, ST_LIS2DUXS12_STEP_COUNTER_L_ADDR,
-			 (u8 *)&data, sizeof(data));
+			default:
+				return -EINVAL;
+			}
+			break;
 
-reset_page:
-	st_lis2duxs12_set_emb_access(hw, 0);
-
-unlock_page:
-	mutex_unlock(&hw->page_lock);
-
-	err = st_lis2duxs12_step_counter_set_enable(sensor, false);
-
-unlock_iio_dev:
-	iio_device_release_direct_mode(iio_dev);
+		default:
+			return -EINVAL;
+		}
+	} else {
+		return -EINVAL;
+	}
 
 	return err;
 }
 
+static int st_lis2duxs12_read_step_raw(struct iio_dev *iio_dev,
+				       struct iio_chan_spec const *ch,
+				       int *val, int *val2, long mask)
+{
+	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
+	struct st_lis2duxs12_hw *hw = sensor->hw;
+	int ret = -EINVAL;
+
+	switch (ch->type) {
+	case IIO_STEPS:
+		switch (mask) {
+		case IIO_CHAN_INFO_PROCESSED:
+			ret = iio_device_claim_direct_mode(iio_dev);
+			if (ret)
+				return ret;
+
+			ret = st_lis2duxs12_read_step_counter(sensor,
+							      ch->address, val);
+			iio_device_release_direct_mode(iio_dev);
+			return IIO_VAL_INT;
+		case IIO_CHAN_INFO_ENABLE:
+			*val = !!(hw->enable_mask & BIT(sensor->id));
+			return IIO_VAL_INT;
+		default:
+			ret = -EINVAL;
+			break;
+		}
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+
+static int st_lis2duxs12_write_step_raw(struct iio_dev *iio_dev,
+					struct iio_chan_spec const *ch,
+					int val, int val2, long mask)
+{
+	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
+
+	if ((ch->type == IIO_STEPS) &&
+	    (mask == IIO_CHAN_INFO_ENABLE))
+		return st_lis2duxs12_step_enable(sensor, val);
+
+	return -EINVAL;
+}
+
+static IIO_DEVICE_ATTR(reset_counter, 0200, NULL,
+		       st_lis2duxs12_sysfs_reset_step_counter, 0);
+
+static struct attribute *st_lis2duxs12_step_attributes[] = {
+	&iio_dev_attr_reset_counter.dev_attr.attr,
+	NULL,
+};
+
+static const struct attribute_group st_lis2duxs12_step_attribute_group = {
+	.attrs = st_lis2duxs12_step_attributes,
+};
+
+static const struct iio_info st_lis2duxs12_step_info = {
+	.attrs = &st_lis2duxs12_step_attribute_group,
+	.read_raw = st_lis2duxs12_read_step_raw,
+	.write_raw = st_lis2duxs12_write_step_raw,
+	.read_event_config = st_lis2duxs12_read_event_step_config,
+	.write_event_config = st_lis2duxs12_write_event_step_config,
+};
+
+/**
+ * st_lis2duxs12_embfunc_handler_thread() - Bottom handler embedded function
+ *
+ * @hw: ST IMU MEMS hw instance.
+ *
+ * return IRQ_HANDLED or < 0 for error
+ */
+int st_lis2duxs12_embfunc_handler_thread(struct st_lis2duxs12_hw *hw)
+{
+	struct iio_dev *iio_dev;
+	u8 status;
+	int err;
+
+	if (!(hw->enable_mask & BIT(ST_LIS2DUXS12_ID_STEP_COUNTER)))
+		return IRQ_HANDLED;
+
+	err = st_lis2duxs12_read_locked(hw,
+				    ST_LIS2DUXS12_EMB_FUNC_STATUS_MAINPAGE_ADDR,
+				    &status, sizeof(status));
+	if (err < 0)
+		return IRQ_HANDLED;
+
+	iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_STEP_COUNTER];
+	if (status & ST_LIS2DUXS12_IS_STEP_DET_MASK)
+		iio_push_event(iio_dev,
+			       IIO_MOD_EVENT_CODE(IIO_STEPS, 0, IIO_NO_MOD,
+						  IIO_EV_TYPE_CHANGE,
+						  IIO_EV_DIR_NONE),
+			       iio_get_time_ns(iio_dev));
+
+	if (status & ST_LIS2DUXS12_IS_SIGMOT_MASK)
+		iio_push_event(iio_dev,
+			       IIO_MOD_EVENT_CODE(IIO_STEPS, 0, IIO_NO_MOD,
+						  IIO_EV_TYPE_CHANGE,
+						  IIO_EV_DIR_RISING),
+			       iio_get_time_ns(iio_dev));
+
+	return IRQ_HANDLED;
+}
+
 static struct
-iio_dev *st_lis2duxs12_alloc_emb_func_iiodev(struct st_lis2duxs12_hw *hw,
-					     enum st_lis2duxs12_sensor_id id)
+iio_dev *st_lis2duxs12_alloc_step_iiodev(struct st_lis2duxs12_hw *hw,
+					 enum st_lis2duxs12_sensor_id id)
 {
 	struct st_lis2duxs12_sensor *sensor;
 	struct iio_dev *iio_dev;
@@ -350,156 +641,76 @@ iio_dev *st_lis2duxs12_alloc_emb_func_iiodev(struct st_lis2duxs12_hw *hw,
 	sensor->id = id;
 	sensor->hw = hw;
 	sensor->watermark = 1;
+	sensor->decimator = 0;
+	sensor->dec_counter = 0;
 
-	switch (id) {
-	case ST_LIS2DUXS12_ID_STEP_COUNTER:
-		iio_dev->channels = st_lis2duxs12_step_counter_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lis2duxs12_step_counter_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			 "%s_step_c", hw->settings->id.name);
-		iio_dev->info = &st_lis2duxs12_sc_info;
-		iio_dev->available_scan_masks =
-				st_lis2duxs12_emb_available_scan_masks;
+	iio_dev->channels = st_lis2duxs12_step_channels;
+	iio_dev->num_channels = ARRAY_SIZE(st_lis2duxs12_step_channels);
+	scnprintf(sensor->name, sizeof(sensor->name),
+		  "%s_step", hw->settings->id.name);
+	iio_dev->info = &st_lis2duxs12_step_info;
 
-		/* request ODR @50 Hz to works properly */
-		sensor->max_watermark = 1;
-		sensor->odr = 50;
-		sensor->uodr = 0;
-		break;
-	case ST_LIS2DUXS12_ID_STEP_DETECTOR:
-		iio_dev->channels = st_lis2duxs12_step_detector_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lis2duxs12_step_detector_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			 "%s_step_d", hw->settings->id.name);
-		iio_dev->info = &st_lis2duxs12_sd_info;
-		iio_dev->available_scan_masks =
-				st_lis2duxs12_emb_available_scan_masks;
-
-		/* request ODR @50 Hz to works properly */
-		sensor->odr = 50;
-		sensor->uodr = 0;
-		break;
-	case ST_LIS2DUXS12_ID_SIGN_MOTION:
-		iio_dev->channels = st_lis2duxs12_sign_motion_channels;
-		iio_dev->num_channels =
-			ARRAY_SIZE(st_lis2duxs12_sign_motion_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			 "%s_sign_motion", hw->settings->id.name);
-		iio_dev->info = &st_lis2duxs12_sm_info;
-		iio_dev->available_scan_masks =
-				st_lis2duxs12_emb_available_scan_masks;
-
-		/* request ODR @50 Hz to works properly */
-		sensor->odr = 50;
-		sensor->uodr = 0;
-		break;
-	case ST_LIS2DUXS12_ID_TILT:
-		iio_dev->channels = st_lis2duxs12_tilt_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_lis2duxs12_tilt_channels);
-		scnprintf(sensor->name, sizeof(sensor->name),
-			 "%s_tilt", hw->settings->id.name);
-		iio_dev->info = &st_lis2duxs12_tilt_info;
-		iio_dev->available_scan_masks =
-				st_lis2duxs12_emb_available_scan_masks;
-
-		/* request ODR @50 Hz to works properly */
-		sensor->odr = 50;
-		sensor->uodr = 0;
-		break;
-	default:
-		return NULL;
-	}
+	/* request acc ODR to works properly */
+	sensor->odr = ST_LIS2DUXS12_MIN_ODR_IN_EMB_FUNC;
+	sensor->uodr = 0;
 
 	iio_dev->name = sensor->name;
 
 	return iio_dev;
 }
 
-int st_lis2duxs12_embedded_function_handler(struct st_lis2duxs12_hw *hw)
-{
-	if (hw->enable_mask & (BIT(ST_LIS2DUXS12_ID_STEP_DETECTOR) |
-			       BIT(ST_LIS2DUXS12_ID_TILT) |
-			       BIT(ST_LIS2DUXS12_ID_SIGN_MOTION))) {
-		struct iio_dev *iio_dev;
-		u8 status;
-		s64 event;
-		int err;
-
-		err = st_lis2duxs12_read_locked(hw,
-			    ST_LIS2DUXS12_EMB_FUNC_STATUS_MAINPAGE_ADDR,
-			    &status, sizeof(status));
-		if (err < 0)
-			return IRQ_HANDLED;
-
-		/* embedded function sensors */
-		if (status & ST_LIS2DUXS12_IS_STEP_DET_MASK) {
-			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_STEP_DETECTOR];
-			event = IIO_UNMOD_EVENT_CODE(IIO_STEPS, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       iio_get_time_ns(iio_dev));
-		}
-
-		if (status & ST_LIS2DUXS12_IS_SIGMOT_MASK) {
-			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_SIGN_MOTION];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_SIGN_MOTION, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       iio_get_time_ns(iio_dev));
-		}
-
-		if (status & ST_LIS2DUXS12_IS_TILT_MASK) {
-			iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_TILT];
-			event = IIO_UNMOD_EVENT_CODE(STM_IIO_TILT, -1,
-						     IIO_EV_TYPE_THRESH,
-						     IIO_EV_DIR_RISING);
-			iio_push_event(iio_dev, event,
-				       iio_get_time_ns(iio_dev));
-		}
-	}
-
-	return IRQ_HANDLED;
-}
-
+/**
+ * Initialize Embedded funcrtion HW block
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @return  < 0 if error, 0 otherwise
+ */
 static int st_lis2duxs12_embedded_function_init(struct st_lis2duxs12_hw *hw)
 {
 	int err;
 
-	err = st_lis2duxs12_update_bits_locked(hw,
-					ST_LIS2DUXS12_CTRL4_ADDR,
-					ST_LIS2DUXS12_EMB_FUNC_EN_MASK,
-					1);
+	mutex_lock(&hw->page_lock);
+	err = st_lis2duxs12_set_emb_access(hw, true);
 	if (err < 0)
-		return err;
-
-	usleep_range(5000, 6000);
+		goto unlock;
 
 	/* enable latched interrupts */
-	return st_lis2duxs12_update_page_bits_locked(hw,
-						ST_LIS2DUXS12_PAGE_RW_ADDR,
-						ST_LIS2DUXS12_EMB_FUNC_LIR_MASK,
-						1);
+	__st_lis2duxs12_write_with_mask(hw, ST_LIS2DUXS12_PAGE_RW_ADDR,
+					ST_LIS2DUXS12_EMB_FUNC_LIR_MASK, 1);
+	st_lis2duxs12_set_emb_access(hw, false);
+
+	/* enable embedded function */
+	err = __st_lis2duxs12_write_with_mask(hw, ST_LIS2DUXS12_CTRL4_ADDR,
+					      ST_LIS2DUXS12_EMB_FUNC_EN_MASK,
+					      1);
+	if (err < 0)
+		goto unlock;
+
+	/* enable embedded function interrupts enable */
+	err  = __st_lis2duxs12_write_with_mask(hw, hw->md_int_reg,
+					       ST_LIS2DUXS12_INT_EMB_FUNC_MASK,
+					       1);
+unlock:
+	mutex_unlock(&hw->page_lock);
+
+	return err;
 }
 
-int st_lis2duxs12_embedded_function_probe(struct st_lis2duxs12_hw *hw)
+/**
+ * st_lis2duxs12_embfunc_probe() - Enable embedded functionalities
+ *
+ * @hw: ST IMU MEMS hw instance.
+ *
+ * return 0 or < 0 for error
+ */
+int st_lis2duxs12_embfunc_probe(struct st_lis2duxs12_hw *hw)
 {
-	int err, i, id;
+	enum st_lis2duxs12_sensor_id id;
 
-	for (i = 0;
-	     i < ARRAY_SIZE(st_lis2duxs12_embedded_function_sensor_list);
-	     i++) {
-		id = st_lis2duxs12_embedded_function_sensor_list[i];
+	id = ST_LIS2DUXS12_ID_STEP_COUNTER;
+	hw->iio_devs[id] = st_lis2duxs12_alloc_step_iiodev(hw, id);
+	if (!hw->iio_devs[id])
+		return -ENOMEM;
 
-		hw->iio_devs[id] = st_lis2duxs12_alloc_emb_func_iiodev(hw, id);
-		if (!hw->iio_devs[id])
-			return -ENOMEM;
-	}
-
-	err = st_lis2duxs12_embedded_function_init(hw);
-
-	return err < 0 ? err : 0;
+	return st_lis2duxs12_embedded_function_init(hw);
 }

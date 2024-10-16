@@ -225,15 +225,6 @@ config IIO_ST_LIS2DUXS12_I3C
         select REGMAP_I3C
         depends on IIO_ST_LIS2DUXS12
 
-config IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
-        bool "Enable internal basic features event detection"
-        depends on IIO_ST_LIS2DUXS12
-        help
-         Enable internal event detection features like: step counter,
-         step detection and significant motion. If this feature is enabled
-         it is necessary to extend the iio_chan_type_name_spec array in
-         industrialio-core.c by adding the custom sensor-types used by this driver.
-
 config IIO_ST_H3LIS331DL
         tristate "STMicroelectronics H3LIS331DL/LIS331DLH sensor"
         depends on (I2C || SPI)

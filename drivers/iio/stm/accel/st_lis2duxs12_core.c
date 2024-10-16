@@ -494,6 +494,8 @@ int st_lis2duxs12_set_odr(struct st_lis2duxs12_sensor *sensor,
 		}
 	}
 
+	hw->xl_odr = oe.hz;
+
 	return st_lis2duxs12_update_bits_locked(hw,
 				   st_lis2duxs12_odr_table[id].reg.addr,
 				   st_lis2duxs12_odr_table[id].reg.mask,
@@ -1040,6 +1042,14 @@ st_lis2duxs12_sysfs_start_selftest(struct device *dev,
 	if (mode == ARRAY_SIZE(st_lis2duxs12_selftest_table))
 		return -EINVAL;
 
+	/* disable interrupt on FIFO watermak */
+	if (hw->ft_int_reg) {
+		ret = st_lis2duxs12_write_with_mask_locked(hw, hw->ft_int_reg,
+					     ST_LIS2DUXS12_INT_FIFO_TH_MASK, 0);
+		if (ret)
+			return ret;
+	}
+
 	/* set BDU = 1, FS = 8g, BW = ODR/16, ODR = 200 Hz */
 	gain = sensor->gain;
 	st_lis2duxs12_set_full_scale(sensor, IIO_G_TO_M_S_2(244));
@@ -1049,6 +1059,12 @@ st_lis2duxs12_sysfs_start_selftest(struct device *dev,
 	st_lis2duxs12_set_full_scale(sensor, gain);
 
 out_claim:
+	/* re-enable interrupt on FIFO watermak */
+	if (hw->ft_int_reg) {
+		st_lis2duxs12_write_with_mask_locked(hw, hw->ft_int_reg,
+					     ST_LIS2DUXS12_INT_FIFO_TH_MASK, 1);
+	}
+
 	iio_device_release_direct_mode(iio_dev);
 
 	return size;
@@ -1161,31 +1177,13 @@ static int st_lis2duxs12_reset_device(struct st_lis2duxs12_hw *hw)
 	return ret;
 }
 
-/*
- * st_lis2duxs12_init_timestamp_engine - Init timestamp engine
- */
-static int
-st_lis2duxs12_init_timestamp_engine(struct st_lis2duxs12_hw *hw,
-				   bool enable)
-{
-	int err;
-
-	err = regmap_update_bits(hw->regmap,
-				 ST_LIS2DUXS12_INTERRUPT_CFG_ADDR,
-				 ST_LIS2DUXS12_TIMESTAMP_EN_MASK,
-				 FIELD_PREP(ST_LIS2DUXS12_TIMESTAMP_EN_MASK,
-					    enable));
-	if (err < 0)
-		return err;
-
-	hw->timestamp = enable;
-
-	return err;
-}
-
 static int st_lis2duxs12_init_device(struct st_lis2duxs12_hw *hw)
 {
 	int err;
+
+	err = st_lis2duxs12_get_int_reg(hw);
+	if (err < 0)
+		dev_info(hw->dev, "interrupt lines not configured\n");
 
 	/* latch interrupts */
 	err = regmap_update_bits(hw->regmap,
@@ -1196,44 +1194,10 @@ static int st_lis2duxs12_init_device(struct st_lis2duxs12_hw *hw)
 		return err;
 
 	/* enable Block Data Update */
-	err = regmap_update_bits(hw->regmap,
+	return regmap_update_bits(hw->regmap,
 				 ST_LIS2DUXS12_CTRL4_ADDR,
 				 ST_LIS2DUXS12_BDU_MASK,
 				 FIELD_PREP(ST_LIS2DUXS12_BDU_MASK, 1));
-	if (err < 0)
-		return err;
-
-	err = st_lis2duxs12_get_int_reg(hw);
-	if (err < 0)
-		return err;
-
-	err = st_lis2duxs12_init_timestamp_engine(hw, true);
-	if (err < 0)
-		return err;
-
-
-	/* enable fifo configuration */
-	err = regmap_update_bits(hw->regmap,
-				 ST_LIS2DUXS12_CTRL4_ADDR,
-				 ST_LIS2DUXS12_FIFO_EN_MASK,
-				 FIELD_PREP(ST_LIS2DUXS12_FIFO_EN_MASK, 1));
-	if (err < 0)
-		return err;
-
-	/* enable XL and Temp */
-	err = regmap_update_bits(hw->regmap,
-				 ST_LIS2DUXS12_FIFO_WTM_ADDR,
-				 ST_LIS2DUXS12_XL_ONLY_FIFO_MASK,
-				 FIELD_PREP(ST_LIS2DUXS12_XL_ONLY_FIFO_MASK, 1));
-	if (err < 0)
-		return err;
-
-	hw->xl_only = true;
-
-	/* enable FIFO watermak interrupt */
-	return regmap_update_bits(hw->regmap, hw->ft_int_reg,
-				  ST_LIS2DUXS12_INT_FIFO_TH_MASK,
-				  FIELD_PREP(ST_LIS2DUXS12_INT_FIFO_TH_MASK, 1));
 }
 
 static struct
@@ -1379,6 +1343,7 @@ int st_lis2duxs12_probe(struct device *dev, int irq,
 	hw->irq = irq;
 	hw->odr_table_entry = st_lis2duxs12_odr_table;
 	hw->fs_table_entry = st_lis2duxs12_fs_table;
+	hw->has_hw_fifo = hw->irq > 0 ? true : false;
 
 	err = st_lis2duxs12_enable_regulator(hw);
 	if (err < 0)
@@ -1420,27 +1385,25 @@ int st_lis2duxs12_probe(struct device *dev, int irq,
 			return -ENOMEM;
 	}
 
-#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
-	err = st_lis2duxs12_embedded_function_probe(hw);
-	if (err < 0)
-		return err;
-#endif /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
-
-	if (hw->settings->st_qvar_support) {
-		err = st_lis2duxs12_qvar_probe(hw);
-		if (err)
+	if (hw->has_hw_fifo) {
+		err = st_lis2duxs12_embfunc_probe(hw);
+		if (err < 0)
 			return err;
-	}
 
-	err = st_lis2duxs12_event_init(hw);
-	if (err < 0)
-		return err;
+		if (hw->settings->st_qvar_support) {
+			err = st_lis2duxs12_qvar_probe(hw);
+			if (err)
+				return err;
+		}
 
-	err = st_lis2duxs12_mlc_probe(hw);
-	if (err < 0)
-		return err;
+		err = st_lis2duxs12_event_init(hw);
+		if (err < 0)
+			return err;
 
-	if (hw->irq > 0) {
+		err = st_lis2duxs12_mlc_probe(hw);
+		if (err < 0)
+			return err;
+
 		err = st_lis2duxs12_buffers_setup(hw);
 		if (err < 0)
 			return err;
@@ -1456,9 +1419,11 @@ int st_lis2duxs12_probe(struct device *dev, int irq,
 			return err;
 	}
 
-	err = st_lis2duxs12_mlc_init_preload(hw);
-	if (err)
-		return err;
+	if (hw->has_hw_fifo) {
+		err = st_lis2duxs12_mlc_init_preload(hw);
+		if (err)
+			return err;
+	}
 
 #if defined(CONFIG_PM)
 	device_init_wakeup(dev, 1);

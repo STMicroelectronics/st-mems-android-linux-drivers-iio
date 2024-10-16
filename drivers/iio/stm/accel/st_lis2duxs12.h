@@ -222,6 +222,7 @@
 
 /* embedded function registers */
 #define ST_LIS2DUXS12_PAGE_SEL_ADDR		0x02
+
 #define ST_LIS2DUXS12_EMB_FUNC_EN_A_ADDR	0x04
 #define ST_LIS2DUXS12_PEDO_EN_MASK		BIT(3)
 #define ST_LIS2DUXS12_TILT_EN_MASK		BIT(4)
@@ -416,6 +417,9 @@ enum st_lis2duxs12_event_id {
 	ST_LIS2DUXS12_EVENT_DTAP,
 #endif /* LINUX_VERSION_CODE */
 
+	ST_LIS2DUXS12_EVENT_STEPC,
+	ST_LIS2DUXS12_EVENT_SIGNMOT,
+
 	ST_LIS2DUXS12_EVENT_MAX
 };
 
@@ -556,9 +560,6 @@ enum st_lis2duxs12_sensor_id {
 	ST_LIS2DUXS12_ID_ACC = 0,
 	ST_LIS2DUXS12_ID_TEMP,
 	ST_LIS2DUXS12_ID_STEP_COUNTER,
-	ST_LIS2DUXS12_ID_STEP_DETECTOR,
-	ST_LIS2DUXS12_ID_SIGN_MOTION,
-	ST_LIS2DUXS12_ID_TILT,
 	ST_LIS2DUXS12_ID_QVAR,
 	ST_LIS2DUXS12_ID_MLC,
 	ST_LIS2DUXS12_ID_MLC_0,
@@ -590,14 +591,6 @@ st_lis2duxs12_sensor_id st_lis2duxs12_buffered_sensor_list[] = {
 	[3] = ST_LIS2DUXS12_ID_QVAR,
 };
 
-static const enum
-st_lis2duxs12_sensor_id st_lis2duxs12_embedded_function_sensor_list[] = {
-	[0] = ST_LIS2DUXS12_ID_STEP_COUNTER,
-	[1] = ST_LIS2DUXS12_ID_STEP_DETECTOR,
-	[2] = ST_LIS2DUXS12_ID_SIGN_MOTION,
-	[3] = ST_LIS2DUXS12_ID_TILT,
-};
-
 #define ST_LIS2DUXS12_BUFFERED_ENABLED (BIT(ST_LIS2DUXS12_ID_ACC) | \
 					BIT(ST_LIS2DUXS12_ID_TEMP) | \
 					BIT(ST_LIS2DUXS12_ID_STEP_COUNTER) | \
@@ -623,10 +616,6 @@ st_lis2duxs12_sensor_id st_lis2duxs12_fsm_sensor_list[] = {
 	[7] = ST_LIS2DUXS12_ID_FSM_7,
 };
 
-#define ST_LIS2DUXS12_EMB_FUNC_ENABLED (BIT(ST_LIS2DUXS12_ID_STEP_DETECTOR) | \
-					BIT(ST_LIS2DUXS12_ID_SIGN_MOTION)   | \
-					BIT(ST_LIS2DUXS12_ID_TILT))
-
 /* HW devices that can wakeup the target */
 #define ST_LIS2DUXS12_WAKE_UP_SENSORS (BIT(ST_LIS2DUXS12_ID_ACC)    | \
 				       BIT(ST_LIS2DUXS12_ID_MLC_0)  | \
@@ -648,6 +637,7 @@ st_lis2duxs12_sensor_id st_lis2duxs12_fsm_sensor_list[] = {
 #define ST_LIS2DUXS12_MIN_ODR_IN_6D			200
 #define ST_LIS2DUXS12_MIN_ODR_IN_TAP			400
 #define ST_LIS2DUXS12_MIN_ODR_IN_DTAP			400
+#define ST_LIS2DUXS12_MIN_ODR_IN_EMB_FUNC		25
 
 enum st_lis2duxs12_fifo_mode {
 	ST_LIS2DUXS12_FIFO_BYPASS = 0x0,
@@ -740,6 +730,7 @@ struct st_lis2duxs12_hw {
 	unsigned long state;
 	bool xl_only;
 	bool timestamp;
+	u16 xl_odr;
 
 	u8 std_level;
 	u64 samples;
@@ -764,6 +755,7 @@ struct st_lis2duxs12_hw {
 	const struct st_lis2duxs12_fs_table_entry *fs_table_entry;
 
 	bool preload_mlc;
+	bool has_hw_fifo;
 
 	u8 int_pin;
 	u8 ft_int_reg;
@@ -971,6 +963,8 @@ int st_lis2duxs12_set_odr(struct st_lis2duxs12_sensor *sensor,
 int st_lis2duxs12_remove(struct device *dev);
 int st_lis2duxs12_sensor_set_enable(struct st_lis2duxs12_sensor *sensor,
 				    bool enable);
+int st_lis2duxs12_get_int_reg(struct st_lis2duxs12_hw *hw);
+
 int st_lis2duxs12_buffers_setup(struct st_lis2duxs12_hw *hw);
 ssize_t st_lis2duxs12_flush_fifo(struct device *dev,
 				 struct device_attribute *attr,
@@ -1022,21 +1016,11 @@ int st_lis2duxs12_event_handler(struct st_lis2duxs12_hw *hw);
 int st_lis2duxs12_update_threshold_events(struct st_lis2duxs12_hw *hw);
 int st_lis2duxs12_update_duration_events(struct st_lis2duxs12_hw *hw);
 
-#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
+/* embedded functions */
 int st_lis2duxs12_reset_step_counter(struct iio_dev *iio_dev);
-int st_lis2duxs12_embedded_function_probe(struct st_lis2duxs12_hw *hw);
-int st_lis2duxs12_step_counter_set_enable(struct st_lis2duxs12_sensor *sensor,
-					  bool enable);
-int st_lis2duxs12_embfunc_sensor_set_enable(struct st_lis2duxs12_sensor *sensor,
-					    bool enable);
-int st_lis2duxs12_embedded_function_handler(struct st_lis2duxs12_hw *hw);
-#else /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
-static inline int
-st_lis2duxs12_step_counter_set_enable(struct st_lis2duxs12_sensor *sensor,
-				      bool enable) {
-	return 0;
-}
-#endif /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
+int st_lis2duxs12_embfunc_handler_thread(struct st_lis2duxs12_hw *hw);
+int st_lis2duxs12_step_enable(struct st_lis2duxs12_sensor *sensor, bool enable);
+int st_lis2duxs12_embfunc_probe(struct st_lis2duxs12_hw *hw);
 
 /* qvar */
 int st_lis2duxs12_qvar_probe(struct st_lis2duxs12_hw *hw);

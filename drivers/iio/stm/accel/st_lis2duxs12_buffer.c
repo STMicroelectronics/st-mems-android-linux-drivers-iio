@@ -488,7 +488,7 @@ static int st_lis2duxs12_update_fifo(struct iio_dev *iio_dev, bool enable)
 		break;
 	}
 	case ST_LIS2DUXS12_ID_STEP_COUNTER:
-		err = st_lis2duxs12_step_counter_set_enable(sensor, enable);
+		err = st_lis2duxs12_step_enable(sensor, enable);
 		if (err < 0)
 			goto out;
 		break;
@@ -548,11 +548,9 @@ static irqreturn_t st_lis2duxs12_handler_thread(int irq, void *private)
 	if (err < 0)
 		return err;
 
-#ifdef CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES
-	err = st_lis2duxs12_embedded_function_handler(hw);
+	err = st_lis2duxs12_embfunc_handler_thread(hw);
 	if (err < 0)
 		return err;
-#endif /* CONFIG_IIO_ST_LIS2DUXS12_EN_BASIC_FEATURES */
 
 	return err;
 }
@@ -571,6 +569,53 @@ static const struct iio_buffer_setup_ops st_lis2duxs12_fifo_ops = {
 	.preenable = st_lis2duxs12_fifo_preenable,
 	.postdisable = st_lis2duxs12_fifo_postdisable,
 };
+
+static int st_lis2duxs12_fifo_init(struct st_lis2duxs12_hw *hw)
+{
+	int err;
+
+	err = regmap_update_bits(hw->regmap,
+				 ST_LIS2DUXS12_INTERRUPT_CFG_ADDR,
+				 ST_LIS2DUXS12_TIMESTAMP_EN_MASK,
+				 FIELD_PREP(ST_LIS2DUXS12_TIMESTAMP_EN_MASK,
+					    1));
+	if (err < 0)
+		return err;
+
+	err = regmap_update_bits(hw->regmap,
+		      ST_LIS2DUXS12_FIFO_BATCH_DEC_ADDR,
+		      ST_LIS2DUXS12_DEC_TS_MASK,
+		      FIELD_PREP(ST_LIS2DUXS12_DEC_TS_MASK, 1));
+	if (err < 0)
+		return err;
+
+	hw->timestamp = true;
+
+	/* enable fifo configuration */
+	err = regmap_update_bits(hw->regmap,
+				 ST_LIS2DUXS12_CTRL4_ADDR,
+				 ST_LIS2DUXS12_FIFO_EN_MASK,
+				 FIELD_PREP(ST_LIS2DUXS12_FIFO_EN_MASK, 1));
+	if (err < 0)
+		return err;
+
+	/* enable XL and Temp */
+	err = regmap_update_bits(hw->regmap,
+				 ST_LIS2DUXS12_FIFO_WTM_ADDR,
+				 ST_LIS2DUXS12_XL_ONLY_FIFO_MASK,
+				 FIELD_PREP(ST_LIS2DUXS12_XL_ONLY_FIFO_MASK,
+					    1));
+	if (err < 0)
+		return err;
+
+	hw->xl_only = true;
+
+	/* enable FIFO watermak interrupt */
+	return regmap_update_bits(hw->regmap, hw->ft_int_reg,
+				  ST_LIS2DUXS12_INT_FIFO_TH_MASK,
+				  FIELD_PREP(ST_LIS2DUXS12_INT_FIFO_TH_MASK,
+					     1));
+}
 
 int st_lis2duxs12_buffers_setup(struct st_lis2duxs12_hw *hw)
 {
@@ -710,14 +755,5 @@ int st_lis2duxs12_buffers_setup(struct st_lis2duxs12_hw *hw)
 #endif /* LINUX_VERSION_CODE */
 	}
 
-	if (hw->timestamp) {
-		err = regmap_update_bits(hw->regmap,
-			      ST_LIS2DUXS12_FIFO_BATCH_DEC_ADDR,
-			      ST_LIS2DUXS12_DEC_TS_MASK,
-			      FIELD_PREP(ST_LIS2DUXS12_DEC_TS_MASK, 1));
-		if (err < 0)
-			return err;
-	}
-
-	return 0;
+	return st_lis2duxs12_fifo_init(hw);
 }
