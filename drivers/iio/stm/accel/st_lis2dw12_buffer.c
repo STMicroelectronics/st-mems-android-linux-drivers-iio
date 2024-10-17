@@ -252,12 +252,10 @@ static irqreturn_t st_lis2dw12_handler_thread(int irq, void *private)
 		mutex_unlock(&hw->fifo_lock);
 	}
 
-#ifdef CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES
 	if (hw->irq_emb > 0)
 		return IRQ_HANDLED;
 
-	err = st_lis2dw12_emb_event(hw);
-#endif /* CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES */
+	err = st_lis2dw12_event_handler(hw);
 
 	return IRQ_HANDLED;
 }

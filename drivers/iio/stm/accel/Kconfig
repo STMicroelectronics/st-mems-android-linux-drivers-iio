@@ -106,15 +106,6 @@ config IIO_ST_LIS2DW12_SPI
 	depends on IIO_ST_LIS2DW12
 	depends on SPI
 
-config IIO_ST_LIS2DW12_EN_BASIC_FEATURES
-        bool "Enable internal basic features event detection"
-        depends on IIO_ST_LIS2DW12
-        help
-         Enable internal event detection features like: wake-up, tap and double
-         tap. If this feature is enabled it is necessary to extend the
-         iio_chan_type_name_spec array in industrialio-core.c by adding the
-         custom sensor-types used by this driver.
-
 config IIO_ST_LIS2DW12_STORE_SAMPLE_FIFO_SUSPEND
 	bool "Store accel sample in FIFO during suspend"
 	depends on IIO_ST_LIS2DW12

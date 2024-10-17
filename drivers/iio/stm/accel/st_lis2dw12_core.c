@@ -119,16 +119,67 @@ struct st_lis2dw12_selftest_req st_lis2dw12_selftest_table[] = {
 	},								\
 }
 
-const struct iio_event_spec st_lis2dw12_fifo_flush_event = {
+static const struct iio_event_spec st_lis2dw12_flush_event = {
 	.type = STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
 };
+
+static const struct iio_event_spec st_lis2dw12_wakeup_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_RISING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE) |
+			 BIT(IIO_EV_INFO_PERIOD),
+};
+
+static const struct iio_event_spec st_lis2dw12_freefall_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_FALLING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+static const struct iio_event_spec st_lis2dw12_6D_event = {
+	.type = IIO_EV_TYPE_CHANGE,
+	.dir = IIO_EV_DIR_EITHER,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+static const struct iio_event_spec st_lis2dw12_tap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_SINGLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT),
+};
+
+static const struct iio_event_spec st_lis2dw12_dtap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_DOUBLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT) |
+			       BIT(IIO_EV_INFO_TAP2_MIN_DELAY),
+};
+#endif /* LINUX_VERSION_CODE */
 
 static const struct iio_chan_spec st_lis2dw12_acc_channels[] = {
 	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_X_L_ADDR, IIO_MOD_X, 0),
 	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_Y_L_ADDR, IIO_MOD_Y, 1),
 	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_Z_L_ADDR, IIO_MOD_Z, 2),
-	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, &st_lis2dw12_fifo_flush_event),
+	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, flush),
+
+	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, freefall),
+	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, 6D),
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, tap),
+	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, dtap),
+#endif /* LINUX_VERSION_CODE */
+
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
@@ -228,7 +279,7 @@ static u16 st_lis2dw12_check_odr_dependency(struct st_lis2dw12_hw *hw, u16 odr,
 	return ret;
 }
 
-static int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr)
+int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr)
 {
 	struct st_lis2dw12_hw *hw = sensor->hw;
 	struct st_lis2dw12_sensor *ref =
@@ -810,6 +861,10 @@ static const struct iio_info st_lis2dw12_acc_info = {
 	.attrs = &st_lis2dw12_acc_attribute_group,
 	.read_raw = st_lis2dw12_read_raw,
 	.write_raw = st_lis2dw12_write_raw,
+	.read_event_config = st_lis2dw12_read_event_config,
+	.write_event_config = st_lis2dw12_write_event_config,
+	.write_event_value = st_lis2dw12_write_event_value,
+	.read_event_value = st_lis2dw12_read_event_value,
 };
 
 static struct attribute *st_lis2dw12_temp_attributes[] = {
@@ -984,6 +1039,8 @@ int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
 	hw->dev = dev;
 	hw->regmap = regmap;
 	hw->watermark = 1;
+	hw->irq = irq;
+	hw->has_hw_fifo = (hw->irq > 0) ? true : false;
 
 	err = st_lis2dw12_check_whoami(hw);
 	if (err < 0)
@@ -1002,17 +1059,15 @@ int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
 			continue;
 	}
 
-	if (hw->irq > 0) {
+	if (hw->has_hw_fifo > 0) {
 		err = st_lis2dw12_fifo_setup(hw);
 		if (err)
 			return err;
-	}
 
-#ifdef CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES
-	err = st_lis2dw12_embedded_function_probe(hw);
-	if (err < 0)
-		return err;
-#endif /* CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES */
+		err = st_lis2dw12_event_init(hw);
+		if (err < 0)
+			return err;
+	}
 
 	/* allocate temperature sensor workqueue */
 	err = st_lis2dw12_allocate_workqueue(hw);

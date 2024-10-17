@@ -15,9 +15,7 @@ obj-$(CONFIG_IIO_ST_ACC33) += st_acc33.o
 obj-$(CONFIG_IIO_ST_ACC33_I2C) += st_acc33_i2c.o
 obj-$(CONFIG_IIO_ST_ACC33_SPI) += st_acc33_spi.o
 
-st_lis2dw12-y:= st_lis2dw12_core.o st_lis2dw12_buffer.o
-
-st_lis2dw12-$(CONFIG_IIO_ST_LIS2DW12_EN_BASIC_FEATURES) += st_lis2dw12_embfunc.o
+st_lis2dw12-y:= st_lis2dw12_core.o st_lis2dw12_buffer.o st_lis2dw12_events.o
 
 obj-$(CONFIG_IIO_ST_LIS2DW12) += st_lis2dw12.o
 obj-$(CONFIG_IIO_ST_LIS2DW12_I2C) += st_lis2dw12_i2c.o
