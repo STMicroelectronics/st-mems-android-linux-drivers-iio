@@ -79,7 +79,9 @@ static inline int st_lsm6dsv16bx_reset_hwts(struct st_lsm6dsv16bx_hw *hw)
 
 	hw->ts = iio_get_time_ns(hw->iio_devs[0]);
 	hw->ts_offset = hw->ts;
-	hw->tsample = 0ull;
+	hw->val_ts_old = 0ULL;
+	hw->hw_ts_high = 0ULL;
+	hw->tsample = 0ULL;
 
 	return 0;
 }
@@ -283,8 +285,6 @@ static int st_lsm6dsv16bx_read_fifo(struct st_lsm6dsv16bx_hw *hw)
 
 			if (tag == ST_LSM6DSV16BX_TS_TAG) {
 				val = get_unaligned_le32(ptr);
-				if (hw->val_ts_old > val)
-					hw->hw_ts_high++;
 
 #if defined(CONFIG_IIO_ST_LSM6DSV16BX_ASYNC_HW_TIMESTAMP)
 				spin_lock_irq(&hw->hwtimestamp_lock);
@@ -299,9 +299,12 @@ static int st_lsm6dsv16bx_read_fifo(struct st_lsm6dsv16bx_hw *hw)
 				spin_unlock_irq(&hw->hwtimestamp_lock);
 #endif /* CONFIG_IIO_ST_LSM6DSV16BX_ASYNC_HW_TIMESTAMP */
 
+				/* check hw rollover */
+				if (hw->val_ts_old > val)
+					hw->hw_ts_high++;
+
 				hw_ts_old = hw->hw_ts;
 
-				/* check hw rollover */
 				hw->val_ts_old = val;
 				hw->hw_ts = (val +
 					     ((s64)hw->hw_ts_high << 32)) *

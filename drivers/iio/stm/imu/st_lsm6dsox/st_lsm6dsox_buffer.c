@@ -79,7 +79,7 @@ static inline int st_lsm6dsox_reset_hwts(struct st_lsm6dsox_hw *hw)
 
 	hw->ts = iio_get_time_ns(hw->iio_devs[0]);
 	hw->ts_offset = hw->ts;
-	hw->tsample = 0ull;
+	hw->tsample = 0ULL;
 
 	return 0;
 }

@@ -74,9 +74,9 @@ inline int st_iis2iclx_reset_hwts(struct st_iis2iclx_hw *hw)
 
 	hw->irq_ts = st_iis2iclx_get_time_ns(hw->iio_devs[0]);
 	hw->ts_offset = hw->irq_ts;
-	hw->val_ts_old = 0;
-	hw->hw_ts_high = 0;
-	hw->tsample = 0ull;
+	hw->val_ts_old = 0ULL;
+	hw->hw_ts_high = 0ULL;
+	hw->tsample = 0ULL;
 
 	return 0;
 }
@@ -268,12 +268,12 @@ static int st_iis2iclx_read_fifo(struct st_iis2iclx_hw *hw)
 				spin_unlock_irq(&hw->hwtimestamp_lock);
 #endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 
+				/* check hw rollover */
 				if (hw->val_ts_old > val)
 					hw->hw_ts_high++;
 
 				hw_ts_old = hw->hw_ts;
 
-				/* check hw rollover */
 				hw->val_ts_old = val;
 				hw->hw_ts = (val + ((s64)hw->hw_ts_high << 32)) *
 					    hw->ts_delta_ns;

@@ -89,9 +89,9 @@ inline int st_ism330dhcx_reset_hwts(struct st_ism330dhcx_hw *hw)
 
 	hw->ts = st_ism330dhcx_get_time_ns(hw);
 	hw->ts_offset = hw->ts;
-	hw->val_ts_old = 0;
-	hw->hw_ts_high = 0;
-	hw->tsample = 0ull;
+	hw->val_ts_old = 0ULL;
+	hw->hw_ts_high = 0ULL;
+	hw->tsample = 0ULL;
 
 	return st_ism330dhcx_write_atomic(hw, ST_ISM330DHCX_REG_TIMESTAMP2_ADDR,
 					  sizeof(data),
@@ -359,7 +359,6 @@ static int st_ism330dhcx_read_fifo(struct st_ism330dhcx_hw *hw)
 
 				hw_ts_old = hw->hw_ts;
 
-				/* check hw rollover */
 				hw->val_ts_old = val;
 				hw->hw_ts = (val +
 					     ((s64)hw->hw_ts_high << 32)) *
