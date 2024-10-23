@@ -34,7 +34,7 @@ static const struct st_lis2du12_std_entry {
 	{  800,  3 },
 };
 
-static const struct st_lis2du12_odr st_lis2du12_odr_table[] = {
+static const struct st_lis2du12_odr st_lis2du12_odr_table[ST_LIS2DU12_ODR_TABLE_SIZE] = {
 	{    0,      0, 0x00 },
 	{    1, 500000, 0x01 },
 	{    3,      0, 0x02 },
@@ -64,22 +64,25 @@ static const struct st_lis2du12_selftest_req {
 	{ "negative-sign", 0x1 },
 };
 
-static const struct iio_event_spec st_lis2du12_fifo_flush_event = {
-	.type = STM_IIO_EV_TYPE_FIFO_FLUSH,
-	.dir = IIO_EV_DIR_EITHER,
-};
-
 static const struct iio_chan_spec st_lis2du12_acc_channels[] = {
 	ST_LIS2DU12_ACC_CHAN(ST_LIS2DU12_OUT_X_L_ADDR, IIO_MOD_X, 0),
 	ST_LIS2DU12_ACC_CHAN(ST_LIS2DU12_OUT_Y_L_ADDR, IIO_MOD_Y, 1),
 	ST_LIS2DU12_ACC_CHAN(ST_LIS2DU12_OUT_Z_L_ADDR, IIO_MOD_Z, 2),
-	ST_LIS2DU12_EVENT_CHANNEL(IIO_ACCEL, &st_lis2du12_fifo_flush_event),
+	ST_LIS2DU12_EVENT_CHANNEL(IIO_ACCEL, fifo_flush),
+	ST_LIS2DU12_EVENT_CHANNEL(IIO_ACCEL, freefall),
+	ST_LIS2DU12_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_LIS2DU12_EVENT_CHANNEL(IIO_ACCEL, 6D),
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LIS2DU12_EVENT_CHANNEL(IIO_ACCEL, tap),
+	ST_LIS2DU12_EVENT_CHANNEL(IIO_ACCEL, dtap),
+#endif /* LINUX_VERSION_CODE */
+
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
 static const struct iio_chan_spec st_lis2du12_temp_channels[] = {
 	ST_LIS2DU12_TEMP_CHAN(ST_LIS2DU12_TEMP_L_ADDR),
-	ST_LIS2DU12_EVENT_CHANNEL(IIO_TEMP, &st_lis2du12_fifo_flush_event),
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
@@ -147,8 +150,8 @@ static int st_lis2du12_check_odr_dependency(struct st_lis2du12_hw *hw,
 	return ret;
 }
 
-static int st_lis2du12_set_odr(struct st_lis2du12_sensor *sensor,
-			       u16 req_odr, u32 req_uodr)
+int st_lis2du12_set_odr(struct st_lis2du12_sensor *sensor,
+			u16 req_odr, u32 req_uodr)
 {
 	int uhz = ST_LIS2DU12_ODR_EXPAND(req_odr, req_uodr);
 	struct st_lis2du12_hw *hw = sensor->hw;
@@ -202,6 +205,7 @@ static int st_lis2du12_check_whoami(struct st_lis2du12_hw *hw)
 	}
 
 	hw->odr_table = st_lis2du12_odr_table;
+	hw->fs_tablefs_table = st_lis2du12_fs_table;
 
 	return 0;
 }
@@ -455,6 +459,8 @@ static int st_lis2du12_write_raw(struct iio_dev *iio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		err = st_lis2du12_set_fs(sensor, val2);
+		if (chan->type == IIO_ACCEL)
+			err = st_lis2du12_update_threshold_events(sensor->hw);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		int ret;
@@ -468,6 +474,10 @@ static int st_lis2du12_write_raw(struct iio_dev *iio_dev,
 		sensor->hw->std_level = st_lis2du12_std_table[ret].val;
 		sensor->odr = val;
 		sensor->uodr = val2;
+
+		/* some events depends on xl odr */
+		if (chan->type == IIO_ACCEL)
+			err = st_lis2du12_update_duration_events(sensor->hw);
 		break;
 	}
 	default:
@@ -710,6 +720,11 @@ static const struct iio_info st_lis2du12_acc_info = {
 	.attrs = &st_lis2du12_acc_attribute_group,
 	.read_raw = st_lis2du12_read_raw,
 	.write_raw = st_lis2du12_write_raw,
+
+	.read_event_config = st_lis2du12_read_event_config,
+	.write_event_config = st_lis2du12_write_event_config,
+	.write_event_value = st_lis2du12_write_event_value,
+	.read_event_value = st_lis2du12_read_event_value,
 };
 
 static struct attribute *st_lis2du12_temp_attributes[] = {
@@ -825,13 +840,11 @@ int st_lis2du12_probe(struct device *dev, int irq, struct regmap *regmap)
 			return -ENOMEM;
 	}
 
-#ifdef CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES
-	err = st_lis2du12_embedded_function_probe(hw);
-	if (err < 0)
-		return err;
-#endif /* CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES */
-
 	if (hw->irq > 0) {
+		err = st_lis2du12_event_init(hw);
+		if (err < 0)
+			return err;
+
 		err = st_lis2du12_buffer_setup(hw);
 		if (err < 0)
 			return err;

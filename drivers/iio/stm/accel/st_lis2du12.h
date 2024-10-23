@@ -10,11 +10,12 @@
 #ifndef ST_LIS2DU12_H
 #define ST_LIS2DU12_H
 
+#include <linux/bitfield.h>
 #include <linux/device.h>
 #include <linux/iio/events.h>
 #include <linux/iio/iio.h>
 #include <linux/regmap.h>
-#include <linux/bitfield.h>
+#include <linux/version.h>
 
 #include "../common/stm_iio_types.h"
 
@@ -107,17 +108,28 @@
 
 #define ST_LIS2DU12_WAKE_UP_SRC_ADDR		0x21
 #define ST_LIS2DU12_WU_MASK			GENMASK(3, 0)
+#define ST_LIS2DU12_Z_WU_MASK			BIT(0)
+#define ST_LIS2DU12_Y_WU_MASK			BIT(1)
+#define ST_LIS2DU12_X_WU_MASK			BIT(2)
 #define ST_LIS2DU12_WU_IA_MASK			BIT(3)
 #define ST_LIS2DU12_SLEEP_STATE_MASK		BIT(4)
 #define ST_LIS2DU12_FF_IA_MASK			BIT(5)
 #define ST_LIS2DU12_SLEEP_CHANGE_IA_MASK	BIT(6)
 
 #define ST_LIS2DU12_TAP_SRC_ADDR		0x22
+#define ST_LIS2DU12_Z_TAP_MASK			BIT(0)
+#define ST_LIS2DU12_Y_TAP_MASK			BIT(1)
+#define ST_LIS2DU12_X_TAP_MASK			BIT(2)
 #define ST_LIS2DU12_DOUBLE_TAP_IA_MASK		BIT(4)
 #define ST_LIS2DU12_SINGLE_TAP_IA_MASK		BIT(5)
 
 #define ST_LIS2DU12_SIXD_SRC_ADDR		0x23
-#define ST_LIS2DU12_OVERTHRESHOLD_MASK		GENMASK(5, 0)
+#define ST_LIS2DU12_ZL_MASK			BIT(0)
+#define ST_LIS2DU12_ZH_MASK			BIT(1)
+#define ST_LIS2DU12_YL_MASK			BIT(2)
+#define ST_LIS2DU12_YH_MASK			BIT(3)
+#define ST_LIS2DU12_XL_MASK			BIT(4)
+#define ST_LIS2DU12_XH_MASK			BIT(5)
 #define ST_LIS2DU12_D6D_IA_MASK			BIT(6)
 
 #define ST_LIS2DU12_ALL_INT_SRC_ADDR		0x24
@@ -194,15 +206,74 @@
 	},							 \
 }
 
-#define ST_LIS2DU12_EVENT_CHANNEL(chan_type, evt_spec)		 \
-{								 \
-	.type = chan_type,					 \
-	.modified = 0,						 \
-	.scan_index = -1,					 \
-	.indexed = -1,						 \
-	.event_spec = evt_spec,					 \
-	.num_event_specs = 1,					 \
+#define ST_LIS2DU12_EVENT_CHANNEL(ctype, etype)		\
+{							\
+	.type = ctype,					\
+	.modified = 0,					\
+	.scan_index = -1,				\
+	.indexed = -1,					\
+	.event_spec = &st_lis2du12_##etype##_event,	\
+	.num_event_specs = 1,				\
 }
+
+static const struct iio_event_spec st_lis2du12_fifo_flush_event = {
+	.type = STM_IIO_EV_TYPE_FIFO_FLUSH,
+	.dir = IIO_EV_DIR_EITHER,
+};
+
+static const struct iio_event_spec st_lis2du12_wakeup_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_RISING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE) |
+			 BIT(IIO_EV_INFO_PERIOD),
+};
+
+static const struct iio_event_spec st_lis2du12_freefall_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_FALLING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+static const struct iio_event_spec st_lis2du12_6D_event = {
+	.type = IIO_EV_TYPE_CHANGE,
+	.dir = IIO_EV_DIR_EITHER,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+static const struct iio_event_spec st_lis2du12_tap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_SINGLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT),
+};
+
+static const struct iio_event_spec st_lis2du12_dtap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_DOUBLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT) |
+			       BIT(IIO_EV_INFO_TAP2_MIN_DELAY),
+};
+#endif /* LINUX_VERSION_CODE */
+
+enum st_lis2du12_event_id {
+	ST_LIS2DU12_EVENT_FF,
+	ST_LIS2DU12_EVENT_WAKEUP,
+	ST_LIS2DU12_EVENT_6D,
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	ST_LIS2DU12_EVENT_TAP,
+	ST_LIS2DU12_EVENT_DTAP,
+#endif /* LINUX_VERSION_CODE */
+
+	ST_LIS2DU12_EVENT_MAX
+};
 
 enum st_lis2du12_fifo_mode {
 	ST_LIS2DU12_FIFO_BYPASS = 0x0,
@@ -218,14 +289,6 @@ enum st_lis2du12_selftest_status {
 enum st_lis2du12_sensor_id {
 	ST_LIS2DU12_ID_ACC,
 	ST_LIS2DU12_ID_TEMP,
-#ifdef CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES
-	ST_LIS2DU12_ID_TAP_TAP,
-	ST_LIS2DU12_ID_TAP,
-	ST_LIS2DU12_ID_WU,
-	ST_LIS2DU12_ID_FF,
-	ST_LIS2DU12_ID_6D,
-	ST_LIS2DU12_ID_ACT,
-#endif /* CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES */
 	ST_LIS2DU12_ID_MAX,
 };
 
@@ -252,8 +315,9 @@ st_lis2du12_sensor_id st_lis2du12_hw_sensor_list[] = {
 	[1] = ST_LIS2DU12_ID_TEMP,
 };
 
-#define ST_LIS2DU12_MAX_BUFFER	ST_LIS2DU12_ID_TEMP
+#define ST_LIS2DU12_MAX_BUFFER				ST_LIS2DU12_ID_TEMP
 
+#define ST_LIS2DU12_ODR_TABLE_SIZE			11
 struct st_lis2du12_odr {
 	u16 hz;
 	u32 uhz;
@@ -265,6 +329,14 @@ struct st_lis2du12_fs {
 	u8 val;
 };
 
+/* this is the minimal ODR for event sensors and dependencies */
+#define ST_LIS2DU12_MIN_ODR_IN_WAKEUP			30
+#define ST_LIS2DU12_MIN_ODR_IN_FREEFALL			30
+#define ST_LIS2DU12_MIN_ODR_IN_6D			30
+#define ST_LIS2DU12_MIN_ODR_IN_EMB_FUNC			30
+#define ST_LIS2DU12_MIN_ODR_IN_TAP			480
+#define ST_LIS2DU12_MIN_ODR_IN_DTAP			480
+
 struct st_lis2du12_sensor {
 	enum st_lis2du12_sensor_id id;
 	struct st_lis2du12_hw *hw;
@@ -272,31 +344,9 @@ struct st_lis2du12_sensor {
 	u16 odr;
 	u32 uodr;
 
-	union {
-		struct {
-			u16 gain;
-			u32 offset;
-			u8 watermark;
-		};
-
-		struct {
-			u8 wk_en;
-			u8 d6d_ths;
-			u8 tap_ths_x;
-			u8 tap_ths_y;
-			u8 tap_ths_z;
-			u8 tap_priority;
-			u8 tap_en;
-			u8 latency;
-			u8 quiet;
-			u8 shock;
-			u8 wh_ths;
-			u8 wh_dur;
-			u8 sleep_dur;
-			u8 ff_dur;
-			u8 ff_ths;
-		};
-	};
+	u16 gain;
+	u32 offset;
+	u8 watermark;
 };
 
 struct st_lis2du12_hw {
@@ -312,6 +362,7 @@ struct st_lis2du12_hw {
 	enum st_lis2du12_selftest_status st_status;
 	enum st_lis2du12_fifo_mode fifo_mode;
 	u16 enable_mask;
+	u16 enable_ev_mask;
 
 	u8 fifo_watermark;
 	bool round_xl_xyz;
@@ -328,6 +379,26 @@ struct st_lis2du12_hw {
 	u8 md_reg;
 	bool fourd_enabled;
 	const struct st_lis2du12_odr *odr_table;
+	const struct st_lis2du12_fs *fs_tablefs_table;
+
+	u32 freefall_threshold;
+	u32 wk_th_mg;
+	u32 wk_dur_ms;
+	u32 sixD_threshold;
+	u32 tap_threshold;
+	u32 tap_quiet_time;
+	u32 tap_shock_time;
+	u32 dtap_duration;
+};
+
+struct st_lis2du12_ff_th {
+	u32 mg;
+	u8 val;
+};
+
+struct st_lis2du12_6D_th {
+	u8 deg;
+	u8 val;
 };
 
 extern const struct dev_pm_ops st_lis2du12_pm_ops;
@@ -414,6 +485,65 @@ static inline int st_lis2du12_write_locked_delayed(struct st_lis2du12_hw *hw,
 	return err;
 }
 
+static inline int
+st_lis2du12_write_locked(struct st_lis2du12_hw *hw, unsigned int addr,
+			 unsigned int val)
+{
+	int err;
+
+	mutex_lock(&hw->lock);
+	err = regmap_write(hw->regmap, addr, val);
+	mutex_unlock(&hw->lock);
+
+	return err;
+}
+
+static inline int
+st_lis2du12_read_with_mask(struct st_lis2du12_hw *hw, u8 addr, u8 mask,
+			   u8 *val)
+{
+	u8 data;
+	int err;
+
+	mutex_lock(&hw->lock);
+	err = regmap_bulk_read(hw->regmap, addr, &data, sizeof(data));
+	if (err < 0)
+		goto out;
+
+	*val = (data & mask) >> __ffs(mask);
+
+out:
+	mutex_unlock(&hw->lock);
+
+	return (err < 0) ? err : 0;
+}
+
+static inline int st_lis2du12_manipulate_bit(int int_reg, int irq_mask, int en)
+{
+	int bit_position = __ffs(irq_mask);
+	int bit_mask = 1 << bit_position;
+
+	int_reg &= ~bit_mask;
+	int_reg |= (en << bit_position);
+
+	return int_reg;
+}
+
+static inline int st_lis2du12_write_with_mask(struct st_lis2du12_hw *hw,
+					      unsigned int addr,
+					      unsigned int mask,
+					      unsigned int data)
+{
+	unsigned int val = ST_LIS2DU12_SHIFT_VAL(data, mask);
+	int err;
+
+	mutex_lock(&hw->lock);
+	err = regmap_update_bits(hw->regmap, addr, mask, val);
+	mutex_unlock(&hw->lock);
+
+	return err;
+}
+
 static inline struct st_lis2du12_sensor *
 st_lis2du12_get_sensor_from_id(struct st_lis2du12_hw *hw,
 			       enum st_lis2du12_sensor_id id)
@@ -423,6 +553,8 @@ st_lis2du12_get_sensor_from_id(struct st_lis2du12_hw *hw,
 
 int st_lis2du12_probe(struct device *dev, int irq,
 		      struct regmap *regmap);
+int st_lis2du12_set_odr(struct st_lis2du12_sensor *sensor,
+			u16 req_odr, u32 req_uodr);
 int st_lis2du12_buffer_setup(struct st_lis2du12_hw *hw);
 ssize_t st_lis2du12_flush_fifo(struct device *dev,
 			       struct device_attribute *attr,
@@ -433,9 +565,31 @@ ssize_t st_lis2du12_set_hwfifo_watermark(struct device *device,
 int st_lis2du12_sensor_set_enable(struct st_lis2du12_sensor *sensor,
 				  bool enable);
 
-#ifdef CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES
-int st_lis2du12_handler_embfunc_thread(struct st_lis2du12_hw *hw);
-int st_lis2du12_embedded_function_probe(struct st_lis2du12_hw *hw);
-#endif /* CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES */
+/* xl events */
+int st_lis2du12_read_event_config(struct iio_dev *iio_dev,
+				  const struct iio_chan_spec *chan,
+				  enum iio_event_type type,
+				  enum iio_event_direction dir);
+int st_lis2du12_write_event_config(struct iio_dev *iio_dev,
+				   const struct iio_chan_spec *chan,
+				   enum iio_event_type type,
+				   enum iio_event_direction dir,
+				   int enable);
+int st_lis2du12_read_event_value(struct iio_dev *iio_dev,
+				 const struct iio_chan_spec *chan,
+				 enum iio_event_type type,
+				 enum iio_event_direction dir,
+				 enum iio_event_info info,
+				 int *val, int *val2);
+int st_lis2du12_write_event_value(struct iio_dev *iio_dev,
+				  const struct iio_chan_spec *chan,
+				  enum iio_event_type type,
+				  enum iio_event_direction dir,
+				  enum iio_event_info info,
+				  int val, int val2);
+int st_lis2du12_event_init(struct st_lis2du12_hw *hw);
+int st_lis2du12_event_handler(struct st_lis2du12_hw *hw);
+int st_lis2du12_update_threshold_events(struct st_lis2du12_hw *hw);
+int st_lis2du12_update_duration_events(struct st_lis2du12_hw *hw);
 
 #endif /* ST_LIS2DU12_H */

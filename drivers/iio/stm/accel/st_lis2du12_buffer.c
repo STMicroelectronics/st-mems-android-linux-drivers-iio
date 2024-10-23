@@ -314,11 +314,9 @@ static irqreturn_t st_lis2du12_handler_thread(int irq, void *private)
 		mutex_unlock(&hw->fifo_lock);
 	}
 
-#ifdef CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES
-	err = st_lis2du12_handler_embfunc_thread(hw);
+	err = st_lis2du12_event_handler(hw);
 	if (err < 0)
 		return err;
-#endif /* CONFIG_IIO_ST_LIS2DU12_EN_BASIC_FEATURES */
 
 	return IRQ_HANDLED;
 }
@@ -404,7 +402,7 @@ int st_lis2du12_buffer_setup(struct st_lis2du12_hw *hw)
 
 	hw->round_xl_xyz = true;
 
-	for (i = ST_LIS2DU12_ID_ACC; i <= ST_LIS2DU12_MAX_BUFFER; i++) {
+	for (i = ST_LIS2DU12_ID_ACC; i < ST_LIS2DU12_ID_MAX; i++) {
 		if (!hw->iio_devs[i])
 			continue;
 
