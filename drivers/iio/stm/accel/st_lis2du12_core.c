@@ -93,7 +93,7 @@ static int st_lis2du12_set_fs(struct st_lis2du12_sensor *sensor,
 	int i, err;
 
 	for (i = 0; i < ARRAY_SIZE(st_lis2du12_fs_table); i++)
-		if (st_lis2du12_fs_table[i].gain == gain)
+		if (st_lis2du12_fs_table[i].gain >= gain)
 			break;
 
 	if (i == ARRAY_SIZE(st_lis2du12_fs_table))

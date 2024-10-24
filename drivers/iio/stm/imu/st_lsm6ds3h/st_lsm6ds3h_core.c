@@ -1689,7 +1689,7 @@ static int st_lsm6ds3h_set_fs(struct lsm6ds3h_sensor_data *sdata,
 	u8 pedometer_reg_value;
 
 	for (i = 0; i < ST_LSM6DS3H_FS_LIST_NUM; i++) {
-		if (st_lsm6ds3h_fs_table[sdata->sindex].fs_avl[i].gain == gain)
+		if (st_lsm6ds3h_fs_table[sdata->sindex].fs_avl[i].gain >= gain)
 			break;
 	}
 	if (i == ST_LSM6DS3H_FS_LIST_NUM)

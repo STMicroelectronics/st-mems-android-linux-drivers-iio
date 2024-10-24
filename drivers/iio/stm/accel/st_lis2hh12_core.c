@@ -266,7 +266,7 @@ int lis2hh12_set_fs(struct lis2hh12_sensor_data *sdata, unsigned int gain)
 	int err, i;
 
 	for (i = 0; i < LIS2HH12_FS_LIST_NUM; i++) {
-		if (lis2hh12_fs_table.fs_avl[i].gain == gain)
+		if (lis2hh12_fs_table.fs_avl[i].gain >= gain)
 			break;
 	}
 

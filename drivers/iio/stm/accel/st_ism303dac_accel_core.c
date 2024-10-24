@@ -312,7 +312,7 @@ static int ism303dac_set_fs(struct ism303dac_sensor_data *sdata, unsigned int fs
 	int err, i;
 
 	for (i = 0; i < ISM303DAC_FS_LIST_NUM; i++) {
-		if (ism303dac_fs_table.fs_avl[i].urv == fs)
+		if (ism303dac_fs_table.fs_avl[i].urv >= fs)
 			break;
 	}
 

@@ -630,7 +630,7 @@ static int st_lsm6dsox_set_full_scale(struct st_lsm6dsox_sensor *sensor,
 	fs_table = &sensor->hw->settings->fs_table[id];
 
 	for (i = 0; i < fs_table->fs_len; i++)
-		if (fs_table->fs_avl[i].gain == gain)
+		if (fs_table->fs_avl[i].gain >= gain)
 			break;
 
 	if (i == fs_table->fs_len)

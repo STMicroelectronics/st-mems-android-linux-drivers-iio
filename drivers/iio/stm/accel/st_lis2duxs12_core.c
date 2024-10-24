@@ -363,7 +363,7 @@ st_lis2duxs12_set_full_scale(struct st_lis2duxs12_sensor *sensor,
 	u8 val;
 
 	for (i = 0; i < st_lis2duxs12_fs_table[id].size; i++)
-		if (st_lis2duxs12_fs_table[id].fs_avl[i].gain == gain)
+		if (st_lis2duxs12_fs_table[id].fs_avl[i].gain >= gain)
 			break;
 
 	if (i == st_lis2duxs12_fs_table[id].size)

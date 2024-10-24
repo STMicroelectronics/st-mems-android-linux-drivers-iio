@@ -498,7 +498,7 @@ static int st_ism330dhcx_set_full_scale(struct st_ism330dhcx_sensor *sensor, u32
 	u8 val;
 
 	for (i = 0; i < st_ism330dhcx_fs_table[id].size; i++)
-		if (st_ism330dhcx_fs_table[id].fs_avl[i].gain == gain)
+		if (st_ism330dhcx_fs_table[id].fs_avl[i].gain >= gain)
 			break;
 
 	if (i == st_ism330dhcx_fs_table[id].size)

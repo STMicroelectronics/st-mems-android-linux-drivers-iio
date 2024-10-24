@@ -212,7 +212,7 @@ static int st_imu68_set_full_scale(struct st_imu68_sensor *sensor, u32 gain)
 	u8 val;
 
 	for (i = 0; i < ST_IMU68_FS_LIST_SIZE; i++)
-		if ((st_imu68_fs_table[id].fs_avl[i].gain == gain) &&
+		if ((st_imu68_fs_table[id].fs_avl[i].gain >= gain) &&
 		    st_imu68_fs_table[id].fs_avl[i].gain)
 			break;
 

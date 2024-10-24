@@ -501,7 +501,7 @@ static int st_lsm6dsrx_set_full_scale(struct st_lsm6dsrx_sensor *sensor,
 	u8 val;
 
 	for (i = 0; i < st_lsm6dsrx_fs_table[id].size; i++)
-		if (st_lsm6dsrx_fs_table[id].fs_avl[i].gain == gain)
+		if (st_lsm6dsrx_fs_table[id].fs_avl[i].gain >= gain)
 			break;
 
 	if (i == st_lsm6dsrx_fs_table[id].size)

@@ -439,7 +439,7 @@ int lis2ds12_set_fs(struct lis2ds12_sensor_data *sdata, unsigned int fs)
 	int err, i;
 
 	for (i = 0; i < LIS2DS12_FS_LIST_NUM; i++) {
-		if (lis2ds12_fs_table.fs_avl[i].urv == fs)
+		if (lis2ds12_fs_table.fs_avl[i].urv >= fs)
 			break;
 	}
 

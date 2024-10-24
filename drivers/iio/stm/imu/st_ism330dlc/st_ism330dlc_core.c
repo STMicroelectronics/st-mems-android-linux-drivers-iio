@@ -1602,7 +1602,7 @@ static int st_ism330dlc_set_fs(struct ism330dlc_sensor_data *sdata,
 	int err, i;
 
 	for (i = 0; i < ST_ISM330DLC_FS_LIST_NUM; i++) {
-		if (st_ism330dlc_fs_table[sdata->sindex].fs_avl[i].gain == gain)
+		if (st_ism330dlc_fs_table[sdata->sindex].fs_avl[i].gain >= gain)
 			break;
 	}
 	if (i == ST_ISM330DLC_FS_LIST_NUM)

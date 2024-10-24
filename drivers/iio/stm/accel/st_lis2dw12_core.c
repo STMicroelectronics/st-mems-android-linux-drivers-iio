@@ -208,7 +208,7 @@ static int st_lis2dw12_set_fs(struct st_lis2dw12_sensor *sensor, u16 gain)
 	int i, err;
 
 	for (i = 0; i < st_lis2dw12_fs_table[sensor->id].size; i++)
-		if (st_lis2dw12_fs_table[sensor->id].fs[i].gain == gain)
+		if (st_lis2dw12_fs_table[sensor->id].fs[i].gain >= gain)
 			break;
 
 	if (i == st_lis2dw12_fs_table[sensor->id].size)

@@ -240,7 +240,7 @@ static int st_lsm6dso16is_set_full_scale(struct st_lsm6dso16is_sensor *sensor,
 	u8 val;
 
 	for (i = 0; i < st_lsm6dso16is_fs_table[id].fs_len; i++)
-		if (st_lsm6dso16is_fs_table[id].fs_avl[i].gain == gain)
+		if (st_lsm6dso16is_fs_table[id].fs_avl[i].gain >= gain)
 			break;
 
 	if (i == st_lsm6dso16is_fs_table[id].fs_len)

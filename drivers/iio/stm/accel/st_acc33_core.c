@@ -224,7 +224,7 @@ static int st_acc33_set_fs(struct st_acc33_hw *hw, u32 gain)
 	int i, err;
 
 	for (i = 0; i < ARRAY_SIZE(st_acc33_fs_table); i++) {
-		if (st_acc33_fs_table[i].gain == gain)
+		if (st_acc33_fs_table[i].gain >= gain)
 			break;
 	}
 

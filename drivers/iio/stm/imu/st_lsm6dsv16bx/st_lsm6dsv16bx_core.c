@@ -594,7 +594,7 @@ st_lsm6dsv16bx_set_full_scale(struct st_lsm6dsv16bx_sensor *sensor, u32 gain)
 	u8 val;
 
 	for (i = 0; i < hw->fs_table[id].size; i++)
-		if (hw->fs_table[id].fs_avl[i].gain == gain)
+		if (hw->fs_table[id].fs_avl[i].gain >= gain)
 			break;
 
 	if (i == hw->fs_table[id].size)
