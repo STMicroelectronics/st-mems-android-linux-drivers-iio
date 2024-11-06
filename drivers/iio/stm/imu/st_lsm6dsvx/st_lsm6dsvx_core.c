@@ -430,7 +430,7 @@ static int st_lsm6dsvx_get_odr_calibration(struct st_lsm6dsvx_hw *hw)
 		return err;
 	}
 
-	odr_calib = (data * ST_LSM6DSVX_TS_CAL_COEFF) / 1000;
+	odr_calib = ((s8)data * ST_LSM6DSVX_TS_CAL_COEFF) / 1000;
 	hw->ts_delta_ns = ST_LSM6DSVX_TS_DELTA_NS - odr_calib;
 
 	dev_info(hw->dev, "Freq Fine %lld (ts %lld)\n",
