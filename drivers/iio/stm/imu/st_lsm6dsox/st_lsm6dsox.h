@@ -279,6 +279,8 @@
 
 /* Temperature in uC */
 #define ST_LSM6DSOX_TEMP_GAIN			256
+#define ST_LSM6DSOX_TEMP_FS_GAIN		(1000000 / \
+						 ST_LSM6DSOX_TEMP_GAIN)
 #define ST_LSM6DSOX_TEMP_OFFSET			6400
 
 /* FIFO simple size and depth */

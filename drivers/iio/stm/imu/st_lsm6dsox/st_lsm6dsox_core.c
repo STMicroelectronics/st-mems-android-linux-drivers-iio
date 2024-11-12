@@ -318,6 +318,10 @@ static const struct st_lsm6dsox_settings st_lsm6dsox_sensor_settings[] = {
 				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000), 0x3 },
 				.fs_len = 4,
 			},
+			[ST_LSM6DSOX_ID_TEMP] = {
+				.fs_avl[0] = { ST_LSM6DSOX_TEMP_FS_GAIN, 0x0 },
+				.fs_len = 1,
+			},
 		},
 	},
 	{
@@ -350,6 +354,10 @@ static const struct st_lsm6dsox_settings st_lsm6dsox_sensor_settings[] = {
 				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000), 0x3 },
 				.fs_len = 4,
 			},
+			[ST_LSM6DSOX_ID_TEMP] = {
+				.fs_avl[0] = { ST_LSM6DSOX_TEMP_FS_GAIN, 0x0 },
+				.fs_len = 1,
+			},
 		},
 	},
 	{
@@ -380,6 +388,10 @@ static const struct st_lsm6dsox_settings st_lsm6dsox_sensor_settings[] = {
 				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000), 0x2 },
 				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000), 0x3 },
 				.fs_len = 4,
+			},
+			[ST_LSM6DSOX_ID_TEMP] = {
+				.fs_avl[0] = { ST_LSM6DSOX_TEMP_FS_GAIN, 0x0 },
+				.fs_len = 1,
 			},
 		},
 	},
@@ -412,6 +424,10 @@ static const struct st_lsm6dsox_settings st_lsm6dsox_sensor_settings[] = {
 				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000), 0x2 },
 				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000), 0x3 },
 				.fs_len = 4,
+			},
+			[ST_LSM6DSOX_ID_TEMP] = {
+				.fs_avl[0] = { ST_LSM6DSOX_TEMP_FS_GAIN, 0x0 },
+				.fs_len = 1,
 			},
 		},
 	},
@@ -934,17 +950,18 @@ static int st_lsm6dsox_write_raw(struct iio_dev *iio_dev,
 	struct st_lsm6dsox_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
-	if (err)
-		return err;
-
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
+		err = iio_device_claim_direct_mode(iio_dev);
+		if (err)
+			return err;
+
 		err = st_lsm6dsox_set_full_scale(sensor, val2);
 
 		/* some events depends on xl full scale */
 		if (chan->type == IIO_ACCEL)
 			err = st_lsm6dsox_update_threshold_events(sensor->hw);
+		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		struct st_lsm6dsox_odr oe = { 0 };
@@ -988,8 +1005,6 @@ static int st_lsm6dsox_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	iio_device_release_direct_mode(iio_dev);
-
 	return err;
 }
 
@@ -1023,9 +1038,20 @@ static ssize_t st_lsm6dsox_sysfs_scale_avail(struct device *dev,
 	int i, len = 0;
 
 	fs_table = &sensor->hw->settings->fs_table[id];
-	for (i = 0; i < fs_table->fs_len; i++)
-		len += scnprintf(buf + len, PAGE_SIZE - len, "0.%09u ",
-				 fs_table->fs_avl[i].gain);
+	for (i = 0; i < fs_table->fs_len; i++) {
+		if (sensor->id != ST_LSM6DSOX_ID_TEMP) {
+			len += scnprintf(buf + len, PAGE_SIZE - len, "0.%09u ",
+					 fs_table->fs_avl[i].gain);
+		} else {
+			int hi, low;
+
+			hi = (int)(fs_table->fs_avl[i].gain / 1000);
+			low = (int)(fs_table->fs_avl[i].gain % 1000);
+			len += scnprintf(buf + len, PAGE_SIZE - len, "%d.%d ",
+					 hi, low);
+		}
+	}
+
 	buf[len - 1] = '\n';
 
 	return len;
