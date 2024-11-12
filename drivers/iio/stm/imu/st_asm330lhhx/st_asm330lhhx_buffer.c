@@ -932,8 +932,9 @@ int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw)
 
 		sensor = iio_priv(hw->iio_devs[id]);
 		sensor->trig = devm_iio_trigger_alloc(hw->dev,
-						"st_%s-trigger",
-						hw->iio_devs[id]->name);
+						"st_%s-trigger%d",
+						hw->iio_devs[id]->name,
+						hw->module_id);
 		if (!sensor->trig) {
 			dev_err(hw->dev, "failed to allocate iio trigger.\n");
 
