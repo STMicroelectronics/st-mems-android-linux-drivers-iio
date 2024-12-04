@@ -31,6 +31,8 @@
 #define ISM303DAC_CTRL5_INT2_PAD_ADDR		0x24
 #define ISM303DAC_FIFO_CTRL_ADDR		0x25
 #define ISM303DAC_OUT_T_A_ADDR			0x26
+#define ISM303DAC_STATUS_A_ADDR			0x27
+#define ISM303DAC_DRDY_MASK			0x01
 #define ISM303DAC_OUTX_L_ADDR			0x28
 #define ISM303DAC_OUTY_L_ADDR			0x2a
 #define ISM303DAC_OUTZ_L_ADDR			0x2c
@@ -258,11 +260,17 @@ struct ism303dac_sensor_data {
 	u8 sample_to_discard;
 };
 
+enum st_ism303dac_selftest_status {
+	ST_ISM303DAC_ST_RESET,
+	ST_ISM303DAC_ST_PASS,
+	ST_ISM303DAC_ST_FAIL,
+};
+
 struct ism303dac_data {
 	const char *name;
 	u8 drdy_int_pin;
 	bool spi_3wire;
-	u8 selftest_status;
+	enum st_ism303dac_selftest_status selftest_status;
 	u8 hwfifo_enabled;
 	u8 hwfifo_watermark;
 	u8 power_mode;

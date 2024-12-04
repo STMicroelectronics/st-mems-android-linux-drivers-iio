@@ -256,10 +256,6 @@ static const struct {
 	u8 streg_val;
 } ism303dac_selftest_table[] = {
 	{
-		.mode_str = "normal-mode",
-		.streg_val = ISM303DAC_SELFTEST_NORMAL,
-	},
-	{
 		.mode_str = "positive-sign",
 		.streg_val = ISM303DAC_SELFTEST_POS_SIGN,
 	},
@@ -333,14 +329,6 @@ static int ism303dac_set_fs(struct ism303dac_sensor_data *sdata, unsigned int fs
 	sdata->gain = ism303dac_fs_table.fs_avl[i].gain;
 
 	return 0;
-}
-
-static int ism303dac_set_selftest_mode(struct ism303dac_sensor_data *sdata,
-				       u8 index)
-{
-	return ism303dac_write_register(sdata->cdata, ISM303DAC_SELFTEST_ADDR,
-				ISM303DAC_SELFTEST_MASK,
-				ism303dac_selftest_table[index].streg_val, true);
 }
 
 static u8 ism303dac_event_irq1_value(struct ism303dac_data *cdata)
@@ -573,7 +561,7 @@ static int ism303dac_init_sensors(struct ism303dac_data *cdata)
 		}
 	}
 
-	cdata->selftest_status = 0;
+	cdata->selftest_status = ST_ISM303DAC_ST_RESET;
 
 	/*
 	 * Soft reset the device on power on.
@@ -1029,46 +1017,302 @@ static ssize_t ism303dac_get_selftest_avail(struct device *dev,
 					    struct device_attribute *attr,
 					    char *buf)
 {
-	return sprintf(buf, "%s %s %s\n", ism303dac_selftest_table[0].mode_str,
-		       ism303dac_selftest_table[1].mode_str,
-		       ism303dac_selftest_table[2].mode_str);
+	return sprintf(buf, "%s %s\n", ism303dac_selftest_table[0].mode_str,
+		       ism303dac_selftest_table[1].mode_str);
 }
 
 static ssize_t ism303dac_get_selftest_status(struct device *dev,
 					     struct device_attribute *attr,
 					     char *buf)
 {
-	u8 status;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ism303dac_sensor_data *sdata = iio_priv(indio_dev);
+	char *message = NULL;
+	int result;
+	int err;
 
-	status = sdata->cdata->selftest_status;
-	return sprintf(buf, "%s\n", ism303dac_selftest_table[status].mode_str);
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
+
+	result = sdata->cdata->selftest_status;
+
+	/* restore to reset value */
+	sdata->cdata->selftest_status = ST_ISM303DAC_ST_RESET;
+	iio_device_release_direct_mode(indio_dev);
+
+	if (result == ST_ISM303DAC_ST_RESET)
+		message = "na";
+	else if (result == ST_ISM303DAC_ST_FAIL)
+		message = "fail";
+	else if (result == ST_ISM303DAC_ST_PASS)
+		message = "pass";
+
+	return sysfs_emit(buf, "%s\n", message);
 }
 
 static ssize_t ism303dac_set_selftest_status(struct device *dev,
 					     struct device_attribute *attr,
 					     const char *buf, size_t size)
 {
-	int err, i;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ism303dac_sensor_data *sdata = iio_priv(indio_dev);
+	int x_selftest = 0, y_selftest = 0, z_selftest = 0;
+	struct ism303dac_data *cdata = sdata->cdata;
+	int x = 0, y = 0, z = 0, try_count = 0;
+	u8 odr_reg, fs_reg, data[6], status;
+	int err, i, count, n = 0;
+
+	err = iio_device_claim_direct_mode(indio_dev);
+	if (err)
+		return err;
 
 	for (i = 0; i < ARRAY_SIZE(ism303dac_selftest_table); i++) {
 		if (strncmp(buf, ism303dac_selftest_table[i].mode_str,
 			    size - 2) == 0)
 			break;
 	}
-	if (i == ARRAY_SIZE(ism303dac_selftest_table))
-		return -EINVAL;
 
-	err = ism303dac_set_selftest_mode(sdata, i);
+	if (i == ARRAY_SIZE(ism303dac_selftest_table)) {
+		err = -EINVAL;
+		goto unlock;
+	}
+
+	cdata->selftest_status = ST_ISM303DAC_ST_RESET;
+
+	err = ism303dac_write_register(sdata->cdata, ISM303DAC_SELFTEST_ADDR,
+				       ISM303DAC_SELFTEST_MASK,
+				       ISM303DAC_SELFTEST_NORMAL, true);
 	if (err < 0)
-		return err;
+		goto unlock;
 
-	sdata->cdata->selftest_status = i;
+	/* set FS 2G, ODR 50 Hz */
+	err = ism303dac_read_register(sdata->cdata, ism303dac_fs_table.addr, 1,
+				      &fs_reg, true);
+	if (err < 0)
+		goto unlock;
 
-	return size;
+	fs_reg = (fs_reg >> __ffs(ism303dac_fs_table.mask)) &
+		 ism303dac_fs_table.mask;
+
+	err = ism303dac_write_register(sdata->cdata, ism303dac_fs_table.addr,
+				       ism303dac_fs_table.mask,
+				       ism303dac_fs_table.fs_avl[0].value,
+				       true);
+	if (err < 0)
+		goto unlock;
+
+	err = ism303dac_read_register(sdata->cdata, ism303dac_odr_table.addr,
+				      1, &odr_reg, true);
+	if (err < 0)
+		goto restore_fs;
+
+	odr_reg = (odr_reg >> __ffs(ism303dac_odr_table.mask)) &
+		  ism303dac_odr_table.mask;
+
+	err = ism303dac_write_register(sdata->cdata,
+			ism303dac_odr_table.addr,
+			ism303dac_odr_table.mask,
+			ism303dac_odr_table.odr_avl[ISM303DAC_HR_MODE][3].value,
+			true);
+	if (err < 0)
+		goto restore_fs;
+
+	/* wait 200 ms for stable output */
+	usleep_range(200000, 200100);
+
+	/* discard first data read */
+	err = ism303dac_read_register(sdata->cdata, ISM303DAC_OUTX_L_ADDR, 2,
+				      data, true);
+	if (err < 0)
+		goto restore_odr;
+
+	/* for 5 times, after checking status bit, read the output registers */
+	for (count = 0; count < 5; count++) {
+		int a, b, c;
+
+		try_count = 0;
+		while (try_count < 3) {
+			usleep_range(200000, 200100);
+			err = ism303dac_read_register(sdata->cdata,
+						      ISM303DAC_STATUS_A_ADDR,
+						      sizeof(status), &status,
+						      true);
+			if (err < 0)
+				goto restore_odr;
+
+			if (status & ISM303DAC_DRDY_MASK) {
+				err = ism303dac_read_register(sdata->cdata,
+							ISM303DAC_OUTX_L_ADDR,
+							6, data, true);
+				if (err < 0)
+					goto restore_odr;
+
+				/*
+				 * for 5 times, after checking status bit,
+				 * read the output registers
+				 */
+				a = (s16)get_unaligned_le16(&data[0]);
+				b = (s16)get_unaligned_le16(&data[2]);
+				c = (s16)get_unaligned_le16(&data[4]);
+
+				/*
+				 * convert data to milli g, sensitivity with
+				 * FS 2G is 61 ug/LSB
+				 */
+				a = (61 * a) / 1000;
+				b = (61 * b) / 1000;
+				c = (61 * c) / 1000;
+
+				x += a;
+				y += b;
+				z += c;
+				n++;
+
+				break;
+			}
+
+			try_count++;
+		}
+	}
+
+	if (count != n) {
+		dev_err(cdata->dev,
+			"some samples missing (expected %d, read %d)\n",
+			count, n);
+		err = -1;
+
+		goto restore_odr;
+	}
+
+	/* calculate average */
+	x = x / n;
+	y = y / n;
+	z = z / n;
+
+	/* enable self test mode */
+	err = ism303dac_write_register(sdata->cdata, ISM303DAC_SELFTEST_ADDR,
+				       ISM303DAC_SELFTEST_MASK,
+				       ism303dac_selftest_table[i].streg_val,
+				       true);
+	if (err < 0)
+		goto restore_odr;
+
+	/* wait 200ms for stable output */
+	usleep_range(200000, 200100);
+
+	err = ism303dac_read_register(sdata->cdata, ISM303DAC_OUTX_L_ADDR, 2,
+				      data, true);
+	if (err < 0)
+		goto restore_odr;
+
+	/* for 5 times, after checking status bit, read the output registers */
+	n = 0;
+
+	for (count = 0; count < 5; count++) {
+		int a, b, c;
+
+		try_count = 0;
+		while (try_count < 3) {
+			usleep_range(200000, 200100);
+			err = ism303dac_read_register(sdata->cdata,
+						      ISM303DAC_STATUS_A_ADDR,
+						      sizeof(status), &status,
+						      true);
+			if (err < 0)
+				goto restore_odr;
+
+			if (status & ISM303DAC_DRDY_MASK) {
+				err = ism303dac_read_register(sdata->cdata,
+							ISM303DAC_OUTX_L_ADDR,
+							6, data, true);
+				if (err < 0)
+					goto restore_odr;
+
+				/*
+				 * for 5 times, after checking status bit,
+				 * read the output registers
+				 */
+				a = (s16)get_unaligned_le16(&data[0]);
+				b = (s16)get_unaligned_le16(&data[2]);
+				c = (s16)get_unaligned_le16(&data[4]);
+
+				/*
+				 * convert data to milli g, sensitivity with
+				 * FS 2G is 61 ug/LSB
+				 */
+				a = (61 * a) / 1000;
+				b = (61 * b) / 1000;
+				c = (61 * c) / 1000;
+
+				x_selftest += a;
+				y_selftest += b;
+				z_selftest += c;
+				n++;
+
+				break;
+			}
+
+			try_count++;
+		}
+	}
+
+	if (count != n) {
+		dev_err(cdata->dev,
+			"some samples missing (expected %d, read %d)\n",
+			count, n);
+		err = -1;
+
+		goto restore_odr;
+	}
+
+	/* calculate average */
+	x_selftest = x_selftest / n;
+	y_selftest = y_selftest / n;
+	z_selftest = z_selftest / n;
+
+	if ((abs(x_selftest - x) < 70) ||
+	    (abs(x_selftest - x) > 1500)) {
+		cdata->selftest_status = ST_ISM303DAC_ST_FAIL;
+		dev_info(cdata->dev, "st: failure on x: non-st(%d), st(%d)\n",
+			 x, x_selftest);
+		goto restore_odr;
+	}
+
+	if ((abs(y_selftest - y) < 70) ||
+	    (abs(y_selftest - y) > 1500)) {
+		cdata->selftest_status = ST_ISM303DAC_ST_FAIL;
+		dev_info(cdata->dev, "st: failure on y: non-st(%d), st(%d)\n",
+			 y, y_selftest);
+		goto restore_odr;
+	}
+
+	if ((abs(z_selftest - z) < 70) ||
+	    (abs(z_selftest - z) > 1500)) {
+		cdata->selftest_status = ST_ISM303DAC_ST_FAIL;
+		dev_info(cdata->dev, "st: failure on z: non-st(%d), st(%d)\n",
+			 z, z_selftest);
+		goto restore_odr;
+	}
+
+	cdata->selftest_status = ST_ISM303DAC_ST_PASS;
+
+restore_odr:
+	ism303dac_write_register(sdata->cdata, ism303dac_odr_table.addr,
+				 ism303dac_odr_table.mask, odr_reg, true);
+
+restore_fs:
+	ism303dac_write_register(sdata->cdata, ism303dac_fs_table.addr,
+				 ism303dac_fs_table.mask, fs_reg, true);
+
+	ism303dac_write_register(sdata->cdata, ISM303DAC_SELFTEST_ADDR,
+				 ISM303DAC_SELFTEST_MASK,
+				 ISM303DAC_SELFTEST_NORMAL, true);
+
+unlock:
+	iio_device_release_direct_mode(indio_dev);
+
+	return err < 0 ? err : size;
 }
 
 static ST_ISM303DAC_HWFIFO_ENABLED();
