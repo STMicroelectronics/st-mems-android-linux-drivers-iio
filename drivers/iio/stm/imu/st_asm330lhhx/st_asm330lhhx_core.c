@@ -2595,9 +2595,11 @@ st_asm330lhhx_configure_wake_up(struct st_asm330lhhx_hw *hw)
 	if (err < 0)
 		return err;
 
+#if !defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	err = st_asm330lhhx_reset_hwts(hw);
 	if (err < 0)
 		return err;
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	/* set fifo mode continuous for batching */
 	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
@@ -2754,9 +2756,11 @@ static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 			return err;
 	}
 
+#if !defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	err = st_asm330lhhx_reset_hwts(hw);
 	if (err < 0)
 		return err;
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	if (st_asm330lhhx_is_fifo_enabled(hw))
 		err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_CONT);

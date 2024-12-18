@@ -67,23 +67,16 @@ inline int st_asm330lhhx_reset_hwts(struct st_asm330lhhx_hw *hw)
 	u8 data = ST_ASM330LHHX_TIMESTAMP_RESET_VALUE;
 	int ret;
 
-	ret = st_asm330lhhx_write_locked(hw, ST_ASM330LHHX_REG_TIMESTAMP2_ADDR,
-				     data);
+	ret = st_asm330lhhx_write_locked(hw,
+					 ST_ASM330LHHX_REG_TIMESTAMP2_ADDR,
+					 data);
 	if (ret < 0)
 		return ret;
-
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-	spin_lock_irq(&hw->hwtimestamp_lock);
-	hw->hw_timestamp_global = (hw->hw_timestamp_global + (1LL << 32)) &
-				  GENMASK_ULL(63, 32);
-	hw->timesync_ktime = ktime_set(0, ST_ASM330LHHX_FAST_KTIME);
-	spin_unlock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	hw->ts = st_asm330lhhx_get_time_ns(hw->iio_devs[0]);
 	hw->ts_offset = hw->ts;
 	hw->val_ts_old = 0ULL;
-	hw->hw_ts_high = 0ULL;
+	hw->hw_ts_high_fifo = 0ULL;
 	hw->tsample = 0ULL;
 
 	return 0;
@@ -95,6 +88,7 @@ void st_asm330lhhx_init_timesync_counter(struct st_asm330lhhx_sensor *sensor,
 					 bool enable)
 {
 	spin_lock_irq(&hw->hwtimestamp_lock);
+	hw->timesync_ktime = ktime_set(0, ST_ASM330LHHX_FAST_KTIME);
 	if (sensor->id <= ST_ASM330LHHX_ID_HW)
 		hw->timesync_c[sensor->id] = enable ? ST_ASM330LHHX_FAST_TO_DEFAULT : 0;
 
@@ -302,8 +296,9 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 {
 	u8 iio_buf[ALIGN(ST_ASM330LHHX_SAMPLE_SIZE, sizeof(s64)) +
 		   sizeof(s64) + sizeof(s64)];
-	u8 buf[6 * ST_ASM330LHHX_FIFO_SAMPLE_SIZE], tag, *ptr;
+	u8 buf[32 * ST_ASM330LHHX_FIFO_SAMPLE_SIZE], tag, *ptr;
 	int i, err, word_len, fifo_len, read_len;
+	bool already_updated = false;
 	__le64 hw_timestamp_push;
 	struct iio_dev *iio_dev;
 	s64 ts_irq, hw_ts_old;
@@ -361,24 +356,29 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 			if (tag == ST_ASM330LHHX_TS_TAG) {
 				val = get_unaligned_le32(ptr);
 
+				/* check hw rollover, just once for batching cycle */
+				if ((hw->val_ts_old > val) &&
+				    !already_updated) {
+					hw->hw_ts_high_fifo++;
+					already_updated = true;
+				}
+
+				hw->val_ts_old = val;
+
+				hw_ts_old = hw->hw_ts;
+
 #if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 				spin_lock_irq(&hw->hwtimestamp_lock);
 
 				hw->hw_timestamp_global =
 					(hw->hw_timestamp_global &
-					 GENMASK_ULL(63, 32)) | val;
+					 GENMASK_ULL(63, ST_ASM330LHHX_RESET_COUNT)) |
+					((s64)hw->hw_ts_high_fifo << 32) | val;
 
 				spin_unlock_irq(&hw->hwtimestamp_lock);
 #endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
-				/* check hw rollover */
-				if (hw->val_ts_old > val)
-					hw->hw_ts_high++;
-
-				hw_ts_old = hw->hw_ts;
-
-				hw->val_ts_old = val;
-				hw->hw_ts = (val + ((s64)hw->hw_ts_high << 32)) *
+				hw->hw_ts = (val + ((s64)hw->hw_ts_high_fifo << 32)) *
 					    hw->ts_delta_ns;
 				hw->ts_offset = st_asm330lhhx_ewma(hw->ts_offset,
 						ts_irq - hw->hw_ts,
@@ -635,7 +635,11 @@ st_asm330lhhx_update_fifo(struct st_asm330lhhx_sensor *sensor,
 		goto out;
 
 	if (enable && hw->fifo_mode == ST_ASM330LHHX_FIFO_BYPASS) {
+
+#if !defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 		st_asm330lhhx_reset_hwts(hw);
+#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+
 		err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_CONT);
 	} else if (!hw->enable_mask) {
 		err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_BYPASS);

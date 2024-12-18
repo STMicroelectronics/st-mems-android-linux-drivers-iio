@@ -27,14 +27,16 @@ static void st_asm330lhhx_read_hw_timestamp(struct st_asm330lhhx_hw *hw)
 {
 	s64 timestamp_hw_global;
 	s64 eventLSB, eventMSB;
-	__le32 timestamp_hw;
+	__le32 _timestamp_hw;
+	u32 timestamp_hw;
 	s64 timestamp_cpu;
 	__le32 tmp;
 	int err;
 
-	err = st_asm330lhhx_read_locked(hw, ST_ASM330LHHX_REG_TIMESTAMP0_ADDR,
-				    (u8 *)&timestamp_hw,
-				    sizeof(timestamp_hw));
+	err = regmap_bulk_read(hw->regmap,
+			       ST_ASM330LHHX_REG_TIMESTAMP0_ADDR,
+			       (u8 *)&_timestamp_hw,
+			       sizeof(_timestamp_hw));
 	if (err < 0)
 		return;
 
@@ -46,9 +48,17 @@ static void st_asm330lhhx_read_hw_timestamp(struct st_asm330lhhx_hw *hw)
 	eventMSB = IIO_EVENT_CODE(IIO_COUNT, 0, 0, 1,
 				  STM_IIO_EV_TYPE_TIME_SYNC, 0, 0, 0);
 
+	timestamp_hw = (u32)le32_to_cpu(_timestamp_hw);
+
+	if (hw->last_hw_timestamp > timestamp_hw)
+		hw->hi_hw_timestamp++;
+
+	hw->last_hw_timestamp = timestamp_hw;
+
 	spin_lock_irq(&hw->hwtimestamp_lock);
-	timestamp_hw_global = (hw->hw_timestamp_global & GENMASK_ULL(63, 32)) |
-			      (u32)le32_to_cpu(timestamp_hw);
+	timestamp_hw_global = (hw->hw_timestamp_global &
+			       GENMASK_ULL(63, ST_ASM330LHHX_RESET_COUNT)) |
+			      ((s64)hw->hi_hw_timestamp << 32) | timestamp_hw;
 
 	ST_ASM330LHHX_TSYNC_DECREMENT(ST_ASM330LHHX_ID_GYRO);
 	ST_ASM330LHHX_TSYNC_DECREMENT(ST_ASM330LHHX_ID_ACC);

@@ -267,8 +267,11 @@
 #define ST_ASM330LHHX_MAX_FIFO_DEPTH		416
 
 #define ST_ASM330LHHX_DEFAULT_KTIME		(200000000)
-#define ST_ASM330LHHX_FAST_KTIME		(5000000)
-#define ST_ASM330LHHX_FAST_TO_DEFAULT		(10)
+#define ST_ASM330LHHX_FAST_KTIME		(2500000)
+#define ST_ASM330LHHX_FAST_TO_DEFAULT		(32)
+
+#define ST_ASM330LHHX_ROLLOVER_COUNT		16
+#define ST_ASM330LHHX_RESET_COUNT		(32 + ST_ASM330LHHX_ROLLOVER_COUNT)
 
 #define ST_ASM330LHHX_DATA_CHANNEL(chan_type, addr, mod, ch2, scan_idx,	\
 				rb, sb, sg, ex_info)			\
@@ -776,7 +779,9 @@ struct st_asm330lhhx_sensor {
  * @ts_delta_ns: Calibrate delta time tick.
  * @hw_ts: Latest hw timestamp from the sensor.
  * @val_ts_old: Hold hw timestamp for timer rollover.
- * @hw_ts_high: Save MSB hw timestamp.
+ * @hw_ts_high_fifo: Save hi part of hw timestamp for FIFO samples.
+ * @hi_hw_timestamp: Save hi part of hw timestamp for timesync.
+ * @last_hw_timestamp: : Save last hw timestamp for timesync.
  * @tsample: Timestamp for each sensor sample.
  * @delta_ts: Delta time between two consecutive interrupts.
  * @ts: Latest timestamp from irq handler.
@@ -833,13 +838,15 @@ struct st_asm330lhhx_hw {
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
 	int timesync_c[ST_ASM330LHHX_ID_HW + 1];
+	u32 hi_hw_timestamp;
+	u32 last_hw_timestamp;
 #endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	s64 ts_offset;
 	u64 ts_delta_ns;
 	s64 hw_ts;
 	u32 val_ts_old;
-	u32 hw_ts_high;
+	u32 hw_ts_high_fifo;
 	s64 tsample;
 	s64 delta_ts;
 	s64 ts;
