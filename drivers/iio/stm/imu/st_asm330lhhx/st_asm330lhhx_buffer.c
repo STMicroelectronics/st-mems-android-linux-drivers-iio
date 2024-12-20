@@ -23,6 +23,8 @@
 #include "st_asm330lhhx.h"
 
 #define ST_ASM330LHHX_REG_FIFO_STATUS1_ADDR		0x3a
+#define ST_ASM330LHHX_REG_FIFO_WTM_IA_MASK		BIT(7)
+
 #define ST_ASM330LHHX_REG_TIMESTAMP2_ADDR		0x42
 #define ST_ASM330LHHX_REG_FIFO_DATA_OUT_TAG_ADDR	0x78
 
@@ -272,6 +274,30 @@ static inline void st_asm330lhhx_sync_hw_ts(struct st_asm330lhhx_hw *hw, s64 ts)
 					  ST_ASM330LHHX_EWMA_LEVEL);
 }
 
+static int st_asm330lhhx_enable_irqline(struct st_asm330lhhx_hw *hw,
+					bool enable)
+{
+	int err;
+
+	/* disable FIFO watermak interrupt */
+	err = st_asm330lhhx_write_locked(hw, hw->drdy_reg,
+					enable ?
+					ST_ASM330LHHX_REG_INT_FIFO_TH_MASK : 0);
+	if (err < 0)
+		return err;
+
+	/* disable embedded function interrupt */
+	if (st_asm330lhhx_events_enabled(hw)) {
+		err = st_asm330lhhx_write_locked(hw,
+				      hw->embfunc_pg0_irq_reg,
+				      enable ? hw->interrupt_enable : 0);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+
 static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 {
 	u8 iio_buf[ALIGN(ST_ASM330LHHX_SAMPLE_SIZE, sizeof(s64)) +
@@ -284,6 +310,7 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 	__le16 fifo_status;
 	u16 fifo_depth;
 	s16 drdymask;
+	u16 wtm_ia;
 	u32 val;
 
 	/* return if FIFO is already disabled */
@@ -293,16 +320,29 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 		return 0;
 	}
 
+	if (hw->irq_edge) {
+		/* disable interrupt line */
+		err = st_asm330lhhx_enable_irqline(hw, false);
+		if (err < 0)
+			return err;
+	}
+
 	ts_irq = hw->ts - hw->delta_ts;
 
 	err = st_asm330lhhx_read_locked(hw, ST_ASM330LHHX_REG_FIFO_STATUS1_ADDR,
 				    &fifo_status, sizeof(fifo_status));
 	if (err < 0)
-		return err;
+		goto enable_fifo;
 
-	fifo_depth = le16_to_cpu(fifo_status) & ST_ASM330LHHX_REG_FIFO_STATUS_DIFF;
+	wtm_ia = le16_to_cpu(fifo_status) &
+		 (ST_ASM330LHHX_REG_FIFO_WTM_IA_MASK << 8);
+	if (!wtm_ia)
+		goto enable_fifo;
+
+	fifo_depth = le16_to_cpu(fifo_status) &
+		     ST_ASM330LHHX_REG_FIFO_STATUS_DIFF;
 	if (!fifo_depth)
-		return 0;
+		goto enable_fifo;
 
 	fifo_len = fifo_depth * ST_ASM330LHHX_FIFO_SAMPLE_SIZE;
 	read_len = 0;
@@ -312,7 +352,7 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 				   ST_ASM330LHHX_REG_FIFO_DATA_OUT_TAG_ADDR,
 				   buf, word_len);
 		if (err < 0)
-			return err;
+			goto enable_fifo;
 
 		for (i = 0; i < word_len; i += ST_ASM330LHHX_FIFO_SAMPLE_SIZE) {
 			ptr = &buf[i + ST_ASM330LHHX_TAG_SIZE];
@@ -409,6 +449,14 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 			}
 		}
 		read_len += word_len;
+	}
+
+enable_fifo:
+	if (hw->irq_edge) {
+		/* enable interrupt line */
+		err = st_asm330lhhx_enable_irqline(hw, true);
+		if (err < 0)
+			return err;
 	}
 
 	return read_len;
@@ -807,6 +855,7 @@ int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw)
 {
 	unsigned long irq_type;
 	bool irq_active_low;
+	bool irq_edge;
 	int i, err;
 
 	irq_type = irqd_get_trigger_type(irq_get_irq_data(hw->irq));
@@ -816,9 +865,19 @@ int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw)
 	switch (irq_type) {
 	case IRQF_TRIGGER_HIGH:
 		irq_active_low = false;
+		irq_edge = false;
 		break;
 	case IRQF_TRIGGER_LOW:
 		irq_active_low = true;
+		irq_edge = false;
+		break;
+	case IRQF_TRIGGER_RISING:
+		irq_active_low = false;
+		irq_edge = true;
+		break;
+	case IRQF_TRIGGER_FALLING:
+		irq_active_low = true;
+		irq_edge = true;
 		break;
 	default:
 		dev_info(hw->dev, "mode %lx unsupported\n", irq_type);
@@ -894,6 +953,8 @@ int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw)
 	err = st_asm330lhhx_config_interrupt(hw, true);
 	if (err < 0)
 		return err;
+
+	hw->irq_edge = irq_edge;
 
 	return st_asm330lhhx_config_timestamp(hw);
 }

@@ -754,6 +754,8 @@ struct st_asm330lhhx_sensor {
  * @regmap: Register map of the device.
  * @int_pin: Save interrupt pin used by sensor.
  * @emb_pin: Embedded function interrupt pin used by sensor.
+ * @irq_edge: Flag for irq edge triggered type (rising/falling).
+ * @interrupt_enable: Flag for interrupt enabled of hardcoded functions.
  * @lock: Mutex to protect read and write operations.
  * @fifo_lock: Mutex to prevent concurrent access to the hw FIFO.
  * @page_lock: Mutex to prevent concurrent memory page configuration.
@@ -809,6 +811,8 @@ struct st_asm330lhhx_hw {
 	struct regmap *regmap;
 	int int_pin;
 	int emb_pin;
+	bool irq_edge;
+	u8 interrupt_enable;
 
 	struct mutex lock;
 	struct mutex fifo_lock;
@@ -1240,4 +1244,5 @@ int st_asm330lhhx_event_init(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_update_threshold_events(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_update_duration_events(struct st_asm330lhhx_hw *hw);
+inline bool st_asm330lhhx_events_enabled(struct st_asm330lhhx_hw *hw);
 #endif /* ST_ASM330LHHX_H */

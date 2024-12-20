@@ -67,7 +67,7 @@ static const struct st_asm330lhhx_6D_th st_asm330lhhx_6D_threshold[] = {
 	[3] = { .val = 0x03, .deg = 50 },
 };
 
-static inline bool
+inline bool
 st_asm330lhhx_events_enabled(struct st_asm330lhhx_hw *hw)
 {
 	return (ST_ASM330LHHX_IS_EVENT_ENABLED(ST_ASM330LHHX_EVENT_FF) ||
@@ -357,6 +357,7 @@ int st_asm330lhhx_write_event_config(struct iio_dev *iio_dev,
 	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	u8 int_reg = hw->embfunc_pg0_irq_reg;
+	bool interrupt_enable;
 	u8 int_val;
 	int id = -1;
 	int req_odr = 0;
@@ -423,10 +424,11 @@ int st_asm330lhhx_write_event_config(struct iio_dev *iio_dev,
 	if (err < 0)
 		return err;
 
+	interrupt_enable = (int_val & ~ST_ASM330LHHX_INT_EMB_FUNC_MASK);
 	err = st_asm330lhhx_write_with_mask_locked(hw,
-			    ST_ASM330LHHX_REG_INT_CFG1_ADDR,
-			    ST_ASM330LHHX_INTERRUPTS_ENABLE_MASK,
-			    !!(int_val & ~ST_ASM330LHHX_INT_EMB_FUNC_MASK));
+					   ST_ASM330LHHX_REG_INT_CFG1_ADDR,
+					   ST_ASM330LHHX_INTERRUPTS_ENABLE_MASK,
+					   !!interrupt_enable);
 	if (err < 0)
 		return err;
 
@@ -444,6 +446,8 @@ int st_asm330lhhx_write_event_config(struct iio_dev *iio_dev,
 		hw->enable_ev_mask &= ~BIT_ULL(id);
 	else
 		hw->enable_ev_mask |= BIT_ULL(id);
+
+	hw->interrupt_enable = int_val;
 
 	return err;
 }
