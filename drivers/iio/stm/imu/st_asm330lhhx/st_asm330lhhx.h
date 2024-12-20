@@ -728,6 +728,7 @@ struct st_asm330lhhx_sensor {
 	u32 discard_samples;
 	int odr;
 	int uodr;
+	int event_hw_odr;
 
 #ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
 	u32 discharged_samples;
@@ -881,7 +882,6 @@ struct st_asm330lhhx_hw {
 
 	bool wakeup_source;
 	u32 wakeup_status;
-
 };
 
 /**
@@ -1164,12 +1164,24 @@ u16 st_asm330lhhx_check_odr_dependency(struct st_asm330lhhx_hw *hw,
 	return ret;
 }
 
+static inline
+u16 st_asm330lhhx_get_odr(struct st_asm330lhhx_hw *hw,
+			  enum st_asm330lhhx_sensor_id id)
+{
+	struct st_asm330lhhx_sensor *sensor = iio_priv(hw->iio_devs[id]);
+	u16 ret;
+
+	ret = (hw->enable_mask & BIT_ULL(id)) ? sensor->odr : 0;
+
+	return ret;
+}
+
 int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
 		  struct regmap *regmap);
 void st_asm330lhhx_remove(struct device *dev);
 int st_asm330lhhx_sensor_set_enable(struct st_asm330lhhx_sensor *sensor,
 				    bool enable);
-int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
+int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor, bool is_event,
 			  int req_odr, int req_uodr);
 int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_allocate_buffers(struct st_asm330lhhx_hw *hw);

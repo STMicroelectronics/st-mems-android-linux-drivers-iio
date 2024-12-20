@@ -438,7 +438,7 @@ int st_asm330lhhx_write_event_config(struct iio_dev *iio_dev,
 					       id, enable);
 
 	err = st_asm330lhhx_set_odr(iio_priv(hw->iio_devs[ST_ASM330LHHX_ID_ACC]),
-				    req_odr, 0);
+				    true, req_odr, 0);
 	if (err < 0)
 		return err;
 

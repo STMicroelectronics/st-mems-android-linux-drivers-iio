@@ -1174,13 +1174,15 @@ unlock:
 	return ret;
 }
 
-int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
-			  int req_odr, int req_uodr)
+int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor, bool is_event,
+			  int req_hw_odr, int req_hw_uodr)
 {
-	enum st_asm330lhhx_sensor_id id_req = sensor->id;
+	struct st_asm330lhhx_sensor *prim_sensor = sensor;
 	enum st_asm330lhhx_sensor_id id = sensor->id;
 	struct st_asm330lhhx_hw *hw = sensor->hw;
+	int max_usr_odr = 0;
 	int err, delay;
+	int hw_odr = 0;
 	u8 val = 0;
 
 	switch (id) {
@@ -1212,22 +1214,23 @@ int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
 	case ST_ASM330LHHX_ID_FSM_15:
 	case ST_ASM330LHHX_ID_TEMP:
 	case ST_ASM330LHHX_ID_ACC: {
-		int odr;
 		int i;
 
 		id = ST_ASM330LHHX_ID_ACC;
+		prim_sensor = iio_priv(hw->iio_devs[ST_ASM330LHHX_ID_ACC]);
 		for (i = ST_ASM330LHHX_ID_ACC; i < ST_ASM330LHHX_ID_MAX; i++) {
 			if (!hw->iio_devs[i])
 				continue;
 
-			if (i == sensor->id)
-				continue;
+			if (is_event) {
+				max_usr_odr = max_t(u16, max_usr_odr, st_asm330lhhx_get_odr(hw, i));
+			} else {
+				if (i == sensor->id)
+					continue;
 
-			odr = st_asm330lhhx_check_odr_dependency(hw, req_odr,
-								req_uodr, i);
-			if (odr != req_odr) {
-				/* device already configured */
-				return 0;
+				max_usr_odr = max_t(u16, max_usr_odr,
+						    st_asm330lhhx_check_odr_dependency(hw, req_hw_odr,
+										       req_hw_uodr, i));
 			}
 		}
 		break;
@@ -1238,13 +1241,19 @@ int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
 		return 0;
 	}
 
-	err = st_asm330lhhx_get_odr_val(id, req_odr, req_uodr, NULL,
-				       NULL, &val);
+	if (is_event)
+		prim_sensor->event_hw_odr = req_hw_odr;
+
+	hw_odr = max_t(u16, req_hw_odr, max_usr_odr);
+	hw_odr = max_t(u16, prim_sensor->event_hw_odr, hw_odr);
+
+	err = st_asm330lhhx_get_odr_val(id, hw_odr, 0, NULL,
+					NULL, &val);
 	if (err < 0)
 		return err;
 
 	err = st_asm330lhhx_update_decimator(iio_priv(hw->iio_devs[id]),
-					     req_odr);
+					     hw_odr);
 	if (err < 0)
 		return err;
 
@@ -1260,9 +1269,9 @@ int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor,
 			return err;
 	}
 
-	delay = req_odr > 0 ? 4000000 / req_odr : 0;
+	delay = req_hw_odr > 0 ? 4000000 / req_hw_odr : 0;
 
-	return st_asm330lhhx_update_odr_fsm(hw, id, id_req, val, delay);
+	return st_asm330lhhx_update_odr_fsm(hw, id, sensor->id, val, delay);
 }
 
 int st_asm330lhhx_sensor_set_enable(struct st_asm330lhhx_sensor *sensor,
@@ -1272,7 +1281,7 @@ int st_asm330lhhx_sensor_set_enable(struct st_asm330lhhx_sensor *sensor,
 	int odr = enable ? sensor->odr : 0;
 	int err;
 
-	err = st_asm330lhhx_set_odr(sensor, odr, uodr);
+	err = st_asm330lhhx_set_odr(sensor, false, odr, uodr);
 	if (err < 0)
 		return err;
 
@@ -1411,7 +1420,7 @@ static int st_asm330lhhx_write_raw(struct iio_dev *iio_dev,
 				switch (s->id) {
 				case ST_ASM330LHHX_ID_GYRO:
 				case ST_ASM330LHHX_ID_ACC:
-					err = st_asm330lhhx_set_odr(s, s->odr, s->uodr);
+					err = st_asm330lhhx_set_odr(s, false, s->odr, s->uodr);
 					if (err < 0)
 						break;
 
@@ -1823,7 +1832,7 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 		/* set BDU = 1, FS = 4 g, ODR = 52 Hz */
 		st_asm330lhhx_set_full_scale(sensor,
 					    ST_ASM330LHHX_ACC_FS_4G_GAIN);
-		st_asm330lhhx_set_odr(sensor, 52, 0);
+		st_asm330lhhx_set_odr(sensor, false, 52, 0);
 		st_asm330lhhx_selftest_sensor(sensor, test);
 
 		/* restore full scale after test */
@@ -1835,7 +1844,7 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 		/* before enable gyro add 150 ms delay when gyro self-test */
 		usleep_range(150000, 151000);
 
-		st_asm330lhhx_set_odr(sensor, 208, 0);
+		st_asm330lhhx_set_odr(sensor, false, 208, 0);
 		st_asm330lhhx_selftest_sensor(sensor, test);
 
 		/* restore full scale after test */
@@ -2642,7 +2651,7 @@ static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 			continue;
 
 		/* power off enabled sensors */
-		err = st_asm330lhhx_set_odr(sensor, 0, 0);
+		err = st_asm330lhhx_set_odr(sensor, false, 0, 0);
 		if (err < 0)
 			return err;
 	}
@@ -2751,7 +2760,7 @@ static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 		if (!(hw->enable_mask & BIT_ULL(sensor->id)))
 			continue;
 
-		err = st_asm330lhhx_set_odr(sensor, sensor->odr, sensor->uodr);
+		err = st_asm330lhhx_set_odr(sensor, false, sensor->odr, sensor->uodr);
 		if (err < 0)
 			return err;
 	}
