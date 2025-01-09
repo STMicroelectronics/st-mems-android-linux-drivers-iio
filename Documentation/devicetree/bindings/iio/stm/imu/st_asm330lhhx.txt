@@ -11,7 +11,7 @@ Required properties for the i2c bindings:
 - reg:            i2c slave address
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg:            the chipselect index
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
                      constrained by external circuitry
@@ -39,7 +39,11 @@ Optional properties for all bus drivers:
                   Refer to iio/mount-matrix.txt for details.
 
 - interrupts:     interrupt mapping for IRQ. It should be configured
-                  with flags IRQ_TYPE_LEVEL_HIGH or IRQ_TYPE_LEVEL_LOW.
+                  with flags IRQ_TYPE_LEVEL_HIGH, IRQ_TYPE_LEVEL_LOW,
+                  IRQ_TYPE_EDGE_RISING or IRQ_TYPE_EDGE_FALLING. If the
+                  interrupt is configured as edge trigger, each interrupt will
+                  require multiple accesses to the configuration registers, so
+                  using it in this mode is not recommended.
 
                   This property can also contain an array of two elements, the
                   first of which refers to the data irq while the second, if present,
@@ -56,7 +60,8 @@ Optional properties for all bus drivers:
 - interrupts-extended: interrupt mapping for IRQ when a node needs to reference
                   multiple interrupt parents or a different interrupt parent
                   than the inherited one. It should be configured with flags
-                  IRQ_TYPE_LEVEL_HIGH or IRQ_TYPE_LEVEL_LOW.
+                  IRQ_TYPE_LEVEL_HIGH, IRQ_TYPE_LEVEL_LOW, IRQ_TYPE_EDGE_RISING
+                  or IRQ_TYPE_EDGE_FALLING.
 
                   Please see the above "interrupts" property.
 
@@ -84,6 +89,23 @@ asm330lhh-imu@0 {
         spi-max-frequency = <10000000>;
         interrupt-parent = <&gpio0>;
         interrupts = <0 IRQ_TYPE_LEVEL_HIGH>, <1 IRQ_TYPE_EDGE_RISING>;
+        vddio-supply = <&sensors_vddio>;
+        vdd-supply = <&sensors_vdd>;
+        st,int-pin = <1>;
+        st,mlc-int-pin = <2>;
+        st,wakeup-int-pin = <2>;
+        st,module_id = <1>;
+        mount-matrix = "1", "0", "0",
+                       "0", "1", "0",
+                       "0", "0", "1";
+};
+
+Example for an spi asm330lhh device node using interrupts-extended:
+asm330lhh-imu@0 {
+        compatible = "st,asm330lhh";
+        reg = <0x0>;
+        spi-max-frequency = <10000000>;
+        interrupts-extended = <&gpio 0 IRQ_TYPE_LEVEL_HIGH>, <&gpio 1 IRQ_TYPE_EDGE_RISING>;
         vddio-supply = <&sensors_vddio>;
         vdd-supply = <&sensors_vdd>;
         st,int-pin = <1>;
