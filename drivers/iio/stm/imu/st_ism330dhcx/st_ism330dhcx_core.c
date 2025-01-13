@@ -849,22 +849,55 @@ int st_ism330dhcx_sensor_set_enable(struct st_ism330dhcx_sensor *sensor,
  * @return  IIO_VAL_INT if OK, negative value for ERROR
  */
 static int st_ism330dhcx_read_oneshot(struct st_ism330dhcx_sensor *sensor,
-				   u8 addr, int *val)
+				      u8 addr, int *val)
 {
 	int err, delay;
 	__le16 data;
+
+	if (sensor->id > ST_ISM330DHCX_ID_HW)
+		return -ENODEV;
 
 	err = st_ism330dhcx_sensor_set_enable(sensor, true);
 	if (err < 0)
 		return err;
 
-	delay = 1000000 / sensor->odr;
-	usleep_range(delay, 2 * delay);
+	if (sensor->id == ST_ISM330DHCX_ID_GYRO) {
+		/*
+		 * for gyro the time to wait before read for having stable
+		 * output is about 70 ms + see Table 17 or Table 18 of AN5398
+		 */
+		delay = 70000 + 3 * (1000000 / sensor->odr);
+		usleep_range(delay, delay + 1000);
 
-	err = st_ism330dhcx_read_atomic(sensor->hw, addr, sizeof(data),
-				     (u8 *)&data);
-	if (err < 0)
-		return err;
+		err = st_ism330dhcx_read_atomic(sensor->hw, addr, sizeof(data),
+						(u8 *)&data);
+		if (err < 0)
+			return err;
+	} else if (sensor->id == ST_ISM330DHCX_ID_ACC) {
+		/*
+		 * for accel the time to wait before read for having stable
+		 * output is about 2 odr
+		 */
+		delay = 2 * (1000000 / sensor->odr);
+		usleep_range(delay, delay + 1000);
+
+		err = st_ism330dhcx_read_atomic(sensor->hw, addr, sizeof(data),
+						(u8 *)&data);
+		if (err < 0)
+			return err;
+	} else {
+		/*
+		 * for temperature sensor the time to wait before read for
+		 * having stable output is about 1 odr
+		 */
+		delay = 1000000 / sensor->odr;
+		usleep_range(delay, delay + 1000);
+
+		err = st_ism330dhcx_read_atomic(sensor->hw, addr, sizeof(data),
+						(u8 *)&data);
+		if (err < 0)
+			return err;
+	}
 
 	st_ism330dhcx_sensor_set_enable(sensor, false);
 
