@@ -794,11 +794,7 @@ static int st_lsm6dsox_shub_write_raw(struct iio_dev *iio_dev,
 				      int val, int val2, long mask)
 {
 	struct st_lsm6dsox_sensor *sensor = iio_priv(iio_dev);
-	int err;
-
-	err = iio_device_claim_direct_mode(iio_dev);
-	if (err)
-		return err;
+	int err = 0;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SAMP_FREQ: {
@@ -807,6 +803,20 @@ static int st_lsm6dsox_shub_write_raw(struct iio_dev *iio_dev,
 		err = st_lsm6dsox_shub_get_odr_val(sensor, val, &data);
 		if (!err)
 			sensor->odr = val;
+
+		/*
+		 * for testxxxReconfigureWhileActive cts tests the odr must be
+		 * applied immediately when the sensors is already enabled
+		 */
+		if (sensor->hw->enable_mask & BIT(sensor->id)) {
+			err = st_lsm6dsox_shub_set_odr(sensor, sensor->odr);
+			if (err)
+				return err;
+
+			err = st_lsm6dsox_sensor_set_enable(sensor, true);
+			if (err)
+				return err;
+		}
 		break;
 	}
 	case IIO_CHAN_INFO_SCALE:
@@ -816,8 +826,6 @@ static int st_lsm6dsox_shub_write_raw(struct iio_dev *iio_dev,
 		err = -EINVAL;
 		break;
 	}
-
-	iio_device_release_direct_mode(iio_dev);
 
 	return err;
 }
