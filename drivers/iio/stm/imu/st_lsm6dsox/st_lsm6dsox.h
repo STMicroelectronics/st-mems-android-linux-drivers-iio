@@ -327,6 +327,18 @@ enum st_lsm6dsox_hw_id {
 	.ext_info = ext_inf,						\
 }
 
+#define IIO_CHAN_HW_TIMESTAMP(si) {					\
+	.type = IIO_COUNT,						\
+	.address = ST_LSM6DSOX_REG_TIMESTAMP0_ADDR,			\
+	.scan_index = si,						\
+	.scan_type = {							\
+		.sign = 's',						\
+		.realbits = 64,						\
+		.storagebits = 64,					\
+		.endianness = IIO_LE,					\
+	},								\
+}
+
 static const struct iio_event_spec st_lsm6dsox_flush_event = {
 	.type = STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
@@ -830,7 +842,7 @@ struct st_lsm6dsox_hw {
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
-	int timesync_c[ST_LSM6DSOX_ID_HW + 1];
+	int timesync_c[ST_LSM6DSOX_ID_EXT1 + 1];
 #endif /* CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP */
 
 	u8 ext_data_len;
