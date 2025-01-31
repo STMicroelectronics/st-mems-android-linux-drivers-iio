@@ -1112,7 +1112,7 @@ int st_lsm6dsrx_get_int_reg(struct st_lsm6dsrx_hw *hw)
 	default:
 		dev_err(hw->dev, "unsupported interrupt pin\n");
 		err = -EINVAL;
-		break;
+		return err;
 	}
 
 	hw->irq_reg = irq_reg;
