@@ -363,7 +363,7 @@ static int st_ism330dhcx_read_step_counter(struct st_ism330dhcx_sensor *sensor,
 					   u8 addr, int *val)
 {
 	struct st_ism330dhcx_hw *hw = sensor->hw;
-	__le16 data;
+	__le16 data = 0;
 	int err;
 
 	mutex_lock(&hw->page_lock);
