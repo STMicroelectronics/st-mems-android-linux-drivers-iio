@@ -501,7 +501,9 @@ static int st_lsm6dsox_update_fifo(struct st_lsm6dsox_sensor *sensor,
 		if (err < 0)
 			goto out;
 		break;
-	case ST_LSM6DSOX_ID_TEMP:
+	case ST_LSM6DSOX_ID_TEMP: {
+		u8 data = 0;
+
 		/*
 		 * This is an auxiliary sensor, it need to get batched
 		 * toghether at least with a primary sensor (Acc/Gyro).
@@ -509,7 +511,6 @@ static int st_lsm6dsox_update_fifo(struct st_lsm6dsox_sensor *sensor,
 		if (!(hw->enable_mask & (BIT(ST_LSM6DSOX_ID_ACC) |
 					 BIT(ST_LSM6DSOX_ID_GYRO)))) {
 			struct st_lsm6dsox_sensor *acc_sensor;
-			u8 data = 0;
 
 			acc_sensor = iio_priv(hw->iio_devs[ST_LSM6DSOX_ID_ACC]);
 			if (enable) {
@@ -527,6 +528,26 @@ static int st_lsm6dsox_update_fifo(struct st_lsm6dsox_sensor *sensor,
 				data);
 			if (err < 0)
 				goto out;
+		}
+
+		if (enable) {
+			err = st_lsm6dsox_get_batch_val(sensor, sensor->odr,
+							sensor->uodr, &data);
+			if (err < 0)
+				goto out;
+		}
+
+		/* batch temperature sensor */
+		err = st_lsm6dsox_write_with_mask_locked(hw,
+				hw->st_lsm6dsox_odr_table[sensor->id].batching_reg.addr,
+				hw->st_lsm6dsox_odr_table[sensor->id].batching_reg.mask,
+				data);
+		if (err < 0)
+			goto out;
+
+		err = st_lsm6dsox_sensor_set_enable(sensor, enable);
+		if (err < 0)
+			goto out;
 		}
 		break;
 	default:
