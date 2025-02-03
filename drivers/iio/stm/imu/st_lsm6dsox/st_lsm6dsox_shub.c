@@ -1062,7 +1062,7 @@ int st_lsm6dsox_shub_probe(struct st_lsm6dsox_hw *hw)
 	struct device_node *np = hw->dev->of_node;
 
 	if (np && of_property_read_bool(np, "drive-pullup-shub")) {
-		dev_err(hw->dev, "enabling pull up on i2c master\n");
+		dev_info(hw->dev, "enabling pull up on i2c master\n");
 		err = st_lsm6dsox_shub_read_reg(hw,
 					ST_LSM6DSOX_REG_MASTER_CONFIG_ADDR,
 					&data, sizeof(data));
