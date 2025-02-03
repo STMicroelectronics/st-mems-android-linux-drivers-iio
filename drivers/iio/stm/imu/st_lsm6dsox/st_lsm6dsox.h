@@ -722,6 +722,7 @@ struct st_lsm6dsox_ext_dev_info {
  * @trig: Trigger used by IIO event sensors.
  * @odr: Output data rate of the sensor [Hz].
  * @uodr: Output data rate of the sensor [uHz].
+ * @event_hw_odr: ODR requested in HW by an event.
  * @gain: Configured sensor sensitivity.
  * @offset: Sensor data offset.
  * @decimator: Sensor decimator
@@ -747,6 +748,7 @@ struct st_lsm6dsox_sensor {
 
 	int odr;
 	int uodr;
+	int event_hw_odr;
 
 	union {
 		struct {
@@ -1032,6 +1034,17 @@ static inline int st_lsm6dsox_set_page_access(struct st_lsm6dsox_hw *hw,
 				  ST_LSM6DSOX_SHIFT_VAL(val, mask));
 }
 
+static inline u16 st_lsm6dsox_get_odr(struct st_lsm6dsox_hw *hw,
+				      enum st_lsm6dsox_sensor_id id)
+{
+	struct st_lsm6dsox_sensor *sensor = iio_priv(hw->iio_devs[id]);
+	u16 ret;
+
+	ret = (hw->enable_mask & BIT_ULL(id)) ? sensor->odr : 0;
+
+	return ret;
+}
+
 /* common */
 int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
 		      struct regmap *regmap);
@@ -1058,8 +1071,8 @@ ssize_t st_lsm6dsox_set_watermark(struct device *dev,
 ssize_t st_lsm6dsox_get_module_id(struct device *dev,
 				  struct device_attribute *attr,
 				  char *buf);
-int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, int req_odr,
-			int req_uodr);
+int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, bool is_event,
+			int req_odr, int req_uodr);
 int st_lsm6dsox_suspend_fifo(struct st_lsm6dsox_hw *hw);
 int st_lsm6dsox_set_fifo_mode(struct st_lsm6dsox_hw *hw,
 			      enum st_lsm6dsox_fifo_mode fifo_mode);

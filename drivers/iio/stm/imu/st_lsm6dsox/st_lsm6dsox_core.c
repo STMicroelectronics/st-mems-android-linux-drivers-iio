@@ -721,12 +721,16 @@ static u16 st_lsm6dsox_check_odr_dependency(struct st_lsm6dsox_hw *hw,
 	return ret;
 }
 
-int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, int req_odr,
-			int req_uodr)
+int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, bool is_event,
+			int req_hw_odr, int req_hw_uodr)
 {
+	struct st_lsm6dsox_sensor *prim_sensor = sensor;
 	enum st_lsm6dsox_sensor_id id = sensor->id;
 	struct st_lsm6dsox_hw *hw = sensor->hw;
 	struct st_lsm6dsox_odr oe = { 0 };
+	int max_usr_odr = 0;
+	int hw_odr = 0;
+	int err;
 
 	switch (id) {
 	case ST_LSM6DSOX_ID_EXT0:
@@ -758,19 +762,23 @@ int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, int req_odr,
 	case ST_LSM6DSOX_ID_MLC_6:
 	case ST_LSM6DSOX_ID_MLC_7:
 	case ST_LSM6DSOX_ID_ACC: {
-		int odr;
 		int i;
 
 		id = ST_LSM6DSOX_ID_ACC;
+		prim_sensor = iio_priv(hw->iio_devs[ST_LSM6DSOX_ID_ACC]);
 		for (i = ST_LSM6DSOX_ID_ACC; i < ST_LSM6DSOX_ID_MAX; i++) {
-			if (!hw->iio_devs[i] || i == sensor->id)
+			if (!hw->iio_devs[i])
 				continue;
 
-			odr = st_lsm6dsox_check_odr_dependency(hw, req_odr,
-							       req_uodr, i);
-			if (odr != req_odr) {
-				/* device already configured */
-				return 0;
+			if (is_event) {
+				max_usr_odr = max_t(u16, max_usr_odr, st_lsm6dsox_get_odr(hw, i));
+			} else {
+				if (i == sensor->id)
+					continue;
+
+				max_usr_odr = max_t(u16, max_usr_odr,
+						    st_lsm6dsox_check_odr_dependency(hw, req_hw_odr,
+										     req_hw_uodr, i));
 			}
 		}
 		break;
@@ -779,23 +787,23 @@ int st_lsm6dsox_set_odr(struct st_lsm6dsox_sensor *sensor, int req_odr,
 		break;
 	}
 
-	if (ST_LSM6DSOX_ODR_EXPAND(req_odr, req_uodr) > 0) {
-		int err;
+	if (is_event)
+		prim_sensor->event_hw_odr = req_hw_odr;
 
-		err = st_lsm6dsox_get_odr_val(id, req_odr, req_uodr, &oe);
-		if (err)
+	hw_odr = max_t(u16, req_hw_odr, max_usr_odr);
+	hw_odr = max_t(u16, prim_sensor->event_hw_odr, hw_odr);
+
+	err = st_lsm6dsox_get_odr_val(id, hw_odr, 0, &oe);
+
+	/* check if sensor supports power mode setting */
+	if (sensor->pm != ST_LSM6DSOX_NO_MODE) {
+		err = regmap_update_bits(hw->regmap,
+				st_lsm6dsox_odr_table[id].pm.addr,
+				st_lsm6dsox_odr_table[id].pm.mask,
+				ST_LSM6DSOX_SHIFT_VAL(sensor->pm,
+					    st_lsm6dsox_odr_table[id].pm.mask));
+		if (err < 0)
 			return err;
-
-		/* check if sensor supports power mode setting */
-		if (sensor->pm != ST_LSM6DSOX_NO_MODE) {
-			err = regmap_update_bits(hw->regmap,
-					st_lsm6dsox_odr_table[id].pm.addr,
-					st_lsm6dsox_odr_table[id].pm.mask,
-					ST_LSM6DSOX_SHIFT_VAL(sensor->pm,
-					 st_lsm6dsox_odr_table[id].pm.mask));
-			if (err < 0)
-				return err;
-		}
 	}
 
 	return regmap_update_bits(hw->regmap,
@@ -812,7 +820,7 @@ int st_lsm6dsox_sensor_set_enable(struct st_lsm6dsox_sensor *sensor,
 	int odr = enable ? sensor->odr : 0;
 	int err;
 
-	err = st_lsm6dsox_set_odr(sensor, odr, uodr);
+	err = st_lsm6dsox_set_odr(sensor, false, odr, uodr);
 	if (err < 0)
 		return err;
 
@@ -969,6 +977,7 @@ static int st_lsm6dsox_write_raw(struct iio_dev *iio_dev,
 				case ST_LSM6DSOX_ID_GYRO:
 				case ST_LSM6DSOX_ID_ACC: {
 					err = st_lsm6dsox_set_odr(sensor,
+								  false,
 								  sensor->odr,
 								  sensor->uodr);
 					if (err < 0)
@@ -1574,7 +1583,7 @@ static ssize_t st_lsm6dsox_sysfs_start_selftest(struct device *dev,
 	if (id == ST_LSM6DSOX_ID_ACC) {
 		/* set BDU = 1, FS = 4 g, ODR = 52 Hz */
 		st_lsm6dsox_set_full_scale(sensor, IIO_G_TO_M_S_2(122));
-		st_lsm6dsox_set_odr(sensor, 52, 0);
+		st_lsm6dsox_set_odr(sensor, false, 52, 0);
 		st_lsm6dsox_selftest_sensor(sensor, test);
 
 		/* restore full scale after test */
@@ -1582,7 +1591,7 @@ static ssize_t st_lsm6dsox_sysfs_start_selftest(struct device *dev,
 	} else {
 		/* set BDU = 1, ODR = 208 Hz, FS = 2000 dps */
 		st_lsm6dsox_set_full_scale(sensor, IIO_DEGREE_TO_RAD(70000));
-		st_lsm6dsox_set_odr(sensor, 208, 0);
+		st_lsm6dsox_set_odr(sensor, false, 208, 0);
 		st_lsm6dsox_selftest_sensor(sensor, test);
 
 		/* restore full scale after test */
@@ -2108,12 +2117,13 @@ static int __maybe_unused st_lsm6dsox_suspend(struct device *dev)
 		     ST_LSM6DSOX_WAKE_UP_SENSORS)) {
 			/* do not disable sensors if requested by wake-up */
 			err = st_lsm6dsox_set_odr(sensor,
+						  false,
 						  ST_LSM6DSOX_MIN_ODR_IN_WAKEUP,
 						  0);
 			if (err < 0)
 				return err;
 		} else {
-			err = st_lsm6dsox_set_odr(sensor, 0, 0);
+			err = st_lsm6dsox_set_odr(sensor, false, 0, 0);
 			if (err < 0)
 				return err;
 		}
@@ -2160,7 +2170,7 @@ static int __maybe_unused st_lsm6dsox_resume(struct device *dev)
 			continue;
 
 		if (hw->enable_mask & BIT_ULL(sensor->id)) {
-			err = st_lsm6dsox_set_odr(sensor, sensor->odr,
+			err = st_lsm6dsox_set_odr(sensor, sensor->odr, false,
 						  sensor->uodr);
 			if (err < 0)
 				return err;

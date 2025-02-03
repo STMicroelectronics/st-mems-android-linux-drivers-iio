@@ -700,7 +700,7 @@ int st_lsm6dsox_write_event_config(struct iio_dev *iio_dev,
 						 id, enable);
 
 	err = st_lsm6dsox_set_odr(iio_priv(hw->iio_devs[ST_LSM6DSOX_ID_ACC]),
-				  req_odr, 0);
+				  true, req_odr, 0);
 	if (err < 0)
 		return err;
 
