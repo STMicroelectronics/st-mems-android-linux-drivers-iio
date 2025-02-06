@@ -1103,19 +1103,18 @@ static int st_lsm6dsvx_write_raw(struct iio_dev *iio_dev,
 	struct st_lsm6dsvx_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
-	if (err)
-		return err;
-
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
+		err = iio_device_claim_direct_mode(iio_dev);
+		if (err)
+			return err;
+
 		err = st_lsm6dsvx_set_full_scale(sensor, val2);
-		if (err < 0)
-			break;
 
 		/* some events depends on xl full scale */
 		if (chan->type == IIO_ACCEL)
 			err = st_lsm6dsvx_update_threshold_events(sensor->hw);
+		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		int todr, tuodr;
@@ -1161,8 +1160,6 @@ static int st_lsm6dsvx_write_raw(struct iio_dev *iio_dev,
 		err = -EINVAL;
 		break;
 	}
-
-	iio_device_release_direct_mode(iio_dev);
 
 	return err < 0 ? err : 0;
 }
