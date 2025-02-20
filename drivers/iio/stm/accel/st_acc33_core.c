@@ -380,6 +380,28 @@ static ssize_t st_acc33_get_module_id(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%u\n", hw->module_id);
 }
 
+static __maybe_unused int st_acc33_reg_access(struct iio_dev *iio_dev,
+					      unsigned int reg,
+					      unsigned int writeval,
+					      unsigned int *readval)
+{
+	struct st_acc33_hw *hw = iio_priv(iio_dev);
+	int ret;
+
+	ret = iio_device_claim_direct_mode(iio_dev);
+	if (ret)
+		return ret;
+
+	if (readval == NULL)
+		ret = hw->tf->write(hw->dev, reg, 1, (u8 *)&writeval);
+	else
+		ret = hw->tf->read(hw->dev, reg, 1, (u8 *)readval);
+
+	iio_device_release_direct_mode(iio_dev);
+
+	return (ret < 0) ? ret : 0;
+}
+
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(st_acc33_get_sampling_frequency_avail);
 static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
 		       st_acc33_get_scale_avail, NULL, 0);
@@ -409,6 +431,11 @@ static const struct iio_info st_acc33_info = {
 	.attrs = &st_acc33_attribute_group,
 	.read_raw = st_acc33_read_raw,
 	.write_raw = st_acc33_write_raw,
+
+#ifdef CONFIG_DEBUG_FS
+	.debugfs_reg_access = &st_acc33_reg_access,
+#endif /* CONFIG_DEBUG_FS */
+
 };
 
 static int st_acc33_check_whoami(struct st_acc33_hw *hw)
