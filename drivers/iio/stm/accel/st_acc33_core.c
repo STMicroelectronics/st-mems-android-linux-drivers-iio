@@ -20,32 +20,6 @@
 
 #include "st_acc33.h"
 
-#define REG_WHOAMI_ADDR			0x0f
-#define REG_WHOAMI_VAL			0x33
-
-#define REG_CTRL1_ADDR			0x20
-#define REG_CTRL1_ODR_MASK		GENMASK(7, 4)
-
-#define REG_CTRL3_ADDR			0x22
-#define REG_CTRL3_I1_OVR_MASK		BIT(1)
-#define REG_CTRL3_I1_WTM_MASK		BIT(2)
-#define REG_CTRL3_I1_DRDY1_MASK		BIT(4)
-
-#define REG_CTRL4_ADDR			0x23
-#define REG_CTRL4_BDU_MASK		BIT(7)
-#define REG_CTRL4_FS_MASK		GENMASK(5, 4)
-
-#define REG_CTRL6_ACC_ADDR		0x25
-
-#define REG_OUTX_L_ADDR			0x28
-#define REG_OUTY_L_ADDR			0x2a
-#define REG_OUTZ_L_ADDR			0x2c
-
-#define ST_ACC33_FS_2G			IIO_G_TO_M_S_2(980)
-#define ST_ACC33_FS_4G			IIO_G_TO_M_S_2(1950)
-#define ST_ACC33_FS_8G			IIO_G_TO_M_S_2(3900)
-#define ST_ACC33_FS_16G			IIO_G_TO_M_S_2(11720)
-
 #define ST_ACC33_DATA_CHANNEL(addr, modx, scan_idx)			\
 {									\
 	.type = IIO_ACCEL,						\
@@ -65,14 +39,14 @@
 	},								\
 }
 
-#define ST_ACC33_FLUSH_CHANNEL()				\
-{								\
-	.type = IIO_ACCEL,					\
-	.modified = 0,						\
-	.scan_index = -1,					\
-	.indexed = -1,						\
-	.event_spec = &st_acc33_fifo_flush_event,		\
-	.num_event_specs = 1,					\
+#define ST_ACC33_EVENT_CHANNEL(chan_type, evt_spec)	\
+{							\
+	.type = chan_type,				\
+	.modified = 0,					\
+	.scan_index = -1,				\
+	.indexed = -1,					\
+	.event_spec = &st_acc33_##evt_spec##_event,	\
+	.num_event_specs = 1,				\
 }
 
 struct st_acc33_std_entry {
@@ -96,6 +70,7 @@ struct st_acc33_odr {
 };
 
 static const struct st_acc33_odr st_acc33_odr_table[] = {
+	{   0, 0x00 },	/* power down */
 	{   1, 0x01 },	/* 1Hz */
 	{  10, 0x02 },	/* 10Hz */
 	{  25, 0x03 },	/* 25Hz */
@@ -107,14 +82,15 @@ static const struct st_acc33_odr st_acc33_odr_table[] = {
 
 struct st_acc33_fs {
 	u32 gain;
+	u8 fs;
 	u8 val;
 };
 
 static const struct st_acc33_fs st_acc33_fs_table[] = {
-	{  ST_ACC33_FS_2G, 0x0 },
-	{  ST_ACC33_FS_4G, 0x1 },
-	{  ST_ACC33_FS_8G, 0x2 },
-	{ ST_ACC33_FS_16G, 0x3 },
+	{  ST_ACC33_FS_2G,  2, 0x0 },
+	{  ST_ACC33_FS_4G,  4, 0x1 },
+	{  ST_ACC33_FS_8G,  8, 0x2 },
+	{ ST_ACC33_FS_16G, 16, 0x3 },
 };
 
 const struct iio_event_spec st_acc33_fifo_flush_event = {
@@ -122,11 +98,29 @@ const struct iio_event_spec st_acc33_fifo_flush_event = {
 	.dir = IIO_EV_DIR_EITHER,
 };
 
+static const struct iio_event_spec st_acc33_wakeup_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_RISING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+static const struct iio_event_spec st_acc33_freefall_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_FALLING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE) |
+			 BIT(IIO_EV_INFO_PERIOD),
+};
+
 static const struct iio_chan_spec st_acc33_channels[] = {
 	ST_ACC33_DATA_CHANNEL(REG_OUTX_L_ADDR, IIO_MOD_X, 0),
 	ST_ACC33_DATA_CHANNEL(REG_OUTY_L_ADDR, IIO_MOD_Y, 1),
 	ST_ACC33_DATA_CHANNEL(REG_OUTZ_L_ADDR, IIO_MOD_Z, 2),
-	ST_ACC33_FLUSH_CHANNEL(),
+	ST_ACC33_EVENT_CHANNEL(IIO_ACCEL, fifo_flush),
+	ST_ACC33_EVENT_CHANNEL(IIO_ACCEL, wakeup),
+	ST_ACC33_EVENT_CHANNEL(IIO_ACCEL, freefall),
+
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
@@ -193,12 +187,21 @@ static int st_acc33_set_std_level(struct st_acc33_hw *hw, u16 odr)
 	return 0;
 }
 
-static int st_acc33_update_odr(struct st_acc33_hw *hw, u16 odr)
+int st_acc33_update_odr(struct st_acc33_hw *hw, u16 odr,
+			bool event, bool enable)
 {
+	u16 req_odr;
 	int err;
 	u8 val;
 
-	err = st_acc33_get_odr_val(odr, &val);
+	bool is_enabled = event ? hw->enable : hw->enable_ev_mask;
+
+	if (enable)
+		req_odr = is_enabled ? max_t(u16, odr, hw->odr) : odr;
+	else
+		req_odr = is_enabled ? hw->odr : 0;
+
+	err = st_acc33_get_odr_val(req_odr, &val);
 	if (err < 0)
 		return err;
 
@@ -210,11 +213,9 @@ int st_acc33_set_enable(struct st_acc33_hw *hw, bool enable)
 {
 	int err;
 
-	if (enable)
-		err = st_acc33_update_odr(hw, hw->odr);
-	else
-		err = st_acc33_write_with_mask(hw, REG_CTRL1_ADDR,
-					       REG_CTRL1_ODR_MASK, 0);
+	err = st_acc33_update_odr(hw, hw->odr, false, enable);
+	if (err >= 0)
+		hw->enable = enable;
 
 	return err < 0 ? err : 0;
 }
@@ -238,6 +239,7 @@ static int st_acc33_set_fs(struct st_acc33_hw *hw, u32 gain)
 		return err;
 
 	hw->gain = gain;
+	hw->fs = st_acc33_fs_table[i].fs;
 
 	return 0;
 }
@@ -431,6 +433,10 @@ static const struct iio_info st_acc33_info = {
 	.attrs = &st_acc33_attribute_group,
 	.read_raw = st_acc33_read_raw,
 	.write_raw = st_acc33_write_raw,
+	.read_event_config = st_acc33_read_event_config,
+	.write_event_config = st_acc33_write_event_config,
+	.write_event_value = st_acc33_write_event_value,
+	.read_event_value = st_acc33_read_event_value,
 
 #ifdef CONFIG_DEBUG_FS
 	.debugfs_reg_access = &st_acc33_reg_access,
@@ -525,7 +531,7 @@ int st_acc33_probe(struct device *device, int irq, const char *name,
 	mutex_init(&hw->fifo_lock);
 	mutex_init(&hw->lock);
 
-	hw->odr = st_acc33_odr_table[0].hz;
+	hw->odr = st_acc33_odr_table[1].hz;
 	hw->watermark = 1;
 	hw->dev = device;
 	hw->tf = tf_ops;
@@ -549,6 +555,10 @@ int st_acc33_probe(struct device *device, int irq, const char *name,
 
 	if (hw->irq > 0) {
 		err = st_acc33_fifo_setup(hw);
+		if (err < 0)
+			return err;
+
+		err = st_acc33_event_init(hw);
 		if (err < 0)
 			return err;
 	}

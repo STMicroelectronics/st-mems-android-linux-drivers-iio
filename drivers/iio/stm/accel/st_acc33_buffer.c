@@ -21,18 +21,6 @@
 
 #include "st_acc33.h"
 
-#define REG_CTRL5_ACC_ADDR		0x24
-#define REG_CTRL5_ACC_FIFO_EN_MASK	BIT(6)
-#define REG_CTRL5_ACC_BOOT_MASK		BIT(7)
-
-#define REG_FIFO_CTRL_REG		0x2e
-#define REG_FIFO_CTRL_REG_WTM_MASK	GENMASK(4, 0)
-#define REG_FIFO_CTRL_MODE_MASK		GENMASK(7, 6)
-
-#define REG_FIFO_SRC_ADDR		0x2f
-#define REG_FIFO_SRC_OVR_MASK		BIT(6)
-#define REG_FIFO_SRC_FSS_MASK		GENMASK(4, 0)
-
 #define ST_ACC33_MAX_WATERMARK		28
 
 static inline s64 st_acc33_get_timestamp(struct iio_dev *iio_dev)
@@ -71,6 +59,9 @@ static int st_acc33_read_fifo(struct st_acc33_hw *hw)
 	err = hw->tf->read(hw->dev, REG_FIFO_SRC_ADDR, sizeof(data), &data);
 	if (err < 0)
 		return err;
+
+	if (!(data & REG_FIFO_SRC_WTM_MASK))
+		return 0;
 
 	delta_ts = div_s64(hw->delta_ts, (hw->watermark + 1));
 	nsamples = data & REG_FIFO_SRC_FSS_MASK;
@@ -203,6 +194,8 @@ static irqreturn_t st_acc33_buffer_handler_thread(int irq, void *private)
 	mutex_lock(&hw->fifo_lock);
 	st_acc33_read_fifo(hw);
 	mutex_unlock(&hw->fifo_lock);
+
+	st_acc33_event_handler(hw);
 
 	return IRQ_HANDLED;
 }
