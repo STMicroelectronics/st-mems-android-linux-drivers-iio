@@ -570,7 +570,7 @@ int st_mag40_common_probe(struct iio_dev *iio_dev)
 	if (err)
 		return err;
 
-	dev_info(cdata->dev, "probe ok 4\n");
+	dev_info(cdata->dev, "Device probed\n");
 
 	return 0;
 }
