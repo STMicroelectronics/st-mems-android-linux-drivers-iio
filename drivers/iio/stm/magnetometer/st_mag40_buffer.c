@@ -131,6 +131,10 @@ static int st_mag40_buffer_postdisable(struct iio_dev *indio_dev)
 
 static const struct iio_buffer_setup_ops st_mag40_buffer_setup_ops = {
 	.preenable = st_mag40_buffer_preenable,
+#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
+	.postenable = iio_triggered_buffer_postenable,
+	.predisable = iio_triggered_buffer_predisable,
+#endif /* LINUX_VERSION_CODE */
 	.postdisable = st_mag40_buffer_postdisable,
 };
 
