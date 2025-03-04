@@ -15,7 +15,13 @@
 #include <linux/iio/sysfs.h>
 #include <linux/iio/trigger.h>
 #include <linux/delay.h>
+#include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
 #include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_lps22hb.h"
 
@@ -41,7 +47,7 @@ struct st_lps22hb_odr_table_t {
 	u8 odr_avl[ST_LPS22HB_ODR_LIST_NUM];
 };
 
-const static struct st_lps22hb_odr_table_t st_lps22hb_odr_table = {
+static const struct st_lps22hb_odr_table_t st_lps22hb_odr_table = {
 	.addr = 0x10,
 	.mask = 0x70,
 	.odr_avl = { 0, 1, 10, 25, 50, 75 },
@@ -195,7 +201,7 @@ int st_lps22hb_set_enable(struct st_lps22hb_sensor *sensor, bool enable)
 	return 0;
 }
 
-int st_lps22hb_init_sensors(struct st_lps22hb_hw *hw)
+static int st_lps22hb_init_sensors(struct st_lps22hb_hw *hw)
 {
 	int err;
 

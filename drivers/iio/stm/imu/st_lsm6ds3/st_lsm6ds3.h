@@ -381,6 +381,12 @@ int st_lsm6ds3_write_embedded_registers(struct lsm6ds3_data *cdata,
 int st_lsm6ds3_i2c_master_probe(struct lsm6ds3_data *cdata);
 int st_lsm6ds3_i2c_master_exit(struct lsm6ds3_data *cdata);
 #else /* CONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT */
+static inline int
+st_lsm6ds3_write_embedded_registers(struct lsm6ds3_data *cdata,
+				    u8 reg_addr, u8 *data, int len)
+{
+	return 0;
+}
 static inline int st_lsm6ds3_i2c_master_probe(struct lsm6ds3_data *cdata)
 {
 	return 0;

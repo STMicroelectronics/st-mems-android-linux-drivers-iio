@@ -14,9 +14,16 @@
 #include <linux/iio/buffer.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
-#include <asm/unaligned.h>
+#include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/property.h>
+#include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
+#include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_acc33.h"
 

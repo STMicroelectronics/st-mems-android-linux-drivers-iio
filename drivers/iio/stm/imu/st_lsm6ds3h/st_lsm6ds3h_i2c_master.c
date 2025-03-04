@@ -20,7 +20,14 @@
 #include <linux/iio/events.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
+#include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
 #include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
+
 #include <linux/version.h>
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0)
@@ -1387,7 +1394,7 @@ static const struct iio_trigger_ops st_lsm6ds3h_i2c_master_trigger_ops = {
 	.set_trigger_state = &st_lsm6ds3h_trig_set_state,
 };
 
-int st_lsm6ds3h_i2c_master_allocate_trigger(struct lsm6ds3h_data *cdata)
+static int st_lsm6ds3h_i2c_master_allocate_trigger(struct lsm6ds3h_data *cdata)
 {
 	int err;
 

@@ -7,7 +7,6 @@
  * Copyright 2022 STMicroelectronics Inc.
  */
 
-#include <asm/unaligned.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/sw_trigger.h>
@@ -16,6 +15,12 @@
 #include <linux/iio/triggered_buffer.h>
 #include <linux/module.h>
 #include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
+#include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_lsm6dso16is.h"
 

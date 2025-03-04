@@ -12,6 +12,7 @@
 #include <linux/delay.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
+#include <linux/of.h>
 
 #include "st_imu68.h"
 
@@ -443,9 +444,9 @@ static ssize_t st_imu68_set_sampling_frequency(struct device *dev,
 	return err < 0 ? err : count;
 }
 
-ssize_t st_imu68_get_module_id(struct device *dev,
-				  struct device_attribute *attr,
-				  char *buf)
+static ssize_t st_imu68_get_module_id(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_imu68_sensor *sensor = iio_priv(iio_dev);

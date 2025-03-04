@@ -7,7 +7,6 @@
  * Copyright 2023 STMicroelectronics Inc.
  */
 
-#include <asm/unaligned.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/events.h>
 #include <linux/iio/iio.h>
@@ -19,7 +18,14 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
+#include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_lsm6dsv16bx.h"
 
@@ -84,7 +90,7 @@ static inline int st_lsm6dsv16bx_reset_hwts(struct st_lsm6dsv16bx_hw *hw)
 }
 
 #if defined(CONFIG_IIO_ST_LSM6DSV16BX_ASYNC_HW_TIMESTAMP)
-void st_lsm6dsv16bx_init_timesync_counter(struct st_lsm6dsv16bx_sensor *sensor,
+static void st_lsm6dsv16bx_init_timesync_counter(struct st_lsm6dsv16bx_sensor *sensor,
 					 struct st_lsm6dsv16bx_hw *hw,
 					 bool enable)
 {
@@ -530,7 +536,7 @@ int st_lsm6dsv16bx_update_batching(struct iio_dev *iio_dev, bool enable)
 	return err;
 }
 
-int st_lsm6dsv16bx_update_fifo(struct st_lsm6dsv16bx_sensor *sensor, bool enable)
+static int st_lsm6dsv16bx_update_fifo(struct st_lsm6dsv16bx_sensor *sensor, bool enable)
 {
 	struct st_lsm6dsv16bx_hw *hw = sensor->hw;
 	int err;

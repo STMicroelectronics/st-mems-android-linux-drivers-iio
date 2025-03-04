@@ -745,9 +745,9 @@ st_lis2duxs12_sysfs_get_power_mode_avail(struct device *dev,
 	return len;
 }
 
-ssize_t st_lis2duxs12_get_power_mode(struct device *dev,
-				     struct device_attribute *attr,
-				     char *buf)
+static ssize_t st_lis2duxs12_get_power_mode(struct device *dev,
+					    struct device_attribute *attr,
+					    char *buf)
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
@@ -756,9 +756,9 @@ ssize_t st_lis2duxs12_get_power_mode(struct device *dev,
 		       st_lis2duxs12_power_mode[sensor->pm].string_mode);
 }
 
-ssize_t st_lis2duxs12_set_power_mode(struct device *dev,
-				     struct device_attribute *attr,
-				     const char *buf, size_t size)
+static ssize_t st_lis2duxs12_set_power_mode(struct device *dev,
+					    struct device_attribute *attr,
+					    const char *buf, size_t size)
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);

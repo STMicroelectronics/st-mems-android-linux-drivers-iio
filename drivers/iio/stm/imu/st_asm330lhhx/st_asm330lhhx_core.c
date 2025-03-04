@@ -437,7 +437,7 @@ static const struct st_asm330lhhx_g_lpf_bw_config_t st_asm330lhhx_g_bw = {
 	.ftype = { 0, 1, 2, 3, 4, 5, 6, 7 },
 };
 
-static const inline struct iio_mount_matrix *
+static inline const struct iio_mount_matrix *
 st_asm330lhhx_get_mount_matrix(const struct iio_dev *iio_dev,
 			      const struct iio_chan_spec *chan)
 {
@@ -943,8 +943,8 @@ static int st_asm330lhhx_set_full_scale(struct st_asm330lhhx_sensor *sensor,
 	return 0;
 }
 
-int st_asm330lhhx_get_odr_val(enum st_asm330lhhx_sensor_id id, int odr,
-			      int uodr, int *podr, int *puodr, u8 *val)
+static int st_asm330lhhx_get_odr_val(enum st_asm330lhhx_sensor_id id, int odr,
+				     int uodr, int *podr, int *puodr, u8 *val)
 {
 	int required_odr = ST_ASM330LHHX_ODR_EXPAND(odr, uodr);
 	int sensor_odr;

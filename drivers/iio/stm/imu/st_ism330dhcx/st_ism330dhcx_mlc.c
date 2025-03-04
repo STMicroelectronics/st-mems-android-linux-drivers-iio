@@ -17,6 +17,7 @@
 #include <linux/iio/buffer.h>
 #include <linux/iio/events.h>
 #include <linux/firmware.h>
+#include <linux/of.h>
 #include <linux/version.h>
 
 #include "st_ism330dhcx.h"

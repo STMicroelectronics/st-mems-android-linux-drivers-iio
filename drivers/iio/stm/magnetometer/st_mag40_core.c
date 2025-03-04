@@ -23,7 +23,14 @@
 #include <linux/iio/buffer.h>
 #include <linux/iio/events.h>
 #include <linux/of_device.h>
+#include <linux/property.h>
+#include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
 #include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_mag40_core.h"
 
@@ -150,7 +157,7 @@ int st_mag40_set_enable(struct st_mag40_data *cdata, bool state)
 				       ST_MAG40_EN_MASK, mode);
 }
 
-int st_mag40_init_sensors(struct st_mag40_data *cdata)
+static int st_mag40_init_sensors(struct st_mag40_data *cdata)
 {
 	int err;
 

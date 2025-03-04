@@ -14,6 +14,7 @@
 #include <linux/iio/events.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/buffer.h>
+#include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/version.h>
 

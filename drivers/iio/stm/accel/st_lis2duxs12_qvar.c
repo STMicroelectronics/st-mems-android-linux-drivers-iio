@@ -217,7 +217,7 @@ int st_lis2duxs12_qvar_set_enable(struct st_lis2duxs12_sensor *sensor,
 				enable ? 1 : 0);
 }
 
-struct iio_dev *
+static struct iio_dev *
 st_lis2duxs12_alloc_qvar_iiodev(struct st_lis2duxs12_hw *hw)
 {
 	struct st_lis2duxs12_sensor *sensor;

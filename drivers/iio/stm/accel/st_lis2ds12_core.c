@@ -22,6 +22,7 @@
 #include <linux/delay.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/events.h>
+#include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/version.h>
 
@@ -391,13 +392,7 @@ lis2ds12_write_advanced_cfg_regs_mutex_unlock:
 	return err;
 }
 
-int lis2ds12_set_axis_enable(struct lis2ds12_sensor_data *sdata, u8 value)
-{
-	return 0;
-}
-EXPORT_SYMBOL(lis2ds12_set_axis_enable);
-
-int lis2ds12_set_fifo_mode(struct lis2ds12_data *cdata, enum fifo_mode fm)
+static int lis2ds12_set_fifo_mode(struct lis2ds12_data *cdata, enum fifo_mode fm)
 {
 	u8 reg_value;
 
@@ -416,9 +411,8 @@ int lis2ds12_set_fifo_mode(struct lis2ds12_data *cdata, enum fifo_mode fm)
 				       LIS2DS12_FIFO_MODE_MASK, reg_value,
 				       true);
 }
-EXPORT_SYMBOL(lis2ds12_set_fifo_mode);
 
-int lis2ds12_update_event_functions(struct lis2ds12_data *cdata)
+static int lis2ds12_update_event_functions(struct lis2ds12_data *cdata)
 {
 	u8 reg_val = 0;
 
@@ -439,7 +433,7 @@ int lis2ds12_update_event_functions(struct lis2ds12_data *cdata)
 				true);
 }
 
-int lis2ds12_set_fs(struct lis2ds12_sensor_data *sdata, unsigned int fs)
+static int lis2ds12_set_fs(struct lis2ds12_sensor_data *sdata, unsigned int fs)
 {
 	int err, i;
 
@@ -471,7 +465,7 @@ static int lis2ds12_set_selftest_mode(struct lis2ds12_sensor_data *sdata,
 				lis2ds12_selftest_table[index].streg_val, true);
 }
 
-u8 lis2ds12_event_irq1_value(struct lis2ds12_data *cdata)
+static u8 lis2ds12_event_irq1_value(struct lis2ds12_data *cdata)
 {
 	u8 value = 0x0;
 
@@ -484,7 +478,7 @@ u8 lis2ds12_event_irq1_value(struct lis2ds12_data *cdata)
 	return value;
 }
 
-u8 lis2ds12_event_irq2_value(struct lis2ds12_data *cdata)
+static u8 lis2ds12_event_irq2_value(struct lis2ds12_data *cdata)
 {
 	u8 value = 0x0;
 
@@ -501,7 +495,8 @@ u8 lis2ds12_event_irq2_value(struct lis2ds12_data *cdata)
 	return value;
 }
 
-int lis2ds12_write_max_odr(struct lis2ds12_sensor_data *sdata) {
+static int lis2ds12_write_max_odr(struct lis2ds12_sensor_data *sdata)
+{
 	int err, i;
 	u32 max_odr = 0;
 	u8 power_mode = sdata->cdata->power_mode;
@@ -717,7 +712,7 @@ enable_sensor_error:
 }
 EXPORT_SYMBOL(lis2ds12_set_enable);
 
-int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
+static int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 {
 	int err, i;
 	struct lis2ds12_sensor_data *sdata;
@@ -843,9 +838,9 @@ static ssize_t lis2ds12_get_sampling_frequency(struct device *dev,
 	return sprintf(buf, "%d\n", sdata->odr);
 }
 
-ssize_t lis2ds12_set_sampling_frequency(struct device * dev,
-					struct device_attribute * attr,
-					const char *buf, size_t count)
+static ssize_t lis2ds12_set_sampling_frequency(struct device *dev,
+					       struct device_attribute *attr,
+					       const char *buf, size_t count)
 {
 	int err;
 	u8 power_mode;
@@ -1017,9 +1012,9 @@ static ssize_t lis2ds12_sysfs_get_hwfifo_enabled(struct device *dev,
 	return sprintf(buf, "%d\n", sdata->cdata->hwfifo_enabled);
 }
 
-ssize_t lis2ds12_sysfs_set_hwfifo_enabled(struct device *dev,
-					  struct device_attribute *attr,
-					  const char *buf, size_t count)
+static ssize_t lis2ds12_sysfs_set_hwfifo_enabled(struct device *dev,
+						 struct device_attribute *attr,
+						 const char *buf, size_t count)
 {
 	int err = 0, enable = 0;
 	u8 mode = BYPASS;
@@ -1054,9 +1049,9 @@ lis2ds12_sysfs_get_hwfifo_watermark(struct device *dev,
 	return sprintf(buf, "%d\n", sdata->cdata->hwfifo_watermark);
 }
 
-ssize_t lis2ds12_sysfs_set_hwfifo_watermark(struct device * dev,
-					    struct device_attribute *attr,
-					    const char *buf, size_t count)
+static ssize_t lis2ds12_sysfs_set_hwfifo_watermark(struct device *dev,
+						  struct device_attribute *attr,
+						  const char *buf, size_t count)
 {
 	int err = 0, watermark = 0;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
@@ -1096,9 +1091,9 @@ lis2ds12_sysfs_get_hwfifo_watermark_max(struct device *dev,
 	return sprintf(buf, "%d\n", LIS2DS12_MAX_FIFO_THS);
 }
 
-ssize_t lis2ds12_sysfs_flush_fifo(struct device *dev,
-				  struct device_attribute *attr,
-				  const char *buf, size_t size)
+static ssize_t lis2ds12_sysfs_flush_fifo(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t size)
 {
 	u64 event_type;
 	int64_t sensor_last_timestamp;
@@ -1140,9 +1135,9 @@ ssize_t lis2ds12_sysfs_flush_fifo(struct device *dev,
 	return size;
 }
 
-ssize_t lis2ds12_reset_step_counter(struct device *dev,
-				    struct device_attribute *attr,
-				    const char *buf, size_t size)
+static ssize_t lis2ds12_reset_step_counter(struct device *dev,
+					   struct device_attribute *attr,
+					   const char *buf, size_t size)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lis2ds12_sensor_data *sdata = iio_priv(indio_dev);

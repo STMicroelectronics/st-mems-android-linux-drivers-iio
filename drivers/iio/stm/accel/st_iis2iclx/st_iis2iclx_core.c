@@ -321,7 +321,7 @@ static const struct st_iis2iclx_xl_lpf_bw_config_t st_iis2iclx_xl_bw = {
 	},
 };
 
-static const inline struct iio_mount_matrix *
+static inline const struct iio_mount_matrix *
 st_iis2iclx_get_mount_matrix(const struct iio_dev *iio_dev,
 			     const struct iio_chan_spec *chan)
 {
@@ -728,8 +728,8 @@ static int st_iis2iclx_set_full_scale(struct st_iis2iclx_sensor *sensor,
 	return 0;
 }
 
-int st_iis2iclx_get_odr_val(enum st_iis2iclx_sensor_id id, int odr,
-			    int uodr, int *podr, int *puodr, u8 *val)
+static int st_iis2iclx_get_odr_val(enum st_iis2iclx_sensor_id id, int odr,
+				   int uodr, int *podr, int *puodr, u8 *val)
 {
 	int required_odr = ST_IIS2ICLX_ODR_EXPAND(odr, uodr);
 	int sensor_odr;

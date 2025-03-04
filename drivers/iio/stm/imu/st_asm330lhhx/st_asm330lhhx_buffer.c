@@ -16,9 +16,14 @@
 #include <linux/iio/trigger.h>
 #include <linux/iio/triggered_buffer.h>
 #include <linux/iio/trigger_consumer.h>
-#include <asm/unaligned.h>
 #include <linux/iio/buffer.h>
 #include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
+#include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_asm330lhhx.h"
 
@@ -83,9 +88,10 @@ inline int st_asm330lhhx_reset_hwts(struct st_asm330lhhx_hw *hw)
 }
 
 #if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-void st_asm330lhhx_init_timesync_counter(struct st_asm330lhhx_sensor *sensor,
-					 struct st_asm330lhhx_hw *hw,
-					 bool enable)
+static void
+st_asm330lhhx_init_timesync_counter(struct st_asm330lhhx_sensor *sensor,
+				    struct st_asm330lhhx_hw *hw,
+				    bool enable)
 {
 	spin_lock_irq(&hw->hwtimestamp_lock);
 	hw->timesync_ktime = ktime_set(0, ST_ASM330LHHX_FAST_KTIME);

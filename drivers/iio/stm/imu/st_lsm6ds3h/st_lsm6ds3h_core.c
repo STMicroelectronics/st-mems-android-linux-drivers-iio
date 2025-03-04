@@ -23,7 +23,13 @@
 #include <linux/iio/trigger.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/events.h>
+#include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
 #include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include <linux/iio/common/st_sensors.h>
 #include "st_lsm6ds3h.h"
@@ -394,6 +400,7 @@ static inline int st_lsm6ds3h_enable_embedded_page_regs(struct lsm6ds3h_data *cd
 	return cdata->tf->write(cdata, ST_LSM6DS3H_FUNC_CFG_ACCESS_ADDR, 1, &value, false);
 }
 
+#ifdef CONFIG_ST_LSM6DS3H_IIO_MASTER_SUPPORT
 int st_lsm6ds3h_write_embedded_registers(struct lsm6ds3h_data *cdata,
 					u8 reg_addr, u8 *data, int len)
 {
@@ -464,6 +471,7 @@ restore_digfunc:
 
 	return err;
 }
+#endif /* CONFIG_ST_LSM6DS3H_IIO_MASTER_SUPPORT */
 
 static int lsm6ds3h_set_watermark(struct lsm6ds3h_data *cdata)
 {
@@ -2360,7 +2368,7 @@ ssize_t st_lsm6ds3h_sysfs_set_hwfifo_enabled(struct device *dev,
 		goto set_hwfifo_enabled_unlock_mutex;
 	}
 
-	err = strtobool(buf, &enable);
+	err = kstrtobool(buf, &enable);
 	if (err < 0)
 		goto set_hwfifo_enabled_unlock_mutex;
 

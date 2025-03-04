@@ -56,7 +56,7 @@ static const struct st_h3lis331dl_fs_table_entry st_h3lis331dl_fs_table = {
 	},
 };
 
-static const inline struct iio_mount_matrix *
+static inline const struct iio_mount_matrix *
 st_h3lis331dl_get_mount_matrix(const struct iio_dev *iio_dev,
 			      const struct iio_chan_spec *chan)
 {
@@ -149,7 +149,7 @@ static int st_h3lis331dl_set_full_scale(struct st_h3lis331dl_sensor *sensor,
 	return 0;
 }
 
-int st_h3lis331dl_get_odr_val(int odr, u8 *val)
+static int st_h3lis331dl_get_odr_val(int odr, u8 *val)
 {
 	int i;
 

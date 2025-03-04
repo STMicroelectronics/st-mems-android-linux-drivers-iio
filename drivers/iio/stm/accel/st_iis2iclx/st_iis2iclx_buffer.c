@@ -16,9 +16,14 @@
 #include <linux/iio/trigger.h>
 #include <linux/iio/triggered_buffer.h>
 #include <linux/iio/trigger_consumer.h>
-#include <asm/unaligned.h>
 #include <linux/iio/buffer.h>
 #include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
+#include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_iis2iclx.h"
 
@@ -80,19 +85,19 @@ inline int st_iis2iclx_reset_hwts(struct st_iis2iclx_hw *hw)
 	return 0;
 }
 
-void st_iis2iclx_init_timesync_counter(struct st_iis2iclx_sensor *sensor,
-				       struct st_iis2iclx_hw *hw,
-				       bool enable)
-{
 #if defined(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
+static void st_iis2iclx_init_timesync_counter(struct st_iis2iclx_sensor *sensor,
+					      struct st_iis2iclx_hw *hw,
+					      bool enable)
+{
 	spin_lock_irq(&hw->hwtimestamp_lock);
 	if (sensor->id <= ST_IIS2ICLX_ID_HW)
 		hw->timesync_c[sensor->id] = enable ?
 					     ST_IIS2ICLX_FAST_TO_DEFAULT : 0;
 
 	spin_unlock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 }
+#endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 
 int st_iis2iclx_set_fifo_mode(struct st_iis2iclx_hw *hw,
 			      enum st_iis2iclx_fifo_mode fifo_mode)

@@ -7,7 +7,6 @@
  * Copyright 2023 STMicroelectronics Inc.
  */
 
-#include <asm/unaligned.h>
 #include <linux/interrupt.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/buffer.h>
@@ -23,6 +22,12 @@
 #include <linux/platform_data/st_sensors_pdata.h>
 #include <linux/property.h>
 #include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
+#include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_h3lis331dl.h"
 

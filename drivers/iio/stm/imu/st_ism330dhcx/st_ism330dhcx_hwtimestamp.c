@@ -11,9 +11,15 @@
 #include <linux/iio/kfifo_buf.h>
 #include <linux/iio/events.h>
 #include <linux/iio/buffer.h>
-#include <asm/unaligned.h>
 #include <linux/iio/buffer.h>
 #include "st_ism330dhcx.h"
+#include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
+#include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #define ST_ISM330DHCX_TSYNC_OFFSET_NS		(300 * 1000LL)
 #define ST_ISM330DHCX_TSYNC_DECREMENT(_id)	do { \

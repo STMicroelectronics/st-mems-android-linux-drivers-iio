@@ -23,7 +23,13 @@
 #include <linux/delay.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/events.h>
+#include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
 #include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_ism303dac_accel.h"
 
@@ -665,9 +671,9 @@ static ssize_t ism303dac_get_sampling_frequency(struct device *dev,
 	return sprintf(buf, "%d\n", sdata->odr);
 }
 
-ssize_t ism303dac_set_sampling_frequency(struct device * dev,
-					 struct device_attribute * attr,
-					 const char *buf, size_t count)
+static ssize_t ism303dac_set_sampling_frequency(struct device *dev,
+						struct device_attribute *attr,
+						const char *buf, size_t count)
 {
 	int err;
 	u8 power_mode;
@@ -892,9 +898,9 @@ static ssize_t ism303dac_sysfs_get_hwfifo_enabled(struct device *dev,
 	return sprintf(buf, "%d\n", sdata->cdata->hwfifo_enabled);
 }
 
-ssize_t ism303dac_sysfs_set_hwfifo_enabled(struct device *dev,
-					   struct device_attribute *attr,
-					   const char *buf, size_t count)
+static ssize_t ism303dac_sysfs_set_hwfifo_enabled(struct device *dev,
+						  struct device_attribute *attr,
+						  const char *buf, size_t count)
 {
 	int err = 0, enable = 0;
 	u8 mode = BYPASS;
@@ -929,9 +935,9 @@ static ssize_t ism303dac_sysfs_get_hwfifo_watermark(struct device *dev,
 	return sprintf(buf, "%d\n", sdata->cdata->hwfifo_watermark);
 }
 
-ssize_t ism303dac_sysfs_set_hwfifo_watermark(struct device * dev,
-					struct device_attribute * attr,
-					const char *buf, size_t count)
+static ssize_t ism303dac_sysfs_set_hwfifo_watermark(struct device *dev,
+						  struct device_attribute *attr,
+						  const char *buf, size_t count)
 {
 	int err = 0, watermark = 0;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
@@ -969,9 +975,9 @@ static ssize_t ism303dac_sysfs_get_hwfifo_watermark_max(struct device *dev,
 	return sprintf(buf, "%d\n", ISM303DAC_MAX_FIFO_THS);
 }
 
-ssize_t ism303dac_sysfs_flush_fifo(struct device *dev,
-				   struct device_attribute *attr,
-				   const char *buf, size_t size)
+static ssize_t ism303dac_sysfs_flush_fifo(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t size)
 {
 	u64 event_type;
 	int64_t sensor_last_timestamp;

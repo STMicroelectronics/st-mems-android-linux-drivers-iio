@@ -12,12 +12,18 @@
 #include <linux/iio/iio.h>
 #include <linux/iio/kfifo_buf.h>
 #include <linux/iio/events.h>
-#include <asm/unaligned.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
 #include <linux/iio/trigger.h>
 #include <linux/iio/buffer.h>
+#include <linux/of.h>
 #include <linux/version.h>
+
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
+#include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 
 #include "st_ism330dhcx.h"
 
@@ -90,6 +96,7 @@ inline int st_ism330dhcx_reset_hwts(struct st_ism330dhcx_hw *hw)
 }
 
 #if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+static
 void st_ism330dhcx_init_timesync_counter(struct st_ism330dhcx_sensor *sensor,
 					 struct st_ism330dhcx_hw *hw,
 					 bool enable)

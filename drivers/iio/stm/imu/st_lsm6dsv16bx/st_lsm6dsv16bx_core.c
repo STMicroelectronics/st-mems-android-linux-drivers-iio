@@ -1750,9 +1750,9 @@ ssize_t st_lsm6dsv16bx_get_module_id(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%u\n", hw->module_id);
 }
 
-ssize_t st_lsm6dsv16bx_get_en_tdm(struct device *dev,
-				  struct device_attribute *attr,
-				  char *buf)
+static ssize_t st_lsm6dsv16bx_get_en_tdm(struct device *dev,
+					 struct device_attribute *attr,
+					 char *buf)
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
@@ -1760,9 +1760,9 @@ ssize_t st_lsm6dsv16bx_get_en_tdm(struct device *dev,
 	return sprintf(buf, "%d\n", sensor->hw->en_tdm);
 }
 
-ssize_t st_lsm6dsv16bx_set_en_tdm(struct device *dev,
-				  struct device_attribute *attr,
-				  const char *buf, size_t size)
+static ssize_t st_lsm6dsv16bx_set_en_tdm(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t size)
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);

@@ -7,7 +7,8 @@ This repository contains STMicroelectronics MEMS IIO drivers for the following L
  - 5.10
  - 5.15
  - 6.1
- - 6.6 (WIP)
+ - 6.6
+ - 6.12
 
 For EOL kernel the maintenance has been discontinued and is strongly discouraged from using it for new developments.
 

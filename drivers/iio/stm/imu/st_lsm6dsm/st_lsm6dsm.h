@@ -372,10 +372,16 @@ int st_lsm6dsm_common_resume(struct lsm6dsm_data *cdata);
 
 #ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
 int st_lsm6dsm_write_embedded_registers(struct lsm6dsm_data *cdata,
-						u8 reg_addr, u8 *data, int len);
+					u8 reg_addr, u8 *data, int len);
 int st_lsm6dsm_i2c_master_probe(struct lsm6dsm_data *cdata);
 int st_lsm6dsm_i2c_master_exit(struct lsm6dsm_data *cdata);
 #else /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
+static inline int
+st_lsm6dsm_write_embedded_registers(struct lsm6dsm_data *cdata,
+				    u8 reg_addr, u8 *data, int len)
+{
+	return 0;
+}
 static inline int st_lsm6dsm_i2c_master_probe(struct lsm6dsm_data *cdata)
 {
 	return 0;
