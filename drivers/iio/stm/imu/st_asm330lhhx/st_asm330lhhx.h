@@ -1263,5 +1263,5 @@ int st_asm330lhhx_event_init(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_update_threshold_events(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_update_duration_events(struct st_asm330lhhx_hw *hw);
-inline bool st_asm330lhhx_events_enabled(struct st_asm330lhhx_hw *hw);
+bool st_asm330lhhx_events_enabled(struct st_asm330lhhx_hw *hw);
 #endif /* ST_ASM330LHHX_H */
