@@ -2565,7 +2565,7 @@ st_asm330lhhx_configure_wake_up(struct st_asm330lhhx_hw *hw)
 	int err;
 
 	/* disable fifo wtm interrupt */
-	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_INT1_CTRL_ADDR,
+	err = regmap_update_bits(hw->regmap, hw->drdy_reg,
 				 ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
 				 FIELD_PREP(ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
 					    0));
@@ -2625,6 +2625,8 @@ st_asm330lhhx_configure_wake_up(struct st_asm330lhhx_hw *hw)
 			st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.mask,
 			ST_ASM330LHHX_SHIFT_VAL(0x02,
 				st_asm330lhhx_odr_table[ST_ASM330LHHX_ID_ACC].reg.mask));
+
+	set_bit(ST_ASM330LHHX_HW_OPERATIONAL, &hw->state);
 
 	return err < 0 ? err : 0;
 }
@@ -2740,8 +2742,9 @@ static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 		hw->wakeup_status &= ST_ASM330LHHX_WAKE_UP_EVENT_MASK;
 
 #if defined(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)
-	/* flush fifo data to user space */
+		/* flush fifo data to user space */
 		st_asm330lhhx_flush_fifo_during_resume(hw);
+		clear_bit(ST_ASM330LHHX_HW_OPERATIONAL, &hw->state);
 #endif /* CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND */
 
 	}
