@@ -759,7 +759,7 @@ st_lis2duxs12_write_with_mask_locked(struct st_lis2duxs12_hw *hw,
 				     unsigned int data)
 {
 	int err;
-	unsigned int val = FIELD_PREP(mask, data);
+	unsigned int val = ST_LIS2DUXS12_SHIFT_VAL(data, mask);
 
 	mutex_lock(&hw->page_lock);
 	err = regmap_update_bits(hw->regmap, addr, mask, val);
