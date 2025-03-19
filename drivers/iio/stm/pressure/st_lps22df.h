@@ -15,6 +15,7 @@
 #include <linux/iio/iio.h>
 #include <linux/property.h>
 #include <linux/iio/trigger.h>
+#include <linux/workqueue.h>
 
 #include "../common/stm_iio_types.h"
 
@@ -145,6 +146,12 @@ struct st_lps22df_hw {
 	s64 ts;
 	const struct st_lps22df_settings *settings;
 
+	/* for temperature management */
+	struct workqueue_struct *workqueue;
+	struct work_struct iio_work;
+	struct hrtimer hr_timer;
+	ktime_t ktime;
+
 	const struct st_lps22df_transfer_function *tf;
 	struct st_lps22df_transfer_buffer tb;
 };
@@ -154,6 +161,7 @@ struct st_lps22df_sensor {
 	enum st_lps22df_sensor_type type;
 	char name[32];
 
+	u64 timestamp;
 	u32 gain;
 	u8 odr;
 };
@@ -170,5 +178,6 @@ ssize_t st_lps22df_sysfs_set_hwfifo_watermark(struct device *dev,
 ssize_t st_lps22df_sysfs_flush_fifo(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t size);
-
+int st_lps22df_deallocate_buffers(struct st_lps22df_hw *hw);
+int st_lps22df_remove(struct device *dev);
 #endif /* __ST_LPS22DF_H */

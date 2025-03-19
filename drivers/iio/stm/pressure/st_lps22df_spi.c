@@ -9,6 +9,7 @@
 
 #include <linux/spi/spi.h>
 #include <linux/of.h>
+#include <linux/version.h>
 
 #include "st_lps22df.h"
 
@@ -76,6 +77,18 @@ static int st_lps22df_spi_probe(struct spi_device *spi)
 				       hw_id, &st_lps22df_tf_spi);
 }
 
+#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
+static void st_lps22df_spi_remove(struct spi_device *spi)
+{
+	st_lps22df_remove(&spi->dev);
+}
+#else /* LINUX_VERSION_CODE */
+static int st_lps22df_spi_remove(struct spi_device *spi)
+{
+	return st_lps22df_remove(&spi->dev);
+}
+#endif /* LINUX_VERSION_CODE */
+
 static const struct spi_device_id st_lps22df_ids[] = {
 	{ "lps22df", ST_LPS22DF_ID },
 	{ "lps28dfw", ST_LPS28DFW_ID },
@@ -103,6 +116,7 @@ static struct spi_driver st_lps22df_spi_driver = {
 		   .of_match_table = of_match_ptr(st_lps22df_id_table),
 	},
 	.probe = st_lps22df_spi_probe,
+	.remove = st_lps22df_spi_remove,
 	.id_table = st_lps22df_ids,
 };
 module_spi_driver(st_lps22df_spi_driver);

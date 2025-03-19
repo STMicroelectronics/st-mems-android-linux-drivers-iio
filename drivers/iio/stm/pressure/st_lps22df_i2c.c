@@ -98,6 +98,18 @@ static int st_lps22df_i2c_probe(struct i2c_client *client,
 }
 #endif /* LINUX_VERSION_CODE */
 
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+static void st_lps22df_i2c_remove(struct i2c_client *client)
+{
+	st_lps22df_remove(&client->dev);
+}
+#else /* LINUX_VERSION_CODE */
+static int st_lps22df_i2c_remove(struct i2c_client *client)
+{
+	return st_lps22df_remove(&client->dev);
+}
+#endif /* LINUX_VERSION_CODE */
+
 static const struct i2c_device_id st_lps22df_ids[] = {
 	{ "lps22df", ST_LPS22DF_ID },
 	{ "lps28dfw", ST_LPS28DFW_ID },
@@ -125,6 +137,7 @@ static struct i2c_driver st_lps22df_i2c_driver = {
 		   .of_match_table = of_match_ptr(st_lps22df_id_table),
 	},
 	.probe = st_lps22df_i2c_probe,
+	.remove = st_lps22df_i2c_remove,
 	.id_table = st_lps22df_ids,
 };
 module_i2c_driver(st_lps22df_i2c_driver);

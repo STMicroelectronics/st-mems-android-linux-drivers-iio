@@ -93,6 +93,14 @@ static const struct iio_chan_spec st_lps22df_temp_channels[] = {
 			.endianness = IIO_LE,
 		},
 	},
+	{
+		.type = IIO_PRESSURE,
+		.scan_index = -1,
+		.indexed = -1,
+		.event_spec = &st_lps22df_fifo_flush_event,
+		.num_event_specs = 1,
+	},
+	IIO_CHAN_SOFT_TIMESTAMP(1)
 };
 
 static const struct st_lps22df_settings st_lps22df_sensor_settings[] = {
@@ -459,9 +467,20 @@ static ssize_t st_lps22df_sysfs_scale_avail(struct device *dev,
 	struct st_lps22df_hw *hw = sensor->hw;
 	int i, len = 0;
 
-	for (i = 0; i < hw->settings->fs_table.fs_len; i++)
-		len += scnprintf(buf + len, PAGE_SIZE - len, "0.%09u ",
-				 hw->settings->fs_table.fs_avl[i].gain);
+	switch (sensor->type) {
+	case ST_LPS22DF_PRESS:
+		for (i = 0; i < hw->settings->fs_table.fs_len; i++)
+			len += scnprintf(buf + len, PAGE_SIZE - len, "0.%09u ",
+					 hw->settings->fs_table.fs_avl[i].gain);
+		break;
+	case ST_LPS22DF_TEMP:
+		len += scnprintf(buf + len, PAGE_SIZE - len, "%u ",
+				 1000 / ST_LPS22DF_TEMP_FS_AVL_GAIN);
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	buf[len - 1] = '\n';
 
 	return len;
@@ -492,6 +511,8 @@ static int st_lps22df_write_raw_get_fmt(struct iio_dev *indio_dev,
 
 static IIO_DEVICE_ATTR(in_pressure_scale_available, 0444,
 		       st_lps22df_sysfs_scale_avail, NULL, 0);
+static IIO_DEVICE_ATTR(in_temp_scale_available, 0444,
+		       st_lps22df_sysfs_scale_avail, NULL, 0);
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(st_lps22df_get_sampling_frequency_avail);
 static IIO_DEVICE_ATTR(hwfifo_watermark, 0644,
 		       st_lps22df_sysfs_get_hwfifo_watermark,
@@ -512,6 +533,7 @@ static struct attribute *st_lps22df_press_attributes[] = {
 
 static struct attribute *st_lps22df_temp_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
+	&iio_dev_attr_in_temp_scale_available.dev_attr.attr,
 	NULL,
 };
 
@@ -621,6 +643,34 @@ int st_lps22df_common_probe(struct device *dev, int irq, int hw_id,
 	return 0;
 }
 EXPORT_SYMBOL(st_lps22df_common_probe);
+
+int st_lps22df_remove(struct device *dev)
+{
+	struct st_lps22df_hw *hw = dev_get_drvdata(dev);
+	struct st_lps22df_sensor *sensor;
+	int i, err = 0;
+
+	for (i = 0; i < ST_LPS22DF_SENSORS_NUMB; i++) {
+		int err;
+
+		if (!hw->iio_devs[i])
+			continue;
+
+		sensor = iio_priv(hw->iio_devs[i]);
+		if (!(hw->enable_mask & BIT(sensor->type)))
+			continue;
+
+		err = st_lps22df_set_enable(sensor, false);
+		if (err < 0)
+			return err;
+	}
+
+	if (hw->irq)
+		err = st_lps22df_deallocate_buffers(hw);
+
+	return err;
+}
+EXPORT_SYMBOL(st_lps22df_remove);
 
 MODULE_DESCRIPTION("STMicroelectronics lps22df driver");
 MODULE_AUTHOR("MEMS Software Solutions Team");

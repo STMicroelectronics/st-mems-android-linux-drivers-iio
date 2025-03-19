@@ -125,25 +125,47 @@ ssize_t st_lps22df_sysfs_flush_fifo(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct st_lps22df_sensor *sensor = iio_priv(indio_dev);
 	struct st_lps22df_hw *hw = sensor->hw;
+	enum iio_chan_type type;
 	int len, dir;
 	s64 fts;
 
 	mutex_lock(&hw->fifo_lock);
-	len = st_lps22df_read_fifo(hw, hw->delta_ts);
+
 	hw->ts = st_lps22df_get_time_ns(hw);
 	hw->ts_irq = hw->ts;
 
-	/* flush event timestamp must match with last sample pushed in fifo */
-	if (len)
+	switch (sensor->type) {
+	case ST_LPS22DF_PRESS:
+		type = IIO_PRESSURE;
+		len = st_lps22df_read_fifo(hw, hw->delta_ts);
+
+		/*
+		 * flush event timestamp must match with last sample pushed
+		 * in fifo
+		 */
+		if (len)
+			fts = hw->ts;
+		else
+			fts = hw->last_fifo_ts;
+
+		break;
+	case ST_LPS22DF_TEMP:
+		type = IIO_TEMP;
+
+		/* temperature not support FIFO */
+		len = 0;
 		fts = hw->ts;
-	else
-		fts = hw->last_fifo_ts;
+		break;
+	default:
+		mutex_unlock(&hw->fifo_lock);
+		return -EINVAL;
+	}
 
 	mutex_unlock(&hw->fifo_lock);
 
 	dir = len > 0 ? STM_IIO_EV_DIR_FIFO_DATA : STM_IIO_EV_DIR_FIFO_EMPTY;
 	iio_push_event(indio_dev,
-		       IIO_UNMOD_EVENT_CODE(IIO_PRESSURE, -1,
+		       IIO_UNMOD_EVENT_CODE(type, -1,
 					    STM_IIO_EV_TYPE_FIFO_FLUSH, dir),
 		       fts);
 
@@ -184,28 +206,39 @@ static int st_lps22df_buffer_preenable(struct iio_dev *indio_dev)
 	struct st_lps22df_hw *hw = sensor->hw;
 	int err;
 
-	err = st_lps22df_set_fifo_mode(sensor->hw, ST_LPS22DF_STREAM);
-	if (err < 0)
-		return err;
+	switch (sensor->type) {
+	case ST_LPS22DF_PRESS:
+		err = st_lps22df_set_fifo_mode(sensor->hw, ST_LPS22DF_STREAM);
+		if (err < 0)
+			return err;
 
-	err = st_lps22df_update_fifo_watermark(hw, hw->watermark);
-	if (err < 0)
-		return err;
+		err = st_lps22df_update_fifo_watermark(hw, hw->watermark);
+		if (err < 0)
+			return err;
 
-	err = st_lps22df_write_with_mask(sensor->hw, ST_LPS22DF_CTRL4_ADDR,
-					 ST_LPS22DF_INT_F_WTM_MASK, true);
-	if (err < 0)
-		return err;
+		err = st_lps22df_write_with_mask(sensor->hw,
+						 ST_LPS22DF_CTRL4_ADDR,
+						 ST_LPS22DF_INT_F_WTM_MASK,
+						 true);
+		if (err < 0)
+			return err;
 
-	err = st_lps22df_set_enable(sensor, true);
-	if (err < 0)
-		return err;
+		hw->delta_ts = div_s64(1000000000UL, hw->odr);
+		hw->ts = st_lps22df_get_time_ns(hw);
+		hw->ts_irq = hw->ts;
+		break;
+	case ST_LPS22DF_TEMP: {
+			ktime_t ktime = ktime_set(0, 1000000000 / sensor->odr);
 
-	hw->delta_ts = div_s64(1000000000UL, hw->odr);
-	hw->ts = st_lps22df_get_time_ns(hw);
-	hw->ts_irq = hw->ts;
+			hrtimer_start(&hw->hr_timer, ktime, HRTIMER_MODE_REL);
+			hw->ktime = ktime;
+		}
+		break;
+	default:
+		return -EINVAL;
+	}
 
-	return 0;
+	return st_lps22df_set_enable(sensor, true);
 }
 
 static int st_lps22df_buffer_postdisable(struct iio_dev *indio_dev)
@@ -213,14 +246,26 @@ static int st_lps22df_buffer_postdisable(struct iio_dev *indio_dev)
 	struct st_lps22df_sensor *sensor = iio_priv(indio_dev);
 	int err;
 
-	err = st_lps22df_set_fifo_mode(sensor->hw, ST_LPS22DF_BYPASS);
-	if (err < 0)
-		return err;
+	switch (sensor->type) {
+	case ST_LPS22DF_PRESS:
+		err = st_lps22df_set_fifo_mode(sensor->hw, ST_LPS22DF_BYPASS);
+		if (err < 0)
+			return err;
 
-	err = st_lps22df_write_with_mask(sensor->hw, ST_LPS22DF_CTRL4_ADDR,
-					 ST_LPS22DF_INT_F_WTM_MASK, false);
-	if (err < 0)
-		return err;
+		err = st_lps22df_write_with_mask(sensor->hw,
+						 ST_LPS22DF_CTRL4_ADDR,
+						 ST_LPS22DF_INT_F_WTM_MASK,
+						 false);
+		if (err < 0)
+			return err;
+		break;
+	case ST_LPS22DF_TEMP:
+		cancel_work_sync(&sensor->hw->iio_work);
+		hrtimer_cancel(&sensor->hw->hr_timer);
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	return st_lps22df_set_enable(sensor, false);
 }
@@ -230,6 +275,89 @@ static const struct iio_buffer_setup_ops st_lps22df_buffer_ops = {
 	.postdisable = st_lps22df_buffer_postdisable,
 };
 
+static enum hrtimer_restart st_lps22df_poll_function_read(struct hrtimer *timer)
+{
+	struct st_lps22df_sensor *sensor;
+	struct st_lps22df_hw *hw;
+
+	hw = container_of((struct hrtimer *)timer,
+			   struct st_lps22df_hw, hr_timer);
+
+	sensor = iio_priv(hw->iio_devs[ST_LPS22DF_TEMP]);
+	sensor->timestamp = st_lps22df_get_time_ns(hw);
+	queue_work(hw->workqueue, &hw->iio_work);
+
+	return HRTIMER_NORESTART;
+}
+
+static void st_lps22df_report_temp(struct st_lps22df_sensor *sensor,
+				    u8 *tmp, int64_t timestamp)
+{
+	struct iio_dev *iio_dev = sensor->hw->iio_devs[ST_LPS22DF_TEMP];
+	u8 iio_buf[ALIGN(2, sizeof(s64)) + sizeof(s64)];
+
+	memcpy(iio_buf, tmp, 2);
+	iio_push_to_buffers_with_timestamp(iio_dev, iio_buf, timestamp);
+}
+
+static void st_lps22df_poll_function_work(struct work_struct *iio_work)
+{
+	struct st_lps22df_sensor *sensor;
+	struct st_lps22df_hw *hw;
+	ktime_t tmpkt, ktdelta;
+	u8 data[2];
+	int err;
+
+	hw = container_of((struct work_struct *)iio_work,
+			   struct st_lps22df_hw, iio_work);
+	sensor = iio_priv(hw->iio_devs[ST_LPS22DF_TEMP]);
+
+	/* adjust delta time */
+	ktdelta = ktime_set(0, st_lps22df_get_time_ns(hw) - sensor->timestamp);
+
+	/* avoid negative value in case of high odr */
+	mutex_lock(&hw->lock);
+	if (ktime_after(hw->ktime, ktdelta))
+		tmpkt = ktime_sub(hw->ktime, ktdelta);
+	else
+		tmpkt = hw->ktime;
+
+	hrtimer_start(&hw->hr_timer, tmpkt, HRTIMER_MODE_REL);
+	mutex_unlock(&hw->lock);
+
+	err = hw->tf->read(hw->dev,
+			   hw->iio_devs[ST_LPS22DF_TEMP]->channels->address,
+			   ARRAY_SIZE(data),
+			   data);
+	mutex_unlock(&hw->lock);
+
+	if (err < 0)
+		return;
+
+	st_lps22df_report_temp(sensor, data, sensor->timestamp);
+}
+
+static inline void st_lps22df_flush_works(struct st_lps22df_hw *hw)
+{
+	flush_workqueue(hw->workqueue);
+}
+
+static inline int st_lps22df_destroy_workqueue(struct st_lps22df_hw *hw)
+{
+	if (hw->workqueue)
+		destroy_workqueue(hw->workqueue);
+
+	return 0;
+}
+
+static inline int st_lps22df_allocate_workqueue(struct st_lps22df_hw *hw)
+{
+	if (!hw->workqueue)
+		hw->workqueue = create_workqueue(ST_LPS22DF_DEV_NAME);
+
+	return !hw->workqueue ? -ENOMEM : 0;
+}
+
 int st_lps22df_allocate_buffers(struct st_lps22df_hw *hw)
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
@@ -237,7 +365,7 @@ int st_lps22df_allocate_buffers(struct st_lps22df_hw *hw)
 #endif /* LINUX_VERSION_CODE */
 	unsigned long irq_type;
 	u8 int_active = 0;
-	int err;
+	int err, i;
 
 	irq_type = irqd_get_trigger_type(irq_get_irq_data(hw->irq));
 
@@ -252,7 +380,6 @@ int st_lps22df_allocate_buffers(struct st_lps22df_hw *hw)
 		break;
 	default:
 		dev_info(hw->dev, "mode %lx unsupported\n", irq_type);
-
 		return -EINVAL;
 	}
 
@@ -286,28 +413,49 @@ int st_lps22df_allocate_buffers(struct st_lps22df_hw *hw)
 	if (err)
 		return err;
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-	err = devm_iio_kfifo_buffer_setup(hw->dev,
-					  hw->iio_devs[ST_LPS22DF_PRESS],
-					  &st_lps22df_buffer_ops);
-	if (err)
-		return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-	err = devm_iio_kfifo_buffer_setup(hw->dev,
-					  hw->iio_devs[ST_LPS22DF_PRESS],
-					  INDIO_BUFFER_SOFTWARE,
-					  &st_lps22df_buffer_ops);
-	if (err)
-		return err;
-#else /* LINUX_VERSION_CODE */
-	buffer = devm_iio_kfifo_allocate(hw->dev);
-	if (!buffer)
-		return -ENOMEM;
+	for (i = 0; i < ST_LPS22DF_SENSORS_NUMB; i++) {
 
-	iio_device_attach_buffer(hw->iio_devs[ST_LPS22DF_PRESS], buffer);
-	hw->iio_devs[ST_LPS22DF_PRESS]->modes |= INDIO_BUFFER_SOFTWARE;
-	hw->iio_devs[ST_LPS22DF_PRESS]->setup_ops = &st_lps22df_buffer_ops;
+#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
+		err = devm_iio_kfifo_buffer_setup(hw->dev,
+						  hw->iio_devs[i],
+						  &st_lps22df_buffer_ops);
+		if (err)
+			return err;
+#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
+		err = devm_iio_kfifo_buffer_setup(hw->dev,
+						  hw->iio_devs[i],
+						  INDIO_BUFFER_SOFTWARE,
+						  &st_lps22df_buffer_ops);
+		if (err)
+			return err;
+#else /* LINUX_VERSION_CODE */
+		buffer = devm_iio_kfifo_allocate(hw->dev);
+		if (!buffer)
+			return -ENOMEM;
+
+		iio_device_attach_buffer(hw->iio_devs[i], buffer);
+		hw->iio_devs[i]->modes |= INDIO_BUFFER_SOFTWARE;
+		hw->iio_devs[i]->setup_ops = &st_lps22df_buffer_ops;
 #endif /* LINUX_VERSION_CODE */
+
+	}
+
+	/* configure sensor hrtimer for temperature */
+	err = st_lps22df_allocate_workqueue(hw);
+	if (err)
+		return err;
+
+	hrtimer_init(&hw->hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	hw->hr_timer.function = &st_lps22df_poll_function_read;
+	INIT_WORK(&hw->iio_work, st_lps22df_poll_function_work);
+
+	return 0;
+}
+
+int st_lps22df_deallocate_buffers(struct st_lps22df_hw *hw)
+{
+	st_lps22df_flush_works(hw);
+	st_lps22df_destroy_workqueue(hw);
 
 	return 0;
 }
