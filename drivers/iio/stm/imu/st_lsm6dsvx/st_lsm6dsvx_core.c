@@ -1196,9 +1196,20 @@ st_lsm6dsvx_sysfs_scale_avail(struct device *dev, struct device_attribute *attr,
 	struct st_lsm6dsvx_hw *hw = sensor->hw;
 	int i, len = 0;
 
-	for (i = 0; i < hw->fs_table[id].size; i++)
-		len += scnprintf(buf + len, PAGE_SIZE - len, "0.%09u ",
-				 hw->fs_table[id].fs_avl[i].gain);
+	for (i = 0; i < hw->fs_table[id].size; i++) {
+		if (sensor->id != ST_LSM6DSVX_ID_TEMP) {
+			len += scnprintf(buf + len, PAGE_SIZE - len, "0.%09u ",
+					 hw->fs_table[id].fs_avl[i].gain);
+		} else {
+			int hi, low;
+
+			hi = (int)(hw->fs_table[id].fs_avl[i].gain / 1000);
+			low = (int)(hw->fs_table[id].fs_avl[i].gain % 1000);
+			len += scnprintf(buf + len, PAGE_SIZE - len,
+					 "%d.%d ", hi, low);
+		}
+	}
+
 	buf[len - 1] = '\n';
 
 	return len;
