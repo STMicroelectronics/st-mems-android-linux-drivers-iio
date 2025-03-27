@@ -26,11 +26,8 @@ static const struct regmap_config st_lis2dw12_i2c_regmap_config = {
 
 #if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
 static int st_lis2dw12_i2c_probe(struct i2c_client *client)
-#else /* LINUX_VERSION_CODE */
-static int st_lis2dw12_i2c_probe(struct i2c_client *client,
-				 const struct i2c_device_id *id)
-#endif /* LINUX_VERSION_CODE */
 {
+	const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	struct regmap *regmap;
 
 	regmap = devm_regmap_init_i2c(client, &st_lis2dw12_i2c_regmap_config);
@@ -43,8 +40,28 @@ static int st_lis2dw12_i2c_probe(struct i2c_client *client,
 	}
 
 	return st_lis2dw12_probe(&client->dev, client->irq,
-				 client->name, regmap);
+				 client->name, id->driver_data, regmap);
 }
+#else /* LINUX_VERSION_CODE */
+static int st_lis2dw12_i2c_probe(struct i2c_client *client,
+				 const struct i2c_device_id *id)
+{
+	enum st_lis2dw12_hw_id hw_id = (enum st_lis2dw12_hw_id)id->driver_data;
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_i2c(client, &st_lis2dw12_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+
+		return PTR_ERR(regmap);
+	}
+
+	return st_lis2dw12_probe(&client->dev, client->irq,
+				 client->name, hw_id, regmap);
+}
+#endif /* LINUX_VERSION_CODE */
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
 static void st_lis2dw12_i2c_remove(struct i2c_client *client)
@@ -71,14 +88,19 @@ static const struct of_device_id st_lis2dw12_i2c_of_match[] = {
 		.compatible = "st,ais2ih",
 		.data = ST_AIS2IH_DEV_NAME,
 	},
+	{
+		.compatible = "st,ais2dw12",
+		.data = ST_AIS2DW12_DEV_NAME,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, st_lis2dw12_i2c_of_match);
 
 static const struct i2c_device_id st_lis2dw12_i2c_id_table[] = {
-	{ ST_LIS2DW12_DEV_NAME },
-	{ ST_IIS2DLPC_DEV_NAME },
-	{ ST_AIS2IH_DEV_NAME },
+	{ ST_LIS2DW12_DEV_NAME, ST_LIS2DW12_ID },
+	{ ST_IIS2DLPC_DEV_NAME, ST_IIS2DLPC_ID },
+	{ ST_AIS2IH_DEV_NAME, ST_AIS2IH_ID },
+	{ ST_AIS2DW12_DEV_NAME, ST_AIS2DW12_ID },
 	{},
 };
 MODULE_DEVICE_TABLE(i2c, st_lis2dw12_i2c_id_table);

@@ -49,28 +49,6 @@ struct st_lis2dw12_std_entry st_lis2dw12_std_table[] = {
 	{ 1600, 64 },
 };
 
-static const struct st_lis2dw12_odr_entry_t st_lis2dw12_odr_table[] = {
-	[ST_LIS2DW12_ID_ACC] = {
-		.size = 9,
-		.odr[0] = {    0, 0x0 }, /* power-down */
-		.odr[1] = {   12, 0x2 }, /* LP 12.5Hz */
-		.odr[2] = {   25, 0x3 }, /* LP 25Hz*/
-		.odr[3] = {   50, 0x4 }, /* LP 50Hz*/
-		.odr[4] = {  100, 0x5 }, /* LP 100Hz*/
-		.odr[5] = {  200, 0x6 }, /* LP 200Hz*/
-		.odr[6] = {  400, 0x7 }, /* HP 400Hz*/
-		.odr[7] = {  800, 0x8 }, /* HP 800Hz*/
-		.odr[8] = { 1600, 0x9 }, /* HP 1600Hz*/
-	},
-	[ST_LIS2DW12_ID_TEMP] = {
-		.size = 4,
-		.odr[0] = {  0, 0x0 },
-		.odr[1] = { 12, 0x2 },
-		.odr[2] = { 25, 0x3 },
-		.odr[3] = { 50, 0x4 },
-	},
-};
-
 struct st_lis2dw12_fs {
 	u32 gain;
 	u8 val;
@@ -92,6 +70,105 @@ static const struct st_lis2dw12_fs_entry_t st_lis2dw12_fs_table[] = {
 	[ST_LIS2DW12_ID_TEMP] = {
 		.size = 1,
 		.fs[0] = { ST_LIS2DW12_FS_TEMP_GAIN, 0x0 },
+	},
+};
+
+static const struct st_lis2dw12_settings st_lis2dw12_sensor_settings[] = {
+	{
+		.id = {
+			.hw_id = ST_LIS2DW12_ID,
+			.name = ST_LIS2DW12_DEV_NAME,
+			.st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC] = {
+				.size = 9,
+				.odr[0] = {    0, 0x0 }, /* power-down */
+				.odr[1] = {   12, 0x2 }, /* LP 12.5Hz */
+				.odr[2] = {   25, 0x3 }, /* LP 25Hz */
+				.odr[3] = {   50, 0x4 }, /* LP 50Hz */
+				.odr[4] = {  100, 0x5 }, /* LP 100Hz */
+				.odr[5] = {  200, 0x6 }, /* LP 200Hz */
+				.odr[6] = {  400, 0x7 }, /* HP 400Hz */
+				.odr[7] = {  800, 0x8 }, /* HP 800Hz */
+				.odr[8] = { 1600, 0x9 }, /* HP 1600Hz */
+			},
+			.st_lis2dw12_odr_table[ST_LIS2DW12_ID_TEMP] = {
+				.size = 4,
+				.odr[0] = {  0, 0x0 },
+				.odr[1] = { 12, 0x2 },
+				.odr[2] = { 25, 0x3 },
+				.odr[3] = { 50, 0x4 },
+			},
+		},
+	},
+	{
+		.id = {
+			.hw_id = ST_IIS2DLPC_ID,
+			.name = ST_IIS2DLPC_DEV_NAME,
+			.st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC] = {
+				.size = 9,
+				.odr[0] = {    0, 0x0 }, /* power-down */
+				.odr[1] = {   12, 0x2 }, /* LP 12.5Hz */
+				.odr[2] = {   25, 0x3 }, /* LP 25Hz */
+				.odr[3] = {   50, 0x4 }, /* LP 50Hz */
+				.odr[4] = {  100, 0x5 }, /* LP 100Hz */
+				.odr[5] = {  200, 0x6 }, /* LP 200Hz */
+				.odr[6] = {  400, 0x7 }, /* HP 400Hz */
+				.odr[7] = {  800, 0x8 }, /* HP 800Hz */
+				.odr[8] = { 1600, 0x9 }, /* HP 1600Hz */
+			},
+			.st_lis2dw12_odr_table[ST_LIS2DW12_ID_TEMP] = {
+				.size = 4,
+				.odr[0] = {  0, 0x0 },
+				.odr[1] = { 12, 0x2 },
+				.odr[2] = { 25, 0x3 },
+				.odr[3] = { 50, 0x4 },
+			},
+		},
+	},
+	{
+		.id = {
+			.hw_id = ST_AIS2IH_ID,
+			.name = ST_AIS2IH_DEV_NAME,
+			.st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC] = {
+				.size = 9,
+				.odr[0] = {    0, 0x0 }, /* power-down */
+				.odr[1] = {   12, 0x2 }, /* LP 12.5Hz */
+				.odr[2] = {   25, 0x3 }, /* LP 25Hz */
+				.odr[3] = {   50, 0x4 }, /* LP 50Hz */
+				.odr[4] = {  100, 0x5 }, /* LP 100Hz */
+				.odr[5] = {  200, 0x6 }, /* LP 200Hz */
+				.odr[6] = {  400, 0x7 }, /* HP 400Hz */
+				.odr[7] = {  800, 0x8 }, /* HP 800Hz */
+				.odr[8] = { 1600, 0x9 }, /* HP 1600Hz */
+			},
+			.st_lis2dw12_odr_table[ST_LIS2DW12_ID_TEMP] = {
+				.size = 4,
+				.odr[0] = {  0, 0x0 },
+				.odr[1] = { 12, 0x2 },
+				.odr[2] = { 25, 0x3 },
+				.odr[3] = { 50, 0x4 },
+			},
+		},
+	},
+	{
+		.id = {
+			.hw_id = ST_AIS2DW12_ID,
+			.name = ST_AIS2DW12_DEV_NAME,
+			.st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC] = {
+				.size = 9,
+				.odr[0] = {    0, 0x0 }, /* power-down */
+				.odr[1] = {   12, 0x2 }, /* LP 12.5Hz */
+				.odr[2] = {   25, 0x3 }, /* LP 25Hz */
+				.odr[3] = {   50, 0x4 }, /* LP 50Hz */
+				.odr[4] = {  100, 0x5 }, /* LP 100Hz */
+			},
+			.st_lis2dw12_odr_table[ST_LIS2DW12_ID_TEMP] = {
+				.size = 4,
+				.odr[0] = {  0, 0x0 },
+				.odr[1] = { 12, 0x2 },
+				.odr[2] = { 25, 0x3 },
+				.odr[3] = { 50, 0x4 },
+			},
+		},
 	},
 };
 
@@ -124,70 +201,6 @@ struct st_lis2dw12_selftest_req st_lis2dw12_selftest_table[] = {
 		.endianness = IIO_LE,					\
 	},								\
 }
-
-static const struct iio_event_spec st_lis2dw12_flush_event = {
-	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
-	.dir = IIO_EV_DIR_EITHER,
-};
-
-static const struct iio_event_spec st_lis2dw12_wakeup_event = {
-	.type = IIO_EV_TYPE_THRESH,
-	.dir = IIO_EV_DIR_RISING,
-	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
-			 BIT(IIO_EV_INFO_ENABLE) |
-			 BIT(IIO_EV_INFO_PERIOD),
-};
-
-static const struct iio_event_spec st_lis2dw12_freefall_event = {
-	.type = IIO_EV_TYPE_THRESH,
-	.dir = IIO_EV_DIR_FALLING,
-	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
-			 BIT(IIO_EV_INFO_ENABLE),
-};
-
-static const struct iio_event_spec st_lis2dw12_6D_event = {
-	.type = IIO_EV_TYPE_CHANGE,
-	.dir = IIO_EV_DIR_EITHER,
-	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
-			 BIT(IIO_EV_INFO_ENABLE),
-};
-
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static const struct iio_event_spec st_lis2dw12_tap_event = {
-	.type = IIO_EV_TYPE_GESTURE,
-	.dir = IIO_EV_DIR_SINGLETAP,
-	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
-			       BIT(IIO_EV_INFO_ENABLE) |
-			       BIT(IIO_EV_INFO_RESET_TIMEOUT),
-};
-
-static const struct iio_event_spec st_lis2dw12_dtap_event = {
-	.type = IIO_EV_TYPE_GESTURE,
-	.dir = IIO_EV_DIR_DOUBLETAP,
-	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
-			       BIT(IIO_EV_INFO_ENABLE) |
-			       BIT(IIO_EV_INFO_RESET_TIMEOUT) |
-			       BIT(IIO_EV_INFO_TAP2_MIN_DELAY),
-};
-#endif /* LINUX_VERSION_CODE */
-
-static const struct iio_chan_spec st_lis2dw12_acc_channels[] = {
-	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_X_L_ADDR, IIO_MOD_X, 0),
-	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_Y_L_ADDR, IIO_MOD_Y, 1),
-	ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_Z_L_ADDR, IIO_MOD_Z, 2),
-	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, flush),
-
-	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, wakeup),
-	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, freefall),
-	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, 6D),
-
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, tap),
-	ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, dtap),
-#endif /* LINUX_VERSION_CODE */
-
-	IIO_CHAN_SOFT_TIMESTAMP(3),
-};
 
 static const struct iio_chan_spec st_lis2dw12_temp_channels[] = {
 	{
@@ -236,13 +249,14 @@ static inline int st_lis2dw12_get_odr_idx(struct st_lis2dw12_sensor *sensor,
 					  u16 odr, u8 *idx)
 {
 	enum st_lis2dw12_sensor_id id = sensor->id;
+	struct st_lis2dw12_hw *hw = sensor->hw;
 	int i;
 
-	for (i = 0; i < st_lis2dw12_odr_table[id].size; i++)
-		if (st_lis2dw12_odr_table[id].odr[i].hz == odr)
+	for (i = 0; i < hw->settings->id.st_lis2dw12_odr_table[id].size; i++)
+		if (hw->settings->id.st_lis2dw12_odr_table[id].odr[i].hz == odr)
 			break;
 
-	if (i == st_lis2dw12_odr_table[id].size)
+	if (i == hw->settings->id.st_lis2dw12_odr_table[id].size)
 		return -EINVAL;
 
 	*idx = i;
@@ -291,7 +305,7 @@ int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr)
 	struct st_lis2dw12_sensor *ref =
 				     iio_priv(hw->iio_devs[ST_LIS2DW12_ID_ACC]);
 	u16 upd_odr = req_odr;
-	u8 mode, val, i;
+	u8 mode = ST_LIS2DW12_LP_MODE_VAL, val, i;
 	bool enable = (req_odr > 0);
 	int err, odr;
 
@@ -304,14 +318,22 @@ int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr)
 			upd_odr = odr;
 	}
 
+	if (upd_odr > 100) {
+		if (hw->settings->id.hw_id != ST_AIS2DW12_ID) {
+			upd_odr = 100;
+		} else {
+			mode = ST_LIS2DW12_HP_MODE_VAL;
+		}
+	}
+
 	upd_odr = max_t(int, hw->req_odr_events, enable ? upd_odr : 0);
 	err = st_lis2dw12_get_odr_idx(ref, upd_odr, &i);
 	if (err < 0)
 		return err;
 
-	mode = req_odr > 200 ? 0x1 : 0x0;
-	val = (st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[i].val << __ffs(ST_LIS2DW12_ODR_MASK)) |
-	      (mode << __ffs(ST_LIS2DW12_MODE_MASK)) | 0x01;
+	/* set by default Low-Power Mode 2 (14-bit resolution) */
+	val = (hw->settings->id.st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[i].val << __ffs(ST_LIS2DW12_ODR_MASK)) |
+	      (mode << __ffs(ST_LIS2DW12_MODE_MASK)) | ST_LIS2DW12_LP_2_MODE_VAL;
 
 	/*
 	 * disable cache support when setting odr register, use the
@@ -325,9 +347,21 @@ int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr)
 	return err < 0 ? err : 0;
 }
 
-static int st_lis2dw12_check_whoami(struct st_lis2dw12_hw *hw)
+static int st_lis2dw12_check_whoami(struct st_lis2dw12_hw *hw, int id)
 {
-	int data, err;
+	int data, err, i;
+
+	for (i = 0; i < ARRAY_SIZE(st_lis2dw12_sensor_settings); i++) {
+			if (st_lis2dw12_sensor_settings[i].id.name &&
+			    st_lis2dw12_sensor_settings[i].id.hw_id == id)
+				break;
+	}
+
+	if (i == ARRAY_SIZE(st_lis2dw12_sensor_settings)) {
+		dev_err(hw->dev, "unsupported hw id [%02x]\n", id);
+
+		return -ENODEV;
+	}
 
 	err = regmap_read(hw->regmap, ST_LIS2DW12_WHOAMI_ADDR, &data);
 	if (err < 0) {
@@ -341,7 +375,8 @@ static int st_lis2dw12_check_whoami(struct st_lis2dw12_hw *hw)
 		return -ENODEV;
 	}
 
-	hw->odr_entry = st_lis2dw12_odr_table;
+	hw->odr_entry = hw->settings->id.st_lis2dw12_odr_table;
+	hw->settings = &st_lis2dw12_sensor_settings[i];
 
 	return 0;
 }
@@ -481,11 +516,16 @@ st_lis2dw12_sysfs_sampling_frequency_avl(struct device *dev,
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_lis2dw12_sensor *sensor = iio_priv(iio_dev);
+	struct st_lis2dw12_hw *hw = sensor->hw;
 	int i, len = 0;
 
-	for (i = 1; i < st_lis2dw12_odr_table[sensor->id].size; i++)
+	for (i = 1; i < hw->settings->id.st_lis2dw12_odr_table[sensor->id].size; i++) {
+		if (hw->settings->id.st_lis2dw12_odr_table[sensor->id].odr[i].hz == 0)
+			continue;
+
 		len += scnprintf(buf + len, PAGE_SIZE - len, "%d ",
-				 st_lis2dw12_odr_table[sensor->id].odr[i].hz);
+				 hw->settings->id.st_lis2dw12_odr_table[sensor->id].odr[i].hz);
+	}
 	buf[len - 1] = '\n';
 
 	return len;
@@ -987,15 +1027,15 @@ static struct iio_dev *st_lis2dw12_alloc_iiodev(struct st_lis2dw12_hw *hw,
 
 	switch (id) {
 	case ST_LIS2DW12_ID_ACC:
-		iio_dev->channels = st_lis2dw12_acc_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_lis2dw12_acc_channels);
+		iio_dev->channels = hw->st_lis2dw12_acc_channels;
+		iio_dev->num_channels = hw->acc_num_channels;
 		scnprintf(sensor->name, sizeof(sensor->name),
 			  "%s_accel", hw->name);
 		iio_dev->info = &st_lis2dw12_acc_info;
 		iio_dev->available_scan_masks = st_lis2dw12_avail_scan_masks;
 
 		sensor->odr =
-			    st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[1].hz;
+			    hw->settings->id.st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[1].hz;
 		sensor->gain =
 			    st_lis2dw12_fs_table[ST_LIS2DW12_ID_ACC].fs[0].gain;
 		break;
@@ -1009,7 +1049,7 @@ static struct iio_dev *st_lis2dw12_alloc_iiodev(struct st_lis2dw12_hw *hw,
 					      st_lis2dw12_temp_avail_scan_masks;
 
 		sensor->odr =
-			   st_lis2dw12_odr_table[ST_LIS2DW12_ID_TEMP].odr[1].hz;
+			   hw->settings->id.st_lis2dw12_odr_table[ST_LIS2DW12_ID_TEMP].odr[1].hz;
 		sensor->gain =
 			   st_lis2dw12_fs_table[ST_LIS2DW12_ID_TEMP].fs[0].gain;
 
@@ -1029,8 +1069,29 @@ static struct iio_dev *st_lis2dw12_alloc_iiodev(struct st_lis2dw12_hw *hw,
 	return iio_dev;
 }
 
+static int st_lis2dw12_fill_accel_channels(struct st_lis2dw12_hw *hw)
+{
+	int i = 0;
+
+	if (hw->settings->id.hw_id == ST_AIS2DW12_ID)
+		hw->acc_num_channels = 8;
+	else
+		hw->acc_num_channels = 10;
+
+	hw->st_lis2dw12_acc_channels = devm_kzalloc(hw->dev, hw->acc_num_channels * sizeof(struct iio_chan_spec), GFP_KERNEL);
+	if (IS_ERR(hw->st_lis2dw12_acc_channels))
+		return PTR_ERR(hw->st_lis2dw12_acc_channels);
+
+	hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_X_L_ADDR, IIO_MOD_X, 0);
+	hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_Y_L_ADDR, IIO_MOD_Y, 1);
+	hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)ST_LIS2DW12_ACC_CHAN(ST_LIS2DW12_OUT_Z_L_ADDR, IIO_MOD_Z, 2);
+	hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)IIO_CHAN_SOFT_TIMESTAMP(3);
+
+	return 0;
+}
+
 int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
-		      struct regmap *regmap)
+		      enum st_lis2dw12_hw_id hw_id, struct regmap *regmap)
 {
 	struct st_lis2dw12_hw *hw;
 	int i, err;
@@ -1050,7 +1111,11 @@ int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
 	hw->irq = irq;
 	hw->has_hw_fifo = (hw->irq > 0) ? true : false;
 
-	err = st_lis2dw12_check_whoami(hw);
+	err = st_lis2dw12_check_whoami(hw, hw_id);
+	if (err < 0)
+		return err;
+
+	err = st_lis2dw12_fill_accel_channels(hw);
 	if (err < 0)
 		return err;
 
@@ -1157,7 +1222,7 @@ static int st_lis2dw12_configure_wake_up(struct st_lis2dw12_hw *hw)
 #endif /* CONFIG_IIO_ST_LIS2DW12_STORE_SAMPLE_FIFO_SUSPEND */
 
 	/* set sensor odr to 25 Hz */
-	val = st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[2].val <<
+	val = hw->settings->id.st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[2].val <<
 						    __ffs(ST_LIS2DW12_ODR_MASK);
 
 	err = regmap_write(hw->regmap, ST_LIS2DW12_CTRL1_ADDR, val);

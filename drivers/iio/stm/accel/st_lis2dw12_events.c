@@ -23,46 +23,125 @@
 #define ST_LIS2DW12_IS_EVENT_ENABLED(_event_id) (!!(hw->enable_ev_mask & \
 						    BIT_ULL(_event_id)))
 
-static const struct st_lis2dw12_event_t {
+static const struct iio_event_spec st_lis2dw12_flush_event = {
+	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
+	.dir = IIO_EV_DIR_EITHER,
+};
+
+static const struct iio_event_spec st_lis2dw12_wakeup_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_RISING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE) |
+			 BIT(IIO_EV_INFO_PERIOD),
+};
+
+static const struct iio_event_spec st_lis2dw12_freefall_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_FALLING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+static const struct iio_event_spec st_lis2dw12_6D_event = {
+	.type = IIO_EV_TYPE_CHANGE,
+	.dir = IIO_EV_DIR_EITHER,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE),
+};
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+static const struct iio_event_spec st_lis2dw12_tap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_SINGLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT),
+};
+
+static const struct iio_event_spec st_lis2dw12_dtap_event = {
+	.type = IIO_EV_TYPE_GESTURE,
+	.dir = IIO_EV_DIR_DOUBLETAP,
+	.mask_shared_by_type = BIT(IIO_EV_INFO_VALUE) |
+			       BIT(IIO_EV_INFO_ENABLE) |
+			       BIT(IIO_EV_INFO_RESET_TIMEOUT) |
+			       BIT(IIO_EV_INFO_TAP2_MIN_DELAY),
+};
+#endif /* LINUX_VERSION_CODE */
+
+struct st_lis2dw12_event_t {
 	enum st_lis2dw12_event_id id;
 	char *name;
 	u8 irq_mask;
 	int req_odr;
-	} st_lis2dw12_events[] = {
-	[ST_LIS2DW12_EVENT_FF] = {
-		.id = ST_LIS2DW12_EVENT_FF,
-		.name = "free_fall",
-		.irq_mask = ST_LIS2DW12_FF_INT1_MASK,
-		.req_odr = ST_LIS2DW12_MIN_ODR_IN_FREEFALL,
-	},
-	[ST_LIS2DW12_EVENT_WAKEUP] = {
-		.id = ST_LIS2DW12_EVENT_WAKEUP,
-		.name = "wake_up",
-		.irq_mask = ST_LIS2DW12_WU_INT1_MASK,
-		.req_odr = ST_LIS2DW12_MIN_ODR_IN_WAKEUP,
-	},
-	[ST_LIS2DW12_EVENT_6D] = {
-		.id = ST_LIS2DW12_EVENT_6D,
-		.name = "sixD",
-		.irq_mask = ST_LIS2DW12_6D_INT1_MASK,
-		.req_odr = ST_LIS2DW12_MIN_ODR_IN_6D,
-	},
+};
+
+static const struct st_lis2dw12_events_t {
+	enum st_lis2dw12_hw_id hw_ids[ST_LIS2DW12_MAX_ID];
+	struct st_lis2dw12_event_t event[ST_LIS2DW12_EVENT_MAX];
+} st_lis2dw12_events[] = {
+	[0] = {
+		.hw_ids = { ST_LIS2DW12_ID, ST_IIS2DLPC_ID, ST_AIS2IH_ID },
+		.event = {
+			[ST_LIS2DW12_EVENT_FF] = {
+				.id = ST_LIS2DW12_EVENT_FF,
+				.name = "free_fall",
+				.irq_mask = ST_LIS2DW12_FF_INT1_MASK,
+				.req_odr = ST_LIS2DW12_MIN_ODR_IN_FREEFALL,
+			},
+			[ST_LIS2DW12_EVENT_WAKEUP] = {
+				.id = ST_LIS2DW12_EVENT_WAKEUP,
+				.name = "wake_up",
+				.irq_mask = ST_LIS2DW12_WU_INT1_MASK,
+				.req_odr = ST_LIS2DW12_MIN_ODR_IN_WAKEUP,
+			},
+			[ST_LIS2DW12_EVENT_6D] = {
+				.id = ST_LIS2DW12_EVENT_6D,
+				.name = "sixD",
+				.irq_mask = ST_LIS2DW12_6D_INT1_MASK,
+				.req_odr = ST_LIS2DW12_MIN_ODR_IN_6D,
+			},
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-	[ST_LIS2DW12_EVENT_TAP] = {
-		.id = ST_LIS2DW12_EVENT_TAP,
-		.name = "tap",
-		.irq_mask = ST_LIS2DW12_TAP_INT1_MASK,
-		.req_odr = ST_LIS2DW12_MIN_ODR_IN_TAP,
-	},
-	[ST_LIS2DW12_EVENT_DTAP] = {
-		.id = ST_LIS2DW12_EVENT_DTAP,
-		.name = "dtap",
-		.irq_mask = ST_LIS2DW12_TAP_TAP_INT1_MASK,
-		.req_odr = ST_LIS2DW12_MIN_ODR_IN_DTAP,
-	},
+			[ST_LIS2DW12_EVENT_TAP] = {
+				.id = ST_LIS2DW12_EVENT_TAP,
+				.name = "tap",
+				.irq_mask = ST_LIS2DW12_TAP_INT1_MASK,
+				.req_odr = ST_LIS2DW12_MIN_ODR_IN_TAP,
+			},
+			[ST_LIS2DW12_EVENT_DTAP] = {
+				.id = ST_LIS2DW12_EVENT_DTAP,
+				.name = "dtap",
+				.irq_mask = ST_LIS2DW12_TAP_TAP_INT1_MASK,
+				.req_odr = ST_LIS2DW12_MIN_ODR_IN_DTAP,
+			},
 #endif /* LINUX_VERSION_CODE */
 
+		},
+	},
+	[1] = {
+		.hw_ids = { ST_AIS2DW12_ID },
+		.event = {
+			[ST_LIS2DW12_EVENT_FF] = {
+				.id = ST_LIS2DW12_EVENT_FF,
+				.name = "free_fall",
+				.irq_mask = ST_LIS2DW12_FF_INT1_MASK,
+				.req_odr = ST_LIS2DW12_MIN_ODR_IN_FREEFALL,
+			},
+			[ST_LIS2DW12_EVENT_WAKEUP] = {
+				.id = ST_LIS2DW12_EVENT_WAKEUP,
+				.name = "wake_up",
+				.irq_mask = ST_LIS2DW12_WU_INT1_MASK,
+				.req_odr = ST_LIS2DW12_MIN_ODR_IN_WAKEUP,
+			},
+			[ST_LIS2DW12_EVENT_6D] = {
+				.id = ST_LIS2DW12_EVENT_6D,
+				.name = "sixD",
+				.irq_mask = ST_LIS2DW12_6D_INT1_MASK,
+				.req_odr = ST_LIS2DW12_MIN_ODR_IN_6D,
+			},
+		},
+	},
 };
 
 static const struct st_lis2dw12_ff_th st_lis2dw12_free_fall_threshold[] = {
@@ -82,6 +161,24 @@ static const struct st_lis2dw12_6D_th st_lis2dw12_6D_threshold[] = {
 	[2] = { .val = 0x02, .deg = 60 },
 	[3] = { .val = 0x03, .deg = 50 },
 };
+
+static const struct st_lis2dw12_event_t *st_lis2dw12_get_events(struct st_lis2dw12_hw *hw)
+{
+	int hw_id = hw->settings->id.hw_id, i, j;
+
+	for (i = 0; i < ARRAY_SIZE(st_lis2dw12_events); i++) {
+		for (j = 0; j < ST_LIS2DW12_MAX_ID; j++) {
+			if (st_lis2dw12_events[i].hw_ids[j] == hw_id)
+				goto out;
+		}
+	}
+
+	if (i == ARRAY_SIZE(st_lis2dw12_events))
+		return ERR_PTR(-ENODEV);
+
+out:
+	return st_lis2dw12_events[i].event;
+}
 
 static inline bool
 st_lis2dw12_events_enabled(struct st_lis2dw12_hw *hw)
@@ -146,12 +243,17 @@ static int st_lis2dw12_get_default_xl_odr(struct st_lis2dw12_hw *hw,
 	int err;
 	int odr;
 	int req_odr;
+	static const struct st_lis2dw12_event_t *event;
 
 	err = st_lis2dw12_get_xl_odr(hw, &odr);
 	if (err < 0)
 		return err;
 
-	req_odr = st_lis2dw12_events[id].req_odr;
+	event = st_lis2dw12_get_events(hw);
+	if (IS_ERR(event))
+		return PTR_ERR(event);
+
+	req_odr = event[id].req_odr;
 
 	if (odr > req_odr)
 		*xl_odr = odr;
@@ -556,9 +658,17 @@ st_lis2dw12_check_events_odr_dependency(struct st_lis2dw12_hw *hw,
 {
 	int i, ret = 0;
 	int current_odr;
+	static const struct st_lis2dw12_event_t *event;
 
-	for (i = 0; i < ARRAY_SIZE(st_lis2dw12_events); i++) {
-		current_odr = st_lis2dw12_events[i].req_odr;
+	event = st_lis2dw12_get_events(hw);
+	if (IS_ERR(event))
+		return PTR_ERR(event);
+
+	for (i = 0; i < ST_LIS2DW12_EVENT_MAX; i++) {
+		if (event[i].req_odr == 0)
+			continue;
+
+		current_odr = event[i].req_odr;
 
 		if (hw->enable_ev_mask & BIT(i)) {
 			if ((i == id) && (!enable))
@@ -580,6 +690,7 @@ int st_lis2dw12_write_event_config(struct iio_dev *iio_dev,
 				   int enable)
 {
 	struct st_lis2dw12_sensor *sensor = iio_priv(iio_dev);
+	static const struct st_lis2dw12_event_t *event;
 	struct st_lis2dw12_hw *hw = sensor->hw;
 	int req_odr = 0;
 	int id = -1;
@@ -665,8 +776,12 @@ int st_lis2dw12_write_event_config(struct iio_dev *iio_dev,
 	if (err < 0)
 		return err;
 
+	event = st_lis2dw12_get_events(hw);
+	if (IS_ERR(event))
+		return PTR_ERR(event);
+
 	int_val = st_lis2dw12_manipulate_bit(int_val,
-					     st_lis2dw12_events[id].irq_mask,
+					     event[id].irq_mask,
 					     enable);
 
 	err = st_lis2dw12_write_locked(hw, ST_LIS2DW12_CTRL4_INT1_CTRL_ADDR,
@@ -676,8 +791,8 @@ int st_lis2dw12_write_event_config(struct iio_dev *iio_dev,
 
 	/* check enabled events ODR dependency */
 	req_odr = st_lis2dw12_check_events_odr_dependency(hw,
-						 st_lis2dw12_events[id].req_odr,
-						 id, enable);
+							  event[id].req_odr,
+							  id, enable);
 
 	hw->req_odr_events = req_odr;
 	err = st_lis2dw12_set_odr(iio_priv(hw->iio_devs[ST_LIS2DW12_ID_ACC]),
@@ -1165,6 +1280,20 @@ static irqreturn_t st_lis2dw12_handler_thread_emb(int irq, void *private)
 int st_lis2dw12_event_init(struct st_lis2dw12_hw *hw)
 {
 	int err;
+	/* start from last data channel (three axes and timestamp) */
+	int i = 4;
+
+	hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, flush);
+	hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, wakeup);
+	hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, freefall);
+	hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, 6D);
+
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+	if (hw->settings->id.hw_id != ST_AIS2DW12_ID) {
+		hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, tap);
+		hw->st_lis2dw12_acc_channels[i++] = (struct iio_chan_spec)ST_LIS2DW12_EVENT_CHANNEL(IIO_ACCEL, dtap);
+	}
+#endif /* LINUX_VERSION_CODE */
 
 	/* Set default wake-up thershold to 100 mg */
 	err = st_lis2dw12_set_wake_up_thershold(hw, 100);
@@ -1187,31 +1316,33 @@ int st_lis2dw12_event_init(struct st_lis2dw12_hw *hw)
 		return err;
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-	/* setting default tap/dtap threshold to 570 mg */
-	err = st_lis2dw12_set_tap_threshold(hw, 570);
-	if (err < 0)
-		return err;
+	if (hw->settings->id.hw_id != ST_AIS2DW12_ID) {
+		/* setting default tap/dtap threshold to 570 mg */
+		err = st_lis2dw12_set_tap_threshold(hw, 570);
+		if (err < 0)
+			return err;
 
-	/* setting default tap/dtap quiet time to 10 ms */
-	err = st_lis2dw12_set_tap_quiet_time(hw, 10);
-	if (err < 0)
-		return err;
+		/* setting default tap/dtap quiet time to 10 ms */
+		err = st_lis2dw12_set_tap_quiet_time(hw, 10);
+		if (err < 0)
+			return err;
 
-	/* setting default dtap min delay time to 540 ms */
-	err = st_lis2dw12_set_dtap_duration(hw, 540);
-	if (err < 0)
-		return err;
+		/* setting default dtap min delay time to 540 ms */
+		err = st_lis2dw12_set_dtap_duration(hw, 540);
+		if (err < 0)
+			return err;
 
-	/* setting default tap/dtap shock time to 40 ms */
-	err = st_lis2dw12_set_tap_shock_time(hw, 40);
-	if (err < 0)
-		return err;
+		/* setting default tap/dtap shock time to 40 ms */
+		err = st_lis2dw12_set_tap_shock_time(hw, 40);
+		if (err < 0)
+			return err;
 
-	/* enable tap detection on all axis */
-	err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_TAP_THS_Z_ADDR,
-						 ST_LIS2DW12_TAP_EN_MASK, 0x07);
-	if (err < 0)
-		return err;
+		/* enable tap detection on all axis */
+		err = st_lis2dw12_write_with_mask_locked(hw, ST_LIS2DW12_TAP_THS_Z_ADDR,
+							ST_LIS2DW12_TAP_EN_MASK, 0x07);
+		if (err < 0)
+			return err;
+	}
 #endif /* LINUX_VERSION_CODE */
 
 	/*

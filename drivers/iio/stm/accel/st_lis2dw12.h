@@ -25,6 +25,7 @@
 #define ST_LIS2DW12_DEV_NAME			"lis2dw12"
 #define ST_IIS2DLPC_DEV_NAME			"iis2dlpc"
 #define ST_AIS2IH_DEV_NAME			"ais2ih"
+#define ST_AIS2DW12_DEV_NAME			"ais2dw12"
 #define ST_LIS2DW12_REGMAP			"lis2dw12_regmap"
 
 #define ST_LIS2DW12_MAX_WATERMARK		31
@@ -39,6 +40,10 @@
 #define ST_LIS2DW12_ODR_MASK			GENMASK(7, 4)
 #define ST_LIS2DW12_MODE_MASK			GENMASK(3, 2)
 #define ST_LIS2DW12_LP_MODE_MASK		GENMASK(1, 0)
+#define ST_LIS2DW12_LP_MODE_VAL			0x00
+#define ST_LIS2DW12_HP_MODE_VAL			0x01
+#define ST_LIS2DW12_LP_1_MODE_VAL		0x00
+#define ST_LIS2DW12_LP_2_MODE_VAL		0x01
 
 #define ST_LIS2DW12_CTRL2_ADDR			0x21
 #define ST_LIS2DW12_BDU_MASK			BIT(3)
@@ -185,6 +190,14 @@
 	.num_event_specs = 1,				\
 }
 
+enum st_lis2dw12_hw_id {
+	ST_LIS2DW12_ID,
+	ST_IIS2DLPC_ID,
+	ST_AIS2IH_ID,
+	ST_AIS2DW12_ID,
+	ST_LIS2DW12_MAX_ID,
+};
+
 enum st_lis2dw12_event_id {
 	ST_LIS2DW12_EVENT_FF,
 	ST_LIS2DW12_EVENT_WAKEUP,
@@ -235,6 +248,14 @@ struct st_lis2dw12_sensor {
 	u16 odr;
 };
 
+struct st_lis2dw12_settings {
+	struct {
+		enum st_lis2dw12_hw_id hw_id;
+		const char *name;
+		const struct st_lis2dw12_odr_entry_t st_lis2dw12_odr_table[9];
+	} id;
+};
+
 struct st_lis2dw12_hw {
 	struct regmap *regmap;
 	struct device *dev;
@@ -249,6 +270,8 @@ struct st_lis2dw12_hw {
 	struct mutex lock;
 
 	struct iio_dev *iio_devs[ST_LIS2DW12_ID_MAX];
+	struct iio_chan_spec *st_lis2dw12_acc_channels;
+	int acc_num_channels;
 
 	enum st_lis2dw12_selftest_status st_status;
 	u16 enable_mask;
@@ -270,6 +293,7 @@ struct st_lis2dw12_hw {
 	s64 timestamp;
 
 	const struct st_lis2dw12_odr_entry_t *odr_entry;
+	const struct st_lis2dw12_settings *settings;
 	int req_odr_events;
 
 	u32 sixD_threshold;
@@ -461,7 +485,7 @@ static inline int st_lis2dw12_is_fifo_enabled(struct st_lis2dw12_hw *hw)
 extern const struct dev_pm_ops st_lis2dw12_pm_ops;
 
 int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
-		      struct regmap *regmap);
+		      enum st_lis2dw12_hw_id hw_id, struct regmap *regmap);
 int st_lis2dw12_remove(struct device *dev);
 int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr);
 int st_lis2dw12_fifo_setup(struct st_lis2dw12_hw *hw);
