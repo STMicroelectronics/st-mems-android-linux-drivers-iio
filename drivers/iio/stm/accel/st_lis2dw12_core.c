@@ -292,6 +292,7 @@ int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr)
 				     iio_priv(hw->iio_devs[ST_LIS2DW12_ID_ACC]);
 	u16 upd_odr = req_odr;
 	u8 mode, val, i;
+	bool enable = (req_odr > 0);
 	int err, odr;
 
 	for (i = 0; i < ST_LIS2DW12_ID_MAX; i++) {
@@ -303,6 +304,7 @@ int st_lis2dw12_set_odr(struct st_lis2dw12_sensor *sensor, u16 req_odr)
 			upd_odr = odr;
 	}
 
+	upd_odr = max_t(int, hw->req_odr_events, enable ? upd_odr : 0);
 	err = st_lis2dw12_get_odr_idx(ref, upd_odr, &i);
 	if (err < 0)
 		return err;

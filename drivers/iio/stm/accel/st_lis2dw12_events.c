@@ -679,6 +679,7 @@ int st_lis2dw12_write_event_config(struct iio_dev *iio_dev,
 						 st_lis2dw12_events[id].req_odr,
 						 id, enable);
 
+	hw->req_odr_events = req_odr;
 	err = st_lis2dw12_set_odr(iio_priv(hw->iio_devs[ST_LIS2DW12_ID_ACC]),
 				  req_odr);
 	if (err < 0)

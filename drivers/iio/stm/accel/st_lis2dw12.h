@@ -270,6 +270,7 @@ struct st_lis2dw12_hw {
 	s64 timestamp;
 
 	const struct st_lis2dw12_odr_entry_t *odr_entry;
+	int req_odr_events;
 
 	u32 sixD_threshold;
 	u32 freefall_threshold;
