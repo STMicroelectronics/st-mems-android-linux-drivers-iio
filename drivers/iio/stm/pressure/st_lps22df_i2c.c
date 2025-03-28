@@ -74,29 +74,15 @@ static const struct st_lps22df_transfer_function st_lps22df_tf_i2c = {
 static int st_lps22df_i2c_probe(struct i2c_client *client)
 {
 	const struct i2c_device_id *id = i2c_client_get_device_id(client);
-	enum st_lps22df_hw_id hw_id;
-	const void *data;
-
-	data = device_get_match_data(&client->dev);
-	if (data)
-		hw_id = (uintptr_t)data;
-	else if (id)
-		hw_id = (enum st_lps22df_hw_id)id->driver_data;
-	else
-		return -ENOSYS;
-
-	return st_lps22df_common_probe(&client->dev, client->irq,
-				       hw_id, &st_lps22df_tf_i2c);
-}
 #else /* LINUX_VERSION_CODE */
 static int st_lps22df_i2c_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
-	int hw_id = id->driver_data;
-	return st_lps22df_common_probe(&client->dev, client->irq,
-				       hw_id, &st_lps22df_tf_i2c);
-}
 #endif /* LINUX_VERSION_CODE */
+
+	return st_lps22df_common_probe(&client->dev, client->irq,
+				       id->driver_data, &st_lps22df_tf_i2c);
+}
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
 static void st_lps22df_i2c_remove(struct i2c_client *client)

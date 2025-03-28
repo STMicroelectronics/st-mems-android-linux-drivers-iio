@@ -1820,7 +1820,7 @@ static int st_lsm6dsrx_power_enable(struct st_lsm6dsrx_hw *hw)
 	return 0;
 }
 
-int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
+int st_lsm6dsrx_probe(struct device *dev, int irq, enum st_lsm6dsrx_hw_id hw_id,
 		      struct regmap *regmap)
 {
 	struct st_lsm6dsrx_hw *hw;

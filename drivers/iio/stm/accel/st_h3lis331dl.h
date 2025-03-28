@@ -257,8 +257,8 @@ static inline s64 st_h3lis331dl_get_time_ns(struct iio_dev *iio_dev)
 	return iio_get_time_ns(iio_dev);
 }
 
-int st_h3lis331dl_probe(struct device *dev, int irq, int hw_id,
-			struct regmap *regmap);
+int st_h3lis331dl_probe(struct device *dev, int irq,
+			enum st_h3lis331dl_hw_id hw_id, struct regmap *regmap);
 int st_h3lis331dl_sensor_set_enable(struct st_h3lis331dl_sensor *sensor,
 				    bool enable);
 int st_h3lis331dl_trigger_setup(struct st_h3lis331dl_hw *hw);

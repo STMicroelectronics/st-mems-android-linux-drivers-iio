@@ -2278,8 +2278,8 @@ static int st_lsm6dsv16bx_power_enable(struct st_lsm6dsv16bx_hw *hw)
 	return 0;
 }
 
-int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
-			 struct regmap *regmap)
+int st_lsm6dsv16bx_probe(struct device *dev, int irq,
+			 enum st_lsm6dsv16bx_hw_id hw_id, struct regmap *regmap)
 {
 	struct st_lsm6dsv16bx_hw *hw;
 	int i, err;

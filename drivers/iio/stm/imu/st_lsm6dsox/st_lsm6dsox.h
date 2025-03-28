@@ -1046,7 +1046,7 @@ static inline u16 st_lsm6dsox_get_odr(struct st_lsm6dsox_hw *hw,
 }
 
 /* common */
-int st_lsm6dsox_probe(struct device *dev, int irq, int hw_id,
+int st_lsm6dsox_probe(struct device *dev, int irq, enum st_lsm6dsox_hw_id hw_id,
 		      struct regmap *regmap);
 int st_lsm6dsox_sensor_set_enable(struct st_lsm6dsox_sensor *sensor,
 				  bool enable);

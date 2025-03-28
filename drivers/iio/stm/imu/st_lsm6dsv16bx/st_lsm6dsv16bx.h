@@ -1065,7 +1065,8 @@ st_lsm6dsv16bx_is_fifo_enabled(struct st_lsm6dsv16bx_hw *hw)
 				  BIT(ST_LSM6DSV16BX_ID_QVAR));
 }
 
-int st_lsm6dsv16bx_probe(struct device *dev, int irq, int hw_id,
+int st_lsm6dsv16bx_probe(struct device *dev, int irq,
+			 enum st_lsm6dsv16bx_hw_id hw_id,
 			 struct regmap *regmap);
 int st_lsm6dsv16bx_sensor_set_enable(struct st_lsm6dsv16bx_sensor *sensor,
 				     bool enable);

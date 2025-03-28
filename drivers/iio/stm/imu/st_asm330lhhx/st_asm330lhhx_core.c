@@ -2428,8 +2428,8 @@ static int st_asm330lhhx_power_enable(struct st_asm330lhhx_hw *hw)
 	return 0;
 }
 
-int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
-			struct regmap *regmap)
+int st_asm330lhhx_probe(struct device *dev, int irq,
+			enum st_asm330lhhx_hw_id hw_id, struct regmap *regmap)
 {
 	struct st_asm330lhhx_hw *hw;
 	int i, err;

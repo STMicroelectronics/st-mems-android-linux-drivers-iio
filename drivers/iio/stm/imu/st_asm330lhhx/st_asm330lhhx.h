@@ -1176,8 +1176,8 @@ u16 st_asm330lhhx_get_odr(struct st_asm330lhhx_hw *hw,
 	return ret;
 }
 
-int st_asm330lhhx_probe(struct device *dev, int irq, int hw_id,
-		  struct regmap *regmap);
+int st_asm330lhhx_probe(struct device *dev, int irq,
+			enum st_asm330lhhx_hw_id hw_id, struct regmap *regmap);
 void st_asm330lhhx_remove(struct device *dev);
 int st_asm330lhhx_sensor_set_enable(struct st_asm330lhhx_sensor *sensor,
 				    bool enable);

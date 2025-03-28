@@ -25,39 +25,15 @@ static const struct regmap_config st_h3lis331dl_i2c_regmap_config = {
 static int st_h3lis331dl_i2c_probe(struct i2c_client *client)
 {
 	const struct i2c_device_id *id = i2c_client_get_device_id(client);
-	enum st_h3lis331dl_hw_id hw_id;
-	struct regmap *regmap;
-	const void *data;
-
-	data = device_get_match_data(&client->dev);
-	if (data)
-		hw_id = (uintptr_t)data;
-	else if (id)
-		hw_id = (enum st_h3lis331dl_hw_id)id->driver_data;
-	else
-		return -ENOSYS;
-
-	regmap = devm_regmap_init_i2c(client,
-				      &st_h3lis331dl_i2c_regmap_config);
-	if (IS_ERR(regmap)) {
-		dev_err(&client->dev,
-			"Failed to register i2c regmap %d\n",
-			(int)PTR_ERR(regmap));
-		return PTR_ERR(regmap);
-	}
-
-	return st_h3lis331dl_probe(&client->dev, client->irq,
-			       hw_id, regmap);
-}
 #else /* LINUX_VERSION_CODE */
 static int st_h3lis331dl_i2c_probe(struct i2c_client *client,
-			       const struct i2c_device_id *id)
+				   const struct i2c_device_id *id)
 {
-	int hw_id = id->driver_data;
+#endif /* LINUX_VERSION_CODE */
+
 	struct regmap *regmap;
 
-	regmap = devm_regmap_init_i2c(client,
-				      &st_h3lis331dl_i2c_regmap_config);
+	regmap = devm_regmap_init_i2c(client, &st_h3lis331dl_i2c_regmap_config);
 	if (IS_ERR(regmap)) {
 		dev_err(&client->dev,
 			"Failed to register i2c regmap %d\n",
@@ -66,9 +42,8 @@ static int st_h3lis331dl_i2c_probe(struct i2c_client *client,
 	}
 
 	return st_h3lis331dl_probe(&client->dev, client->irq,
-			       hw_id, regmap);
+				   id->driver_data, regmap);
 }
-#endif /* LINUX_VERSION_CODE */
 
 static const struct of_device_id st_h3lis331dl_i2c_of_match[] = {
 	{

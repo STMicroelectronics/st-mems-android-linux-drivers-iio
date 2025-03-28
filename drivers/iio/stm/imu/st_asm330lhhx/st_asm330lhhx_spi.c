@@ -24,18 +24,17 @@ static const struct regmap_config st_asm330lhhx_spi_regmap_config = {
 static int st_asm330lhhx_spi_probe(struct spi_device *spi)
 {
 	const struct spi_device_id *id = spi_get_device_id(spi);
-	int hw_id = id->driver_data;
 	struct regmap *regmap;
 
-	regmap = devm_regmap_init_spi(spi,
-				      &st_asm330lhhx_spi_regmap_config);
+	regmap = devm_regmap_init_spi(spi, &st_asm330lhhx_spi_regmap_config);
 	if (IS_ERR(regmap)) {
 		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
 			(int)PTR_ERR(regmap));
 		return PTR_ERR(regmap);
 	}
 
-	return st_asm330lhhx_probe(&spi->dev, spi->irq, hw_id, regmap);
+	return st_asm330lhhx_probe(&spi->dev, spi->irq,
+				   id->driver_data, regmap);
 }
 
 #if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE

@@ -1074,7 +1074,7 @@ out:
 	return (err < 0) ? err : 0;
 }
 
-int st_lsm6dsrx_probe(struct device *dev, int irq, int hw_id,
+int st_lsm6dsrx_probe(struct device *dev, int irq, enum st_lsm6dsrx_hw_id hw_id,
 		      struct regmap *regmap);
 int st_lsm6dsrx_sensor_set_enable(struct st_lsm6dsrx_sensor *sensor,
 				  bool enable);

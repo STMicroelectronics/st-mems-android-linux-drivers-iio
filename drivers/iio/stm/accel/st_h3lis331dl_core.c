@@ -497,8 +497,8 @@ static int st_h3lis331dl_power_enable(struct st_h3lis331dl_hw *hw)
 	return 0;
 }
 
-int st_h3lis331dl_probe(struct device *dev, int irq, int hw_id,
-			struct regmap *regmap)
+int st_h3lis331dl_probe(struct device *dev, int irq,
+			enum st_h3lis331dl_hw_id hw_id, struct regmap *regmap)
 {
 	struct st_h3lis331dl_hw *hw;
 	int err;
