@@ -477,7 +477,7 @@ static const struct iio_chan_spec st_asm330lhhx_acc_channels[] = {
 	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ACCEL, wakeup),
 	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ACCEL, 6D),
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
 #else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
@@ -495,7 +495,7 @@ static const struct iio_chan_spec st_asm330lhhx_gyro_channels[] = {
 				1, IIO_MOD_Z, 2, 16, 16, 's', st_asm330lhhx_ext_info),
 	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ANGL_VEL, flush),
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
 #else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
@@ -523,7 +523,7 @@ __maybe_unused const struct iio_chan_spec st_asm330lhhx_temp_channels[] = {
 	},
 	ST_ASM330LHHX_EVENT_CHANNEL(IIO_TEMP, flush),
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(1),
 	IIO_CHAN_SOFT_TIMESTAMP(2),
 #else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
@@ -2031,7 +2031,7 @@ static const struct iio_info st_asm330lhhx_acc_info = {
 	.write_event_value = st_asm330lhhx_write_event_value,
 	.read_event_value = st_asm330lhhx_read_event_value,
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	.debugfs_reg_access = &st_asm330lhhx_reg_access,
 #endif /* CONFIG_DEBUG_FS */
 
@@ -2090,7 +2090,7 @@ static const struct iio_info st_asm330lhhx_temp_info = {
 
 static const unsigned long st_asm330lhhx_available_scan_masks[] = {
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	GENMASK(3, 0), 0x0
 #else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 	GENMASK(2, 0), 0x0
@@ -2100,7 +2100,7 @@ static const unsigned long st_asm330lhhx_available_scan_masks[] = {
 
 static const unsigned long st_asm330lhhx_temp_available_scan_masks[] = {
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	GENMASK(1, 0), 0x0
 #else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 	BIT(0), 0x0
@@ -2556,12 +2556,6 @@ EXPORT_SYMBOL(st_asm330lhhx_remove);
 static int __maybe_unused
 st_asm330lhhx_configure_wake_up(struct st_asm330lhhx_hw *hw)
 {
-
-#if defined(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)
-	u16 fifo_watermark = ST_ASM330LHHX_MAX_FIFO_DEPTH;
-	__le16 wdata;
-#endif /* CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND */
-
 	int err;
 
 	/* disable fifo wtm interrupt */
@@ -2588,36 +2582,42 @@ st_asm330lhhx_configure_wake_up(struct st_asm330lhhx_hw *hw)
 	if (err < 0)
 		return err;
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)
-	/* set max fifo watermark level */
-	wdata = cpu_to_le16(fifo_watermark);
-	err = regmap_bulk_write(hw->regmap, ST_ASM330LHHX_REG_FIFO_CTRL1_ADDR,
-				&wdata, sizeof(wdata));
-	if (err < 0)
-		return err;
+	if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)) {
+		u16 fifo_watermark = ST_ASM330LHHX_MAX_FIFO_DEPTH;
+		__le16 wdata;
 
-	/* enable xl batching at 26 Hz */
-	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_FIFO_CTRL3_ADDR,
-				 ST_ASM330LHHX_REG_BDR_XL_MASK,
-				 FIELD_PREP(ST_ASM330LHHX_REG_BDR_XL_MASK,
-					    0x02));
-	if (err < 0)
-		return err;
+		/* set max fifo watermark level */
+		wdata = cpu_to_le16(fifo_watermark);
+		err = regmap_bulk_write(hw->regmap,
+					ST_ASM330LHHX_REG_FIFO_CTRL1_ADDR,
+					&wdata, sizeof(wdata));
+		if (err < 0)
+			return err;
 
-#if !defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-	err = st_asm330lhhx_reset_hwts(hw);
-	if (err < 0)
-		return err;
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+		/* enable xl batching at 26 Hz */
+		err = regmap_update_bits(hw->regmap,
+					 ST_ASM330LHHX_REG_FIFO_CTRL3_ADDR,
+					 ST_ASM330LHHX_REG_BDR_XL_MASK,
+					 FIELD_PREP(ST_ASM330LHHX_REG_BDR_XL_MASK,
+						    0x02));
+		if (err < 0)
+			return err;
 
-	/* set fifo mode continuous for batching */
-	err = regmap_update_bits(hw->regmap, ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
-				 ST_ASM330LHHX_REG_FIFO_MODE_MASK,
-				 FIELD_PREP(ST_ASM330LHHX_REG_FIFO_MODE_MASK,
-					    ST_ASM330LHHX_FIFO_CONT));
-	if (err < 0)
-		return err;
-#endif /* CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND */
+		if (!IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
+			err = st_asm330lhhx_reset_hwts(hw);
+			if (err < 0)
+				return err;
+		}
+
+		/* set fifo mode continuous for batching */
+		err = regmap_update_bits(hw->regmap,
+					 ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
+					 ST_ASM330LHHX_REG_FIFO_MODE_MASK,
+					 FIELD_PREP(ST_ASM330LHHX_REG_FIFO_MODE_MASK,
+						    ST_ASM330LHHX_FIFO_CONT));
+		if (err < 0)
+			return err;
+	}
 
 	/* set sensors odr to 26 Hz */
 	err = regmap_update_bits(hw->regmap,
@@ -2663,10 +2663,10 @@ static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 		if (err < 0)
 			return err;
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-		hrtimer_cancel(&hw->timesync_timer);
-		cancel_work_sync(&hw->timesync_work);
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+		if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
+			hrtimer_cancel(&hw->timesync_timer);
+			cancel_work_sync(&hw->timesync_work);
+		}
 
 	}
 
@@ -2741,12 +2741,11 @@ static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 		/* unmask only bits: WU_IA, X_WU, Y_WU and Z_WU */
 		hw->wakeup_status &= ST_ASM330LHHX_WAKE_UP_EVENT_MASK;
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)
-		/* flush fifo data to user space */
-		st_asm330lhhx_flush_fifo_during_resume(hw);
-		clear_bit(ST_ASM330LHHX_HW_OPERATIONAL, &hw->state);
-#endif /* CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND */
-
+		if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)) {
+			/* flush fifo data to user space */
+			st_asm330lhhx_flush_fifo_during_resume(hw);
+			clear_bit(ST_ASM330LHHX_HW_OPERATIONAL, &hw->state);
+		}
 	}
 
 	err = st_asm330lhhx_restore_regs(hw);
@@ -2768,22 +2767,22 @@ static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 			return err;
 	}
 
-#if !defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-	err = st_asm330lhhx_reset_hwts(hw);
-	if (err < 0)
-		return err;
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+	if (!IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
+		err = st_asm330lhhx_reset_hwts(hw);
+		if (err < 0)
+			return err;
+	}
 
 	if (st_asm330lhhx_is_fifo_enabled(hw))
 		err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_CONT);
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-	if (hw->fifo_mode != ST_ASM330LHHX_FIFO_BYPASS) {
-		hrtimer_start(&hw->timesync_timer,
-			      ktime_set(0, 0),
-			      HRTIMER_MODE_REL);
+	if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
+		if (hw->fifo_mode != ST_ASM330LHHX_FIFO_BYPASS) {
+			hrtimer_start(&hw->timesync_timer,
+				ktime_set(0, 0),
+				HRTIMER_MODE_REL);
+		}
 	}
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	enable_irq(hw->irq);
 	if (hw->irq != hw->irq_emb)

@@ -832,7 +832,6 @@ struct st_asm330lhhx_hw {
 	u8 ext_data_len;
 	s64 hw_timestamp_global;
 
-#if defined (CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 	struct workqueue_struct *timesync_workqueue;
 	struct work_struct timesync_work;
 	struct hrtimer timesync_timer;
@@ -841,7 +840,6 @@ struct st_asm330lhhx_hw {
 	int timesync_c[ST_ASM330LHHX_ID_HW + 1];
 	u32 hi_hw_timestamp;
 	u32 last_hw_timestamp;
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 	s64 ts_offset;
 	u64 ts_delta_ns;
@@ -1222,7 +1220,8 @@ int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
 			    u8 addr, u8 *data, int len);
 int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw);
 
-#if defined (CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
+/* timestamp */
+#if IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 int st_asm330lhhx_hwtimesync_init(struct st_asm330lhhx_hw *hw);
 #else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 static inline int

@@ -87,8 +87,7 @@ inline int st_asm330lhhx_reset_hwts(struct st_asm330lhhx_hw *hw)
 	return 0;
 }
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-static void
+static void __maybe_unused
 st_asm330lhhx_init_timesync_counter(struct st_asm330lhhx_sensor *sensor,
 				    struct st_asm330lhhx_hw *hw,
 				    bool enable)
@@ -100,7 +99,6 @@ st_asm330lhhx_init_timesync_counter(struct st_asm330lhhx_sensor *sensor,
 
 	spin_unlock_irq(&hw->hwtimestamp_lock);
 }
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 int st_asm330lhhx_set_fifo_mode(struct st_asm330lhhx_hw *hw,
 				enum st_asm330lhhx_fifo_mode fifo_mode)
@@ -367,16 +365,16 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 
 				hw_ts_old = hw->hw_ts;
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-				spin_lock_irq(&hw->hwtimestamp_lock);
+				if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
+					spin_lock_irq(&hw->hwtimestamp_lock);
 
-				hw->hw_timestamp_global =
-					(hw->hw_timestamp_global &
-					 GENMASK_ULL(63, ST_ASM330LHHX_RESET_COUNT)) |
-					((s64)hw->hw_ts_high_fifo << 32) | val;
+					hw->hw_timestamp_global =
+						(hw->hw_timestamp_global &
+						GENMASK_ULL(63, ST_ASM330LHHX_RESET_COUNT)) |
+						((s64)hw->hw_ts_high_fifo << 32) | val;
 
-				spin_unlock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+					spin_unlock_irq(&hw->hwtimestamp_lock);
+				}
 
 				hw->hw_ts = (val + ((s64)hw->hw_ts_high_fifo << 32)) *
 					    hw->ts_delta_ns;
@@ -417,18 +415,18 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 						    st_asm330lhhx_get_time_ns(hw->iio_devs[0]),
 						    hw->tsample);
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-				spin_lock_irq(&hw->hwtimestamp_lock);
+				if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
+					spin_lock_irq(&hw->hwtimestamp_lock);
 
-				hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
+					hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
 
-				memcpy(&iio_buf[ALIGN(ST_ASM330LHHX_SAMPLE_SIZE, sizeof(s64))],
-				       &hw_timestamp_push, sizeof(hw_timestamp_push));
+					memcpy(&iio_buf[ALIGN(ST_ASM330LHHX_SAMPLE_SIZE, sizeof(s64))],
+					       &hw_timestamp_push, sizeof(hw_timestamp_push));
 
-				spin_unlock_irq(&hw->hwtimestamp_lock);
-#else /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
-				hw_timestamp_push = hw->tsample;
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+					spin_unlock_irq(&hw->hwtimestamp_lock);
+				} else {
+					hw_timestamp_push = hw->tsample;
+				}
 
 				/* LPF sample discard */
 				if (sensor->discard_samples) {
@@ -610,10 +608,10 @@ st_asm330lhhx_update_fifo(struct st_asm330lhhx_sensor *sensor,
 
 	disable_irq(hw->irq);
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-	hrtimer_cancel(&hw->timesync_timer);
-	cancel_work_sync(&hw->timesync_work);
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+	if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
+		hrtimer_cancel(&hw->timesync_timer);
+		cancel_work_sync(&hw->timesync_work);
+	}
 
 	if (sensor->id == ST_ASM330LHHX_ID_EXT0 ||
 	    sensor->id == ST_ASM330LHHX_ID_EXT1) {
@@ -635,24 +633,22 @@ st_asm330lhhx_update_fifo(struct st_asm330lhhx_sensor *sensor,
 		goto out;
 
 	if (enable && hw->fifo_mode == ST_ASM330LHHX_FIFO_BYPASS) {
-
-#if !defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-		st_asm330lhhx_reset_hwts(hw);
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
+		if (!IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP))
+			st_asm330lhhx_reset_hwts(hw);
 
 		err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_CONT);
 	} else if (!hw->enable_mask) {
 		err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_BYPASS);
 	}
 
-#if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
-	st_asm330lhhx_init_timesync_counter(sensor, hw, enable);
-	if (hw->fifo_mode != ST_ASM330LHHX_FIFO_BYPASS) {
-		hrtimer_start(&hw->timesync_timer,
-			      ktime_set(0, 0),
-			      HRTIMER_MODE_REL);
+	if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
+		st_asm330lhhx_init_timesync_counter(sensor, hw, enable);
+		if (hw->fifo_mode != ST_ASM330LHHX_FIFO_BYPASS) {
+			hrtimer_start(&hw->timesync_timer,
+				ktime_set(0, 0),
+				HRTIMER_MODE_REL);
+		}
 	}
-#endif /* CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP */
 
 out:
 	enable_irq(hw->irq);
