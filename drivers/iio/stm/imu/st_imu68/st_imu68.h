@@ -20,7 +20,7 @@
 
 #define ST_IMU68_OUT_LEN		6
 
-#if defined(CONFIG_SPI_MASTER)
+#if IS_ENABLED(CONFIG_SPI_MASTER)
 #define ST_IMU68_RX_MAX_LENGTH		8
 #define ST_IMU68_TX_MAX_LENGTH		8
 
@@ -73,7 +73,7 @@ struct st_imu68_hw {
 	struct iio_dev *iio_devs[ST_IMU68_ID_MAX];
 
 	const struct st_imu68_transfer_function *tf;
-#if defined(CONFIG_SPI_MASTER)
+#if IS_ENABLED(CONFIG_SPI_MASTER)
 	struct st_imu68_transfer_buffer tb;
 #endif /* CONFIG_SPI_MASTER */
 };
