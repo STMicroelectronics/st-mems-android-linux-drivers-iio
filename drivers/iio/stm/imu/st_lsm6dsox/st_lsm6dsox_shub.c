@@ -67,7 +67,7 @@ struct st_lsm6dsox_ext_dev_settings {
 	struct st_lsm6dsox_reg bdu_reg;
 	unsigned long ext_available_scan_masks[2];
 
-#if defined(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
 	const struct iio_chan_spec ext_channels[6];
 #else /* CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP */
 	const struct iio_chan_spec ext_channels[5];
@@ -137,7 +137,7 @@ static const struct st_lsm6dsox_ext_dev_settings st_lsm6dsox_ext_dev_table[] = {
 							    16, 16, 's', NULL),
 		.ext_channels[3] = ST_LSM6DSOX_EVENT_CHANNEL(IIO_MAGN, flush),
 
-#if defined(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
 		.ext_available_scan_masks = { 0xf, 0x0 },
 		.ext_channels[4] = IIO_CHAN_HW_TIMESTAMP(3),
 		.ext_channels[5] = IIO_CHAN_SOFT_TIMESTAMP(4),
@@ -219,7 +219,7 @@ static const struct st_lsm6dsox_ext_dev_settings st_lsm6dsox_ext_dev_table[] = {
 							    16, 16, 's', NULL),
 		.ext_channels[3] = ST_LSM6DSOX_EVENT_CHANNEL(IIO_MAGN, flush),
 
-#if defined(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
 		.ext_available_scan_masks = { 0xf, 0x0 },
 		.ext_channels[4] = IIO_CHAN_HW_TIMESTAMP(3),
 		.ext_channels[5] = IIO_CHAN_SOFT_TIMESTAMP(4),
@@ -266,7 +266,7 @@ static const struct st_lsm6dsox_ext_dev_settings st_lsm6dsox_ext_dev_table[] = {
 		.ext_channels[1] = ST_LSM6DSOX_EVENT_CHANNEL(IIO_PRESSURE,
 							     flush),
 
-#if defined(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
 		.ext_available_scan_masks = { 0x3, 0x0 },
 		.ext_channels[2] = IIO_CHAN_HW_TIMESTAMP(1),
 		.ext_channels[3] = IIO_CHAN_SOFT_TIMESTAMP(2),
@@ -314,7 +314,7 @@ static const struct st_lsm6dsox_ext_dev_settings st_lsm6dsox_ext_dev_table[] = {
 		.ext_channels[1] = ST_LSM6DSOX_EVENT_CHANNEL(IIO_PRESSURE,
 							     flush),
 
-#if defined(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSOX_ASYNC_HW_TIMESTAMP)
 		.ext_available_scan_masks = { 0x3, 0x0 },
 		.ext_channels[2] = IIO_CHAN_HW_TIMESTAMP(1),
 		.ext_channels[3] = IIO_CHAN_SOFT_TIMESTAMP(2),

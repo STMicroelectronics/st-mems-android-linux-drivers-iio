@@ -29,7 +29,7 @@
 #define ST_LSM6DSOX_MLC_MAX_NUMBER		8
 #define ST_LSM6DSOX_FSM_MAX_NUMBER		16
 
-#ifdef CONFIG_IIO_LSM6DSOX_MLC_BUILTIN_FIRMWARE
+#if IS_ENABLED(CONFIG_IIO_LSM6DSOX_MLC_BUILTIN_FIRMWARE)
 static const u8 st_lsm6dsox_mlc_fw[] = {
 	#include "st_lsm6dsox_mlc.fw"
 };
@@ -899,10 +899,10 @@ EXPORT_SYMBOL(st_lsm6dsox_mlc_remove);
 
 int st_lsm6dsox_mlc_init_preload(struct st_lsm6dsox_hw *hw)
 {
-#ifdef CONFIG_IIO_ST_LSM6DSOX_MLC_PRELOAD
-	hw->preload_mlc = 1;
-	st_lsm6dsox_mlc_update(&st_lsm6dsox_mlc_preload, hw);
-#endif /* CONFIG_IIO_ST_LSM6DSOX_MLC_PRELOAD */
+	if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSOX_MLC_PRELOAD)) {
+		hw->preload_mlc = 1;
+		st_lsm6dsox_mlc_update(&st_lsm6dsox_mlc_preload, hw);
+	}
 
 	return 0;
 }
