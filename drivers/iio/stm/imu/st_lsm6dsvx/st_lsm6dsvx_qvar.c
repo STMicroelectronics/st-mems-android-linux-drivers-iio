@@ -21,7 +21,6 @@
 
 #include "st_lsm6dsvx.h"
 
-#ifdef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
 static const u8 qvar_fifo_config[][2] = {
 	{ 0x05, 0x00 }, { 0x17, 0x40 }, { 0x02, 0x11 }, { 0x08, 0xE8 },
 	{ 0x09, 0x00 }, { 0x09, 0x3C }, { 0x09, 0x96 }, { 0x09, 0x03 },
@@ -42,7 +41,6 @@ static const u8 qvar_fifo_config[][2] = {
 	{ 0x09, 0x40 }, { 0x09, 0xE0 }, { 0x17, 0x00 }, { 0x04, 0x00 },
 	{ 0x05, 0x10 }, { 0x02, 0x01 }, { 0x60, 0x45 }, { 0x45, 0x02 },
 };
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
 
 #define ST_LSM6DSVX_QVAR_SIZE			2
 
@@ -69,29 +67,29 @@ static const struct iio_chan_spec st_lsm6dsvx_qvar_channels[] = {
 
 static int st_lsm6dsvx_qvar_init(struct st_lsm6dsvx_hw *hw)
 {
+	if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO)) {
+		uint8_t i;
+		int err;
 
-#ifdef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
-	uint8_t i;
-	int err;
+		mutex_lock(&hw->page_lock);
+		st_lsm6dsvx_set_page_access(hw, ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK, 1);
+		for (i = 0; i < ARRAY_SIZE(qvar_fifo_config); i++) {
+			err = regmap_write(hw->regmap, qvar_fifo_config[i][0],
+					qvar_fifo_config[i][1]);
+			if (err < 0) {
+				st_lsm6dsvx_set_page_access(hw,
+					ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK, 0);
+				mutex_unlock(&hw->page_lock);
+				dev_err(hw->dev, "failed to configure qvar\n");
 
-	mutex_lock(&hw->page_lock);
-	st_lsm6dsvx_set_page_access(hw, ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK, 1);
-	for (i = 0; i < ARRAY_SIZE(qvar_fifo_config); i++) {
-		err = regmap_write(hw->regmap, qvar_fifo_config[i][0],
-				   qvar_fifo_config[i][1]);
-		if (err < 0) {
-			st_lsm6dsvx_set_page_access(hw,
-				   ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK, 0);
-			mutex_unlock(&hw->page_lock);
-			dev_err(hw->dev, "failed to configure qvar\n");
-
-			return err;
+				return err;
+			}
 		}
+
+		st_lsm6dsvx_set_page_access(hw,
+					ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK, 0);
+		mutex_unlock(&hw->page_lock);
 	}
-	st_lsm6dsvx_set_page_access(hw,
-				   ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK, 0);
-	mutex_unlock(&hw->page_lock);
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
 
 	/* impedance selection */
 	return st_lsm6dsvx_write_with_mask(hw,
@@ -154,19 +152,19 @@ _st_lsm6dsvx_qvar_sensor_set_enable(struct st_lsm6dsvx_sensor *sensor,
 	if (err < 0)
 		return err;
 
-#ifndef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
-	if (enable) {
-		int64_t newTime;
+	if (!IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO)) {
+		if (enable) {
+			int64_t newTime;
 
-		newTime = 1000000000 / odr;
-		sensor->oldktime = ktime_set(0, newTime);
-		hrtimer_start(&sensor->hr_timer, sensor->oldktime,
-			      HRTIMER_MODE_REL);
-	} else {
-		cancel_work_sync(&sensor->iio_work);
-		hrtimer_cancel(&sensor->hr_timer);
+			newTime = 1000000000 / odr;
+			sensor->oldktime = ktime_set(0, newTime);
+			hrtimer_start(&sensor->hr_timer, sensor->oldktime,
+				HRTIMER_MODE_REL);
+		} else {
+			cancel_work_sync(&sensor->iio_work);
+			hrtimer_cancel(&sensor->hr_timer);
+		}
 	}
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
 
 	return st_lsm6dsvx_write_with_mask(sensor->hw,
 					   ST_LSM6DSVX_REG_CTRL7_ADDR,
@@ -192,7 +190,6 @@ st_lsm6dsvx_qvar_sensor_set_enable(struct st_lsm6dsvx_sensor *sensor,
 	return 0;
 }
 
-#ifndef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
 static inline void st_lsm6dsvx_flush_works(struct st_lsm6dsvx_hw *hw)
 {
 	flush_workqueue(hw->qvar_workqueue);
@@ -316,7 +313,6 @@ static int st_lsm6dsvx_qvar_buffer(struct st_lsm6dsvx_hw *hw)
 
 	return st_lsm6dsvx_allocate_workqueue(hw);
 }
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
 
 static struct iio_dev *
 st_lsm6dsvx_alloc_qvar_iiodev(struct st_lsm6dsvx_hw *hw)
@@ -348,14 +344,14 @@ st_lsm6dsvx_alloc_qvar_iiodev(struct st_lsm6dsvx_hw *hw)
 	sensor->gain = 1;
 	sensor->watermark = 1;
 
-#ifndef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
-	/* configure hrtimer */
-	hrtimer_init(&sensor->hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	sensor->hr_timer.function = &st_lsm6dsvx_qvar_poll_function_read;
+	if (!IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO)) {
+		/* configure hrtimer */
+		hrtimer_init(&sensor->hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		sensor->hr_timer.function = &st_lsm6dsvx_qvar_poll_function_read;
 
-	sensor->oldktime = ktime_set(0, 1000000000 / sensor->odr);
-	INIT_WORK(&sensor->iio_work, st_lsm6dsvx_qvar_poll_function_work);
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
+		sensor->oldktime = ktime_set(0, 1000000000 / sensor->odr);
+		INIT_WORK(&sensor->iio_work, st_lsm6dsvx_qvar_poll_function_work);
+	}
 
 	return iio_dev;
 }
@@ -369,12 +365,12 @@ int st_lsm6dsvx_qvar_probe(struct st_lsm6dsvx_hw *hw)
 	if (!hw->iio_devs[ST_LSM6DSVX_ID_QVAR])
 		return -ENOMEM;
 
-#ifndef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
-	/* if qvar not in FIFO the st_lsm6dsvx_qvar_ops is local */
-	err = st_lsm6dsvx_qvar_buffer(hw);
-	if (err)
-		return err;
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
+	if (!IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO)) {
+		/* if qvar not in FIFO the st_lsm6dsvx_qvar_ops is local */
+		err = st_lsm6dsvx_qvar_buffer(hw);
+		if (err)
+			return err;
+	}
 
 	err = st_lsm6dsvx_qvar_init(hw);
 
@@ -384,13 +380,13 @@ int st_lsm6dsvx_qvar_probe(struct st_lsm6dsvx_hw *hw)
 int st_lsm6dsvx_qvar_remove(struct device *dev)
 {
 
-#ifndef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
-	struct st_lsm6dsvx_hw *hw = dev_get_drvdata(dev);
+	if (!IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO)) {
+		struct st_lsm6dsvx_hw *hw = dev_get_drvdata(dev);
 
-	st_lsm6dsvx_flush_works(hw);
-	destroy_workqueue(hw->qvar_workqueue);
-	hw->qvar_workqueue = NULL;
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
+		st_lsm6dsvx_flush_works(hw);
+		destroy_workqueue(hw->qvar_workqueue);
+		hw->qvar_workqueue = NULL;
+	}
 
 	return 0;
 }

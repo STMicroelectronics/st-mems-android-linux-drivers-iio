@@ -27,7 +27,7 @@
 #define ST_LSM6DSVX_MLC_MAX_NUMBER		4
 #define ST_LSM6DSVX_FSM_MAX_NUMBER		8
 
-#ifdef CONFIG_IIO_LSM6DSVX_MLC_BUILTIN_FIRMWARE
+#if IS_ENABLED(CONFIG_IIO_LSM6DSVX_MLC_BUILTIN_FIRMWARE)
 static const u8 st_lsm6dsvx_mlc_fw[] = {
 	#include "st_lsm6dsvx_mlc.fw"
 };
@@ -37,7 +37,7 @@ DECLARE_BUILTIN_FIRMWARE(LSM6DSVX_MLC_FIRMWARE_NAME,
 #define LSM6DSVX_MLC_FIRMWARE_NAME		"st_lsm6dsvx_mlc.bin"
 #endif /* CONFIG_IIO_LSM6DSVX_MLC_BUILTIN_FIRMWARE */
 
-#ifdef CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD)
 #include "st_lsm6dsvx_preload_mlc.h"
 #endif /* CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD */
 
@@ -796,7 +796,7 @@ int st_lsm6dsvx_mlc_check_status(struct st_lsm6dsvx_hw *hw)
 
 int st_lsm6dsvx_mlc_init_preload(struct st_lsm6dsvx_hw *hw)
 {
-#ifdef CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD)
 	hw->preload_mlc = 1;
 	st_lsm6dsvx_mlc_update(&st_lsm6dsvx_mlc_preload, hw);
 #endif /* CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD */

@@ -814,12 +814,10 @@ struct st_lsm6dsvx_sensor {
 			u32 gain;
 			u32 offset;
 
-#ifndef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
 			struct hrtimer hr_timer;
 			struct work_struct iio_work;
 			ktime_t oldktime;
 			s64 timestamp;
-#endif /* !CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
 
 			u8 std_samples;
 			u8 std_level;
@@ -926,14 +924,12 @@ struct st_lsm6dsvx_hw {
 	u32 enable_ev_mask;
 	s64 hw_timestamp_global;
 
-#if defined(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
 	struct workqueue_struct *timesync_workqueue;
 	struct work_struct timesync_work;
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
 	int timesync_c[ST_LSM6DSVX_ID_HW + 1];
-#endif /* CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP */
 
 	u8 int_pin;
 
@@ -1159,7 +1155,7 @@ st_lsm6dsvx_qvar_sensor_set_enable(struct st_lsm6dsvx_sensor *sensor,
 				   bool enable);
 int st_lsm6dsvx_qvar_remove(struct device *dev);
 
-#if defined(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
 int st_lsm6dsvx_hwtimesync_init(struct st_lsm6dsvx_hw *hw);
 #else /* CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP */
 static inline int

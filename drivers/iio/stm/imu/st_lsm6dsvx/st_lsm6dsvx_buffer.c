@@ -42,9 +42,7 @@ enum {
 	ST_LSM6DSVX_EXT1_TAG = 0x10,
 	ST_LSM6DSVX_STEPC_TAG = 0x12,
 	ST_LSM6DSVX_GAMEROT_TAG = 0x13,
-#ifdef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
 	ST_LSM6DSVX_QVAR_TAG = 0x1B,
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
 };
 
 #define ST_LSM6DSVX_EWMA_LEVEL			120
@@ -73,13 +71,13 @@ static inline int st_lsm6dsvx_reset_hwts(struct st_lsm6dsvx_hw *hw)
 	if (ret < 0)
 		return ret;
 
-#if defined(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
-	spin_lock_irq(&hw->hwtimestamp_lock);
-	hw->hw_timestamp_global = (hw->hw_timestamp_global + (1LL << 32)) &
-				   GENMASK_ULL(63, 32);
-	hw->timesync_ktime = ktime_set(0, ST_LSM6DSVX_FAST_KTIME);
-	spin_unlock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP */
+	if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)) {
+		spin_lock_irq(&hw->hwtimestamp_lock);
+		hw->hw_timestamp_global = (hw->hw_timestamp_global +
+					  (1LL << 32)) & GENMASK_ULL(63, 32);
+		hw->timesync_ktime = ktime_set(0, ST_LSM6DSVX_FAST_KTIME);
+		spin_unlock_irq(&hw->hwtimestamp_lock);
+	}
 
 	hw->ts = iio_get_time_ns(hw->iio_devs[0]);
 	hw->ts_offset = hw->ts;
@@ -90,7 +88,6 @@ static inline int st_lsm6dsvx_reset_hwts(struct st_lsm6dsvx_hw *hw)
 	return 0;
 }
 
-#if defined(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
 static void st_lsm6dsvx_init_timesync_counter(struct st_lsm6dsvx_sensor *sensor,
 					      struct st_lsm6dsvx_hw *hw,
 					      bool enable)
@@ -101,7 +98,6 @@ static void st_lsm6dsvx_init_timesync_counter(struct st_lsm6dsvx_sensor *sensor,
 
 	spin_unlock_irq(&hw->hwtimestamp_lock);
 }
-#endif /* CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP */
 
 int st_lsm6dsvx_set_fifo_mode(struct st_lsm6dsvx_hw *hw,
 			      enum st_lsm6dsvx_fifo_mode fifo_mode)
@@ -249,7 +245,7 @@ st_lsm6dsvx_get_iiodev_from_tag(struct st_lsm6dsvx_hw *hw, u8 tag)
 		iio_dev = hw->iio_devs[ST_LSM6DSVX_ID_STEP_COUNTER];
 		break;
 
-#ifdef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO)
 	case ST_LSM6DSVX_QVAR_TAG:
 		iio_dev = hw->iio_devs[ST_LSM6DSVX_ID_QVAR];
 		break;
@@ -315,15 +311,15 @@ static int st_lsm6dsvx_read_fifo(struct st_lsm6dsvx_hw *hw)
 				if (hw->val_ts_old > val)
 					hw->hw_ts_high++;
 
-#if defined(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
-				spin_lock_irq(&hw->hwtimestamp_lock);
+				if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)) {
+					spin_lock_irq(&hw->hwtimestamp_lock);
 
-				hw->hw_timestamp_global =
-					    (hw->hw_timestamp_global &
-					     GENMASK_ULL(63, 32)) | val;
+					hw->hw_timestamp_global =
+						(hw->hw_timestamp_global &
+						GENMASK_ULL(63, 32)) | val;
 
-				spin_unlock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP */
+					spin_unlock_irq(&hw->hwtimestamp_lock);
+				}
 
 				hw_ts_old = hw->hw_ts;
 				hw->val_ts_old = val;
@@ -354,9 +350,9 @@ static int st_lsm6dsvx_read_fifo(struct st_lsm6dsvx_hw *hw)
 				if (!iio_dev)
 					continue;
 
-#ifdef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
 				/* qvar data is on X axis of the filter */
-				if (tag == ST_LSM6DSVX_QVAR_TAG) {
+				if ((tag == ST_LSM6DSVX_QVAR_TAG) &&
+				    IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO)) {
 					u16 id_f = (u16)le16_to_cpu(get_unaligned_le16(ptr + 2));
 
 					if (id_f != ST_LSM6DSVX_QVAR_FILTER_X)
@@ -368,7 +364,6 @@ static int st_lsm6dsvx_read_fifo(struct st_lsm6dsvx_hw *hw)
 						iio_buf,
 						iio_get_time_ns(hw->iio_devs[0]));
 				} else {
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
 					drdymask = (s16)le16_to_cpu(get_unaligned_le16(ptr));
 					if (unlikely(drdymask >= ST_LSM6DSVX_SAMPLE_DISCHARD))
 						continue;
@@ -391,18 +386,18 @@ static int st_lsm6dsvx_read_fifo(struct st_lsm6dsvx_hw *hw)
 							    iio_get_time_ns(hw->iio_devs[0]),
 							    hw->tsample);
 
-#if defined(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
-					spin_lock_irq(&hw->hwtimestamp_lock);
+					if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)) {
+						spin_lock_irq(&hw->hwtimestamp_lock);
 
-					hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
+						hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
 
-					spin_unlock_irq(&hw->hwtimestamp_lock);
+						spin_unlock_irq(&hw->hwtimestamp_lock);
 
-					memcpy(&iio_buf[ALIGN(ST_LSM6DSVX_SAMPLE_SIZE, sizeof(s64))],
-					       &hw_timestamp_push, sizeof(hw_timestamp_push));
-#else /* CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP */
-					hw_timestamp_push = hw->tsample;
-#endif /* CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP */
+						memcpy(&iio_buf[ALIGN(ST_LSM6DSVX_SAMPLE_SIZE, sizeof(s64))],
+						       &hw_timestamp_push, sizeof(hw_timestamp_push));
+					} else {
+						hw_timestamp_push = hw->tsample;
+					}
 
 					/* support decimation for ODR < 15 Hz */
 					if (sensor->dec_counter > 0) {
@@ -415,9 +410,7 @@ static int st_lsm6dsvx_read_fifo(struct st_lsm6dsvx_hw *hw)
 						sensor->last_fifo_timestamp = hw_timestamp_push;
 						sensor->dec_counter = sensor->decimator;
 					}
-#ifdef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
 				}
-#endif /* CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO */
 			}
 		}
 		read_len += word_len;
@@ -554,14 +547,14 @@ static int st_lsm6dsvx_update_fifo(struct st_lsm6dsvx_sensor *sensor, bool enabl
 
 	disable_irq(hw->irq);
 
-#if defined(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
-	hrtimer_cancel(&hw->timesync_timer);
-	cancel_work_sync(&hw->timesync_work);
-#endif /* CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP */
+	if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)) {
+		hrtimer_cancel(&hw->timesync_timer);
+		cancel_work_sync(&hw->timesync_work);
+	}
 
 	switch (sensor->id) {
 
-#ifdef CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO)
 	case ST_LSM6DSVX_ID_QVAR:
 		err = st_lsm6dsvx_qvar_sensor_set_enable(sensor, enable);
 		if (err < 0)
@@ -656,14 +649,14 @@ static int st_lsm6dsvx_update_fifo(struct st_lsm6dsvx_sensor *sensor, bool enabl
 		err = st_lsm6dsvx_set_fifo_mode(hw, ST_LSM6DSVX_FIFO_BYPASS);
 	}
 
-#if defined(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)
-	st_lsm6dsvx_init_timesync_counter(sensor, hw, enable);
-	if (hw->fifo_mode != ST_LSM6DSVX_FIFO_BYPASS) {
-		hrtimer_start(&hw->timesync_timer,
-			      ktime_set(0, 0),
-			      HRTIMER_MODE_REL);
+	if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP)) {
+		st_lsm6dsvx_init_timesync_counter(sensor, hw, enable);
+		if (hw->fifo_mode != ST_LSM6DSVX_FIFO_BYPASS) {
+			hrtimer_start(&hw->timesync_timer,
+				ktime_set(0, 0),
+				HRTIMER_MODE_REL);
+		}
 	}
-#endif /* CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP */
 
 out:
 	enable_irq(hw->irq);
