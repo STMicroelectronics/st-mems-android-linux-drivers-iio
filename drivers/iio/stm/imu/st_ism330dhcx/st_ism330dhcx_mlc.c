@@ -29,7 +29,7 @@
 #define ST_ISM330DHCX_FSM_NUMBER		16
 #define ST_ISM330DHCX_MLC_FIRMWARE_NAME		"st_ism330dhcx_mlc.bin"
 
-#ifdef CONFIG_IIO_ST_ISM330DHCX_MLC_PRELOAD
+#if IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_MLC_PRELOAD)
 #include "st_ism330dhcx_preload_mlc.h"
 #endif /* CONFIG_IIO_ST_ISM330DHCX_MLC_PRELOAD */
 
@@ -992,7 +992,7 @@ EXPORT_SYMBOL(st_ism330dhcx_mlc_remove);
 int st_ism330dhcx_mlc_init_preload(struct st_ism330dhcx_hw *hw)
 {
 
-#ifdef CONFIG_IIO_ST_ISM330DHCX_MLC_PRELOAD
+#if IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_MLC_PRELOAD)
 	hw->preload_mlc = 1;
 	st_ism330dhcx_mlc_update(&st_ism330dhcx_mlc_preload, hw);
 #endif /* CONFIG_IIO_ST_ISM330DHCX_MLC_PRELOAD */

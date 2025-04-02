@@ -78,13 +78,13 @@ inline int st_ism330dhcx_reset_hwts(struct st_ism330dhcx_hw *hw)
 	if (ret < 0)
 		return ret;
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
-	spin_lock_irq(&hw->hwtimestamp_lock);
-	hw->hw_timestamp_global = (hw->hw_timestamp_global + (1LL << 32)) &
-				  GENMASK_ULL(63, 32);
-	hw->timesync_ktime = ktime_set(0, ST_ISM330DHCX_FAST_KTIME);
-	spin_unlock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+	if (IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)) {
+		spin_lock_irq(&hw->hwtimestamp_lock);
+		hw->hw_timestamp_global = (hw->hw_timestamp_global +
+					   (1LL << 32)) & GENMASK_ULL(63, 32);
+		hw->timesync_ktime = ktime_set(0, ST_ISM330DHCX_FAST_KTIME);
+		spin_unlock_irq(&hw->hwtimestamp_lock);
+	}
 
 	hw->ts = st_ism330dhcx_get_time_ns(hw);
 	hw->ts_offset = hw->ts;
@@ -95,7 +95,6 @@ inline int st_ism330dhcx_reset_hwts(struct st_ism330dhcx_hw *hw)
 	return 0;
 }
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
 static
 void st_ism330dhcx_init_timesync_counter(struct st_ism330dhcx_sensor *sensor,
 					 struct st_ism330dhcx_hw *hw,
@@ -107,7 +106,6 @@ void st_ism330dhcx_init_timesync_counter(struct st_ism330dhcx_sensor *sensor,
 
 	spin_unlock_irq(&hw->hwtimestamp_lock);
 }
-#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 
 /**
  * Setting FIFO mode
@@ -388,15 +386,15 @@ static int st_ism330dhcx_read_fifo(struct st_ism330dhcx_hw *hw)
 			if (tag == ST_ISM330DHCX_TS_TAG) {
 				val = get_unaligned_le32(ptr);
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
-				spin_lock_irq(&hw->hwtimestamp_lock);
+				if (IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)) {
+					spin_lock_irq(&hw->hwtimestamp_lock);
 
-				hw->hw_timestamp_global =
-					(hw->hw_timestamp_global &
-					 GENMASK_ULL(63, 32)) | val;
+					hw->hw_timestamp_global =
+						(hw->hw_timestamp_global &
+						GENMASK_ULL(63, 32)) | val;
 
-				spin_unlock_irq(&hw->hwtimestamp_lock);
-#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+					spin_unlock_irq(&hw->hwtimestamp_lock);
+				}
 
 				if (hw->val_ts_old > val)
 					hw->hw_ts_high++;
@@ -450,18 +448,18 @@ static int st_ism330dhcx_read_fifo(struct st_ism330dhcx_hw *hw)
 						    st_ism330dhcx_get_time_ns(hw),
 						    hw->tsample);
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
-				spin_lock_irq(&hw->hwtimestamp_lock);
+				if (IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)) {
+					spin_lock_irq(&hw->hwtimestamp_lock);
 
-				hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
+					hw_timestamp_push = cpu_to_le64(hw->hw_timestamp_global);
 
-				memcpy(&iio_buf[ALIGN(ST_ISM330DHCX_SAMPLE_SIZE, sizeof(s64))],
-				       &hw_timestamp_push, sizeof(hw_timestamp_push));
+					memcpy(&iio_buf[ALIGN(ST_ISM330DHCX_SAMPLE_SIZE, sizeof(s64))],
+					       &hw_timestamp_push, sizeof(hw_timestamp_push));
 
-				spin_unlock_irq(&hw->hwtimestamp_lock);
-#else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
-				hw_timestamp_push = hw->tsample;
-#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+					spin_unlock_irq(&hw->hwtimestamp_lock);
+				} else {
+					hw_timestamp_push = hw->tsample;
+				}
 
 				/* support decimation for ODR < 12.5 Hz */
 				if (sensor->dec_counter > 0) {
@@ -667,10 +665,10 @@ static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
 
 	disable_irq(hw->irq);
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
-	hrtimer_cancel(&hw->timesync_timer);
-	cancel_work_sync(&hw->timesync_work);
-#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
+	if (IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)) {
+		hrtimer_cancel(&hw->timesync_timer);
+		cancel_work_sync(&hw->timesync_work);
+	}
 
 	switch (sensor->id) {
 	case ST_ISM330DHCX_ID_EXT0:
@@ -709,15 +707,14 @@ static int st_ism330dhcx_update_fifo(struct st_ism330dhcx_sensor *sensor,
 		err = st_ism330dhcx_set_fifo_mode(hw, ST_ISM330DHCX_FIFO_BYPASS);
 	}
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
-	st_ism330dhcx_init_timesync_counter(sensor, hw, enable);
-	if (hw->fifo_mode != ST_ISM330DHCX_FIFO_BYPASS) {
-		hrtimer_start(&hw->timesync_timer,
-			      ktime_set(0, 0),
-			      HRTIMER_MODE_REL);
+	if (IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)) {
+		st_ism330dhcx_init_timesync_counter(sensor, hw, enable);
+		if (hw->fifo_mode != ST_ISM330DHCX_FIFO_BYPASS) {
+			hrtimer_start(&hw->timesync_timer,
+				      ktime_set(0, 0),
+				      HRTIMER_MODE_REL);
+		}
 	}
-#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
-
 out:
 	enable_irq(hw->irq);
 

@@ -352,7 +352,7 @@ static const struct iio_chan_spec st_ism330dhcx_acc_channels[] = {
 	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ACCEL, dtap),
 #endif /* LINUX_VERSION_CODE */
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
 #else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
@@ -381,7 +381,7 @@ static const struct iio_chan_spec st_ism330dhcx_gyro_channels[] = {
 				1, IIO_MOD_Z, 2, 16, 16, 's'),
 	ST_ISM330DHCX_EVENT_CHANNEL(IIO_ANGL_VEL, flush),
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(3),
 	IIO_CHAN_SOFT_TIMESTAMP(4),
 #else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
@@ -416,7 +416,7 @@ static const struct iio_chan_spec st_ism330dhcx_temp_channels[] = {
 	},
 	ST_ISM330DHCX_EVENT_CHANNEL(IIO_TEMP, flush),
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(1),
 	IIO_CHAN_SOFT_TIMESTAMP(2),
 #else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
@@ -1052,9 +1052,11 @@ release_iio:
 	return err;
 }
 
-#ifdef CONFIG_DEBUG_FS
-static int st_ism330dhcx_reg_access(struct iio_dev *iio_dev, unsigned int reg,
-				 unsigned int writeval, unsigned int *readval)
+static int
+__maybe_unused st_ism330dhcx_reg_access(struct iio_dev *iio_dev,
+					unsigned int reg,
+					unsigned int writeval,
+					unsigned int *readval)
 {
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	int ret;
@@ -1072,7 +1074,6 @@ static int st_ism330dhcx_reg_access(struct iio_dev *iio_dev, unsigned int reg,
 
 	return (ret < 0) ? ret : 0;
 }
-#endif /* CONFIG_DEBUG_FS */
 
 /**
  * Get a list of available sensor ODR
@@ -1585,7 +1586,7 @@ static const struct iio_info st_ism330dhcx_acc_info = {
 	.write_event_value = st_ism330dhcx_write_event_value,
 	.read_event_value = st_ism330dhcx_read_event_value,
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	/* connect debug info to first device */
 	.debugfs_reg_access = st_ism330dhcx_reg_access,
 #endif /* CONFIG_DEBUG_FS */
@@ -1638,7 +1639,7 @@ static const struct iio_info st_ism330dhcx_temp_info = {
 
 static const unsigned long st_ism330dhcx_available_scan_masks[] = {
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
 	GENMASK(3, 0), 0x0
 #else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 	GENMASK(2, 0), 0x0
@@ -1647,7 +1648,7 @@ static const unsigned long st_ism330dhcx_available_scan_masks[] = {
 };
 static const unsigned long st_ism330dhcx_sc_available_scan_masks[] = {
 
-#if defined(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
 	GENMASK(1, 0), 0x0
 #else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 	BIT(0), 0x0

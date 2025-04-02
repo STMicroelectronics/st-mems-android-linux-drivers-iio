@@ -839,14 +839,12 @@ struct st_ism330dhcx_hw {
 
 	s64 hw_timestamp_global;
 
-#if defined (CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
 	struct workqueue_struct *timesync_workqueue;
 	struct work_struct timesync_work;
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
 	int timesync_c[ST_ISM330DHCX_ID_HW + 1];
-#endif /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 
 	s64 ts_offset;
 	u64 ts_delta_ns;
@@ -1179,7 +1177,7 @@ int st_ism330dhcx_embfunc_probe(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_embfunc_handler_thread(struct st_ism330dhcx_hw *hw);
 int st_ism330dhcx_step_enable(struct st_ism330dhcx_sensor *sensor, bool enable);
 
-#if defined (CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP)
 int st_ism330dhcx_hwtimesync_init(struct st_ism330dhcx_hw *hw);
 #else /* CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP */
 static inline int
