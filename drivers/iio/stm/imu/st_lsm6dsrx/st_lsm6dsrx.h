@@ -855,14 +855,12 @@ struct st_lsm6dsrx_hw {
 	unsigned long state;
 	s64 hw_timestamp_global;
 
-#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
 	struct workqueue_struct *timesync_workqueue;
 	struct work_struct timesync_work;
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
 	int timesync_c[ST_LSM6DSRX_ID_HW + 1];
-#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
 
 	u64 enable_mask;
 	u64 enable_ev_mask;
@@ -1112,7 +1110,7 @@ int st_lsm6dsrx_shub_set_enable(struct st_lsm6dsrx_sensor *sensor,
 				bool enable);
 int st_lsm6dsrx_shub_read(struct st_lsm6dsrx_sensor *sensor,
 			  u8 addr, u8 *data, int len);
-#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
 int st_lsm6dsrx_hwtimesync_init(struct st_lsm6dsrx_hw *hw);
 #else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
 static inline int
