@@ -20,9 +20,7 @@
 #include <linux/iio/iio-opaque.h>
 #endif /* LINUX_VERSION_CODE */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
 #include <linux/i2c.h>
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
 
 #define ISM330DLC_DEV_NAME			"ism330dlc"
 
@@ -55,7 +53,7 @@ enum st_mask_id {
 
 #define ST_ISM330DLC_WAKE_UP_SENSORS	BIT(ST_MASK_ID_TILT)
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)
 #define ST_ISM330DLC_NUM_CLIENTS		1
 #else /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
 #define ST_ISM330DLC_NUM_CLIENTS		0
@@ -172,9 +170,7 @@ struct ism330dlc_data {
 	const char *name;
 
 	u16 enable_digfunc_mask;
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
 	u16 enable_sensorhub_mask;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
 
 	u16 irq_enable_fifo_mask;
 	u16 irq_enable_accel_ext_mask;
@@ -218,11 +214,9 @@ struct ism330dlc_data {
 	int64_t slower_counter;
 	uint8_t slower_id;
 
-#ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
 	bool injection_mode;
 	s64 last_injection_timestamp;
 	u8 injection_odr;
-#endif /* CONFIG_ST_ISM330DLC_XL_DATA_INJECTION */
 
 	struct work_struct data_work;
 
@@ -233,11 +227,9 @@ struct ism330dlc_data {
 	struct mutex fifo_lock;
 	u32 module_id;
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
 	bool ext0_available;
 	int8_t ext0_selftest_status;
 	struct mutex i2c_transfer_lock;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
 
 	const struct st_ism330dlc_transfer_function *tf;
 	struct st_ism330dlc_transfer_buffer tb;
@@ -262,7 +254,7 @@ struct ism330dlc_sensor_data {
 
 static bool __maybe_unused st_ism330dlc_skip_basic_features(enum st_mask_id i)
 {
-#ifndef CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES
+#if !IS_ENABLED(CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES)
 	if (i == ST_MASK_ID_TILT)
 		return true;
 #endif /* CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
@@ -308,7 +300,7 @@ ssize_t st_ism330dlc_get_module_id(struct device *dev,
 				   struct device_attribute *attr,
 				   char *buf);
 
-#ifdef CONFIG_IIO_BUFFER
+#if IS_ENABLED(CONFIG_IIO_BUFFER)
 int st_ism330dlc_allocate_rings(struct ism330dlc_data *cdata);
 void st_ism330dlc_deallocate_rings(struct ism330dlc_data *cdata);
 int st_ism330dlc_trig_set_state(struct iio_trigger *trig, bool state);
@@ -330,7 +322,7 @@ static inline int st_ism330dlc_read_fifo(struct ism330dlc_data *cdata,
 #define ST_ISM330DLC_TRIGGER_SET_STATE NULL
 #endif /* CONFIG_IIO_BUFFER */
 
-#ifdef CONFIG_IIO_TRIGGER
+#if IS_ENABLED(CONFIG_IIO_TRIGGER)
 int st_ism330dlc_allocate_triggers(struct ism330dlc_data *cdata,
 				   const struct iio_trigger_ops *trigger_ops);
 void st_ism330dlc_deallocate_triggers(struct ism330dlc_data *cdata);
@@ -352,12 +344,12 @@ static inline void st_ism330dlc_flush_works(void)
 }
 #endif /* CONFIG_IIO_TRIGGER */
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 int st_ism330dlc_common_suspend(struct ism330dlc_data *cdata);
 int st_ism330dlc_common_resume(struct ism330dlc_data *cdata);
 #endif /* CONFIG_PM */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)
 int st_ism330dlc_write_embedded_registers(struct ism330dlc_data *cdata,
 					  u8 reg_addr, u8 *data, int len);
 int st_ism330dlc_i2c_master_probe(struct ism330dlc_data *cdata);

@@ -143,7 +143,7 @@ static int st_ism330dlc_spi_remove(struct spi_device *spi)
 }
 #endif /* LINUX_VERSION_CODE */
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_ism330dlc_suspend(struct device *dev)
 {
 	struct ism330dlc_data *cdata = spi_get_drvdata(to_spi_device(dev));
@@ -173,7 +173,7 @@ static const struct spi_device_id st_ism330dlc_id_table[] = {
 };
 MODULE_DEVICE_TABLE(spi, st_ism330dlc_id_table);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id ism330dlc_of_match[] = {
 	{
 		.compatible = "st,ism330dlc",

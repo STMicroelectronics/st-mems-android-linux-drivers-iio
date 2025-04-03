@@ -135,7 +135,7 @@ static int st_ism330dlc_i2c_remove(struct i2c_client *client)
 }
 #endif /* LINUX_VERSION_CODE */
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_ism330dlc_suspend(struct device *dev)
 {
 	struct ism330dlc_data *cdata = i2c_get_clientdata(to_i2c_client(dev));
@@ -165,7 +165,7 @@ static const struct i2c_device_id st_ism330dlc_id_table[] = {
 };
 MODULE_DEVICE_TABLE(i2c, st_ism330dlc_id_table);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id ism330dlc_of_match[] = {
 	{
 		.compatible = "st,ism330dlc",

@@ -53,7 +53,7 @@
 #define ST_ISM330DLC_SLVX_READ			0x01
 
 /* External sensors configuration */
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL)
 static int lis3mdl_initialization(struct ism330dlc_sensor_data *sdata);
 
 #define ST_ISM330DLC_EXT0_ADDR			0x1e
@@ -101,7 +101,7 @@ static int lis3mdl_initialization(struct ism330dlc_sensor_data *sdata);
 #define ST_ISM330DLC_SELFTEST_ENABLE		0x1d
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911)
 static int akm09911_initialization(struct ism330dlc_sensor_data *sdata);
 
 #define ST_ISM330DLC_EXT0_ADDR			0x0c
@@ -143,7 +143,7 @@ static int akm09911_initialization(struct ism330dlc_sensor_data *sdata);
 #define ST_ISM330DLC_SELFTEST_EXT0_MAX_Z	(-50)
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911 */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912)
 static int akm09912_initialization(struct ism330dlc_sensor_data *sdata);
 
 #define ST_ISM330DLC_EXT0_ADDR			0x0c
@@ -185,7 +185,7 @@ static int akm09912_initialization(struct ism330dlc_sensor_data *sdata);
 #define ST_ISM330DLC_SELFTEST_EXT0_MAX_Z	(-400)
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912 */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09916
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09916)
 #define ST_ISM330DLC_EXT0_ADDR			0x0c
 #define ST_ISM330DLC_EXT0_ADDR2			0x0c
 #define ST_ISM330DLC_EXT0_WAI_ADDR		0x01
@@ -225,8 +225,7 @@ static int akm09912_initialization(struct ism330dlc_sensor_data *sdata);
 #define ST_ISM330DLC_SELFTEST_EXT0_MAX_Z	(-200)
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09916 */
 
-
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB)
 static int lps22hb_initialization(struct ism330dlc_sensor_data *sdata);
 
 #define ST_ISM330DLC_EXT0_ADDR			0x5d
@@ -262,7 +261,7 @@ static int lps22hb_initialization(struct ism330dlc_sensor_data *sdata);
 #define ST_ISM330DLC_EXT0_BOOT_FUNCTION		(&lps22hb_initialization)
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LIS2MDL
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS2MDL)
 static int lis2mdl_initialization(struct ism330dlc_sensor_data *sdata);
 
 #define ST_ISM330DLC_EXT0_ADDR			0x1e
@@ -304,30 +303,29 @@ static int lis2mdl_initialization(struct ism330dlc_sensor_data *sdata);
 #define ST_ISM330DLC_EXT0_SUFFIX_NAME		"magn"
 #define ST_ISM330DLC_EXT1_SUFFIX_NAME		"press"
 
-#if defined(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL) || \
-			defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912) || \
-			defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09916) || \
-			defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911)
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09916) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911)
 #define ST_ISM330DLC_EXT0_HAS_SELFTEST		1
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_MAGN */
 
-#if defined(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL) || \
-    defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912) || \
-    defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09916) || \
-    defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911) || \
-    defined(CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB)
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09916) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB)
 #define ST_ISM330DLC_EXT0_HAS_FULLSCALE		1
 #endif
 
-#if defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912) || \
-	defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09916) || \
-	defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911)
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09916) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911)
 #define ST_ISM330DLC_EXT0_IS_AKM		1
 #define ST_ISM330DLC_SELFTEST_STATUS_REG	0x10
 #define ST_ISM330DLC_SELFTEST_ADDR		0x31
 #define ST_ISM330DLC_SELFTEST_ENABLE		0x10
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_AKM0099xx */
-
 
 struct st_ism330dlc_i2c_master_odr_reg {
 	unsigned int hz;
@@ -343,7 +341,7 @@ struct st_ism330dlc_i2c_master_odr_table {
 static int st_ism330dlc_i2c_master_read_raw(struct iio_dev *indio_dev,
 		struct iio_chan_spec const *ch, int *val, int *val2, long mask);
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB)
 static const struct iio_chan_spec st_ism330dlc_ext0_ch[] = {
 	ST_ISM330DLC_LSM_CHANNELS(IIO_PRESSURE, 0, 0, IIO_NO_MOD, IIO_LE,
 				24, 24, ST_ISM330DLC_EXT0_OUT_P_L_ADDR, 'u'),
@@ -749,7 +747,7 @@ static int st_ism330dlc_i2c_master_write_data_with_mask(
 	return err;
 }
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL)
 static int lis3mdl_initialization(struct ism330dlc_sensor_data *sdata)
 {
 
@@ -760,7 +758,7 @@ static int lis3mdl_initialization(struct ism330dlc_sensor_data *sdata)
 }
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911)
 static int akm09911_initialization(struct ism330dlc_sensor_data *sdata)
 {
 	int err; u8 data[ST_ISM330DLC_EXT0_SENSITIVITY_LEN];
@@ -787,7 +785,7 @@ static int akm09911_initialization(struct ism330dlc_sensor_data *sdata)
 }
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911 */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912)
 static int akm09912_initialization(struct ism330dlc_sensor_data *sdata)
 {
 	int err; u8 data[ST_ISM330DLC_EXT0_SENSITIVITY_LEN];
@@ -814,7 +812,7 @@ static int akm09912_initialization(struct ism330dlc_sensor_data *sdata)
 }
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912 */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB)
 static int lps22hb_initialization(struct ism330dlc_sensor_data *sdata)
 {
 
@@ -825,7 +823,7 @@ static int lps22hb_initialization(struct ism330dlc_sensor_data *sdata)
 }
 #endif /* CONFIG_ST_ISM330DLC_IIO_EXT0_LPS22HB */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LIS2MDL
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS2MDL)
 static int lis2mdl_initialization(struct ism330dlc_sensor_data *sdata)
 {
 	int err;
@@ -886,7 +884,7 @@ static ssize_t st_ism330dlc_i2c_master_sysfs_start_selftest(struct device *dev,
 	int err;
 	int x_selftest = 0, y_selftest = 0, z_selftest = 0;
 	u8 outdata[8], reg_addr, reg_status = 0, temp_reg_status;
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL)
 	int i, x = 0, y = 0, z = 0;
 	u8 reg_status2 = 0, reg_status3 = 0;
 	u8 reg_addr2, reg_addr3, temp_reg_status2, temp_reg_status3;
@@ -916,7 +914,7 @@ static ssize_t st_ism330dlc_i2c_master_sysfs_start_selftest(struct device *dev,
 		return err;
 	}
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL)
 	reg_addr = ST_ISM330DLC_SELFTEST_ADDR1;
 	temp_reg_status = ST_ISM330DLC_SELFTEST_ADDR1_VALUE;
 	reg_addr2 = ST_ISM330DLC_SELFTEST_ADDR2;
@@ -960,7 +958,7 @@ static ssize_t st_ism330dlc_i2c_master_sysfs_start_selftest(struct device *dev,
 		goto disable_sensor_hub;
 #endif /* ST_ISM330DLC_EXT0_IS_AKM */
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL)
 	err = st_ism330dlc_i2c_master_read(sdata->cdata, reg_addr2, 1,
 					&reg_status2, false, true, false,
 					st_ism330dlc_exs_list[0].read_data_len);
@@ -979,7 +977,7 @@ static ssize_t st_ism330dlc_i2c_master_sysfs_start_selftest(struct device *dev,
 	if (err < 0)
 		goto disable_sensor_hub;
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL)
 	err = st_ism330dlc_i2c_master_write(sdata->cdata, reg_addr2, 1,
 					&temp_reg_status2, false, true);
 	if (err < 0)
@@ -1127,9 +1125,8 @@ static ssize_t st_ism330dlc_i2c_master_sysfs_start_selftest(struct device *dev,
 	y_selftest = ((s16)*(u16 *)&outdata[2]);
 	z_selftest = ((s16)*(u16 *)&outdata[4]);
 
-#if defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912) || \
-	defined(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911)
-
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09912) || \
+    IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_AKM09911)
 	x_selftest *= sdata->c_gain[0];
 	y_selftest *= sdata->c_gain[1];
 	z_selftest *= sdata->c_gain[2];
@@ -1167,7 +1164,7 @@ static ssize_t st_ism330dlc_i2c_master_sysfs_start_selftest(struct device *dev,
 
 	return size;
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_EXT0_LIS3MDL)
 restore_status_reg3:
 	st_ism330dlc_i2c_master_write(sdata->cdata, reg_addr3, 1,
 				      &reg_status3, false, true);
@@ -1407,7 +1404,7 @@ static int st_ism330dlc_i2c_master_read_raw(struct iio_dev *indio_dev,
 
 static int st_ism330dlc_i2c_master_buffer_preenable(struct iio_dev *indio_dev)
 {
-#ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_XL_DATA_INJECTION)
 	struct ism330dlc_sensor_data *sdata = iio_priv(indio_dev);
 
 	if (sdata->cdata->injection_mode)
@@ -1678,7 +1675,7 @@ int st_ism330dlc_i2c_master_probe(struct ism330dlc_data *cdata)
 	cdata->ext0_available = false;
 	cdata->ext0_selftest_status = false;
 
-#ifdef CONFIG_ST_ISM330DLC_ENABLE_INTERNAL_PULLUP
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_ENABLE_INTERNAL_PULLUP)
 	err = st_ism330dlc_write_data_with_mask(cdata,
 					ST_ISM330DLC_INTER_PULLUP_ADDR,
 					ST_ISM330DLC_INTER_PULLUP_MASK,

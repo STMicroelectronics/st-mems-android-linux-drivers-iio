@@ -354,7 +354,7 @@ static inline int st_ism330dlc_enable_embedded_page_regs(struct ism330dlc_data *
 				1, &value, false);
 }
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)
 int st_ism330dlc_write_embedded_registers(struct ism330dlc_data *cdata,
 					 u8 reg_addr, u8 *data, int len)
 {
@@ -448,14 +448,13 @@ static int ism330dlc_set_watermark(struct ism330dlc_data *cdata)
 			cdata->fifo_output[ST_MASK_ID_GYRO].sip);
 	}
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-	if (cdata->fifo_output[ST_MASK_ID_EXT0].sip > 0) {
+	if ((IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) &&
+	    cdata->fifo_output[ST_MASK_ID_EXT0].sip > 0) {
 		sip += cdata->fifo_output[ST_MASK_ID_EXT0].sip;
 		min_pattern = MIN(min_pattern,
 			cdata->hwfifo_watermark[ST_MASK_ID_EXT0] /
 			cdata->fifo_output[ST_MASK_ID_EXT0].sip);
 	}
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
 
 	if (sip == 0)
 		return 0;
@@ -588,13 +587,14 @@ static bool ism330dlc_calculate_fifo_decimators(struct ism330dlc_data *cdata,
 					(new_hw_odr[ST_MASK_ID_GYRO] > 0))
 		gyro_decimator = trigger_odr / new_v_odr[ST_MASK_ID_GYRO];
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-	if ((cdata->sensors_use_fifo & BIT(ST_MASK_ID_EXT0)) &&
-			(new_v_odr[ST_MASK_ID_EXT0] != 0) && cdata->magn_on)
-		ext_decimator = trigger_odr / new_v_odr[ST_MASK_ID_EXT0];
+	if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+		if ((cdata->sensors_use_fifo & BIT(ST_MASK_ID_EXT0)) &&
+		    (new_v_odr[ST_MASK_ID_EXT0] != 0) && cdata->magn_on)
+			ext_decimator = trigger_odr /
+					new_v_odr[ST_MASK_ID_EXT0];
 
-	new_fifo_decimator[ST_MASK_ID_EXT0] = 1;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+		new_fifo_decimator[ST_MASK_ID_EXT0] = 1;
+	}
 
 	new_fifo_decimator[ST_MASK_ID_ACCEL] = 1;
 	new_fifo_decimator[ST_MASK_ID_GYRO] = 1;
@@ -641,21 +641,21 @@ static bool ism330dlc_calculate_fifo_decimators(struct ism330dlc_data *cdata,
 			new_fifo_decimator[ST_MASK_ID_GYRO] = gyro_decimator / 32;
 			gyro_decimator = 32;
 		}
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-		if ((ext_decimator > 4) && (ext_decimator < 8)) {
-			new_fifo_decimator[ST_MASK_ID_EXT0] = ext_decimator - 3;
-			ext_decimator = 4;
-		} else if ((ext_decimator > 8) && (ext_decimator < 16)) {
-			new_fifo_decimator[ST_MASK_ID_EXT0] = ext_decimator - 7;
-			ext_decimator = 8;
-		} else if (ext_decimator > 16 && ext_decimator < 32) {
-			new_fifo_decimator[ST_MASK_ID_EXT0] = ext_decimator - 15;
-			ext_decimator = 16;
-		} else if (ext_decimator > 32) {
-			new_fifo_decimator[ST_MASK_ID_EXT0] = ext_decimator / 32;
-			ext_decimator = 32;
+		if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+			if ((ext_decimator > 4) && (ext_decimator < 8)) {
+				new_fifo_decimator[ST_MASK_ID_EXT0] = ext_decimator - 3;
+				ext_decimator = 4;
+			} else if ((ext_decimator > 8) && (ext_decimator < 16)) {
+				new_fifo_decimator[ST_MASK_ID_EXT0] = ext_decimator - 7;
+				ext_decimator = 8;
+			} else if (ext_decimator > 16 && ext_decimator < 32) {
+				new_fifo_decimator[ST_MASK_ID_EXT0] = ext_decimator - 15;
+				ext_decimator = 16;
+			} else if (ext_decimator > 32) {
+				new_fifo_decimator[ST_MASK_ID_EXT0] = ext_decimator / 32;
+				ext_decimator = 32;
+			}
 		}
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
 		max_decimator = MAX(MAX(accel_decimator, gyro_decimator), ext_decimator);
 	}
 
@@ -675,25 +675,28 @@ static bool ism330dlc_calculate_fifo_decimators(struct ism330dlc_data *cdata,
 	} else
 		samples_in_pattern[1] = 0;
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-	decimators[2] = ext_decimator;
-	if (ext_decimator > 0) {
-		new_deltatime[ST_MASK_ID_EXT0] = ext_decimator *
-						(1000000000U / trigger_odr);
-		samples_in_pattern[2] = max_decimator / ext_decimator;
-	} else
-		samples_in_pattern[2] = 0;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+	if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+		decimators[2] = ext_decimator;
+		if (ext_decimator > 0) {
+			new_deltatime[ST_MASK_ID_EXT0] = ext_decimator *
+						    (1000000000U / trigger_odr);
+			samples_in_pattern[2] = max_decimator / ext_decimator;
+		} else {
+			samples_in_pattern[2] = 0;
+		}
+	}
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-	if ((accel_decimator == cdata->hwfifo_decimator[ST_MASK_ID_ACCEL]) &&
-			(ext_decimator == cdata->hwfifo_decimator[ST_MASK_ID_EXT0]) &&
-			(gyro_decimator == cdata->hwfifo_decimator[ST_MASK_ID_GYRO])) {
-#else /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
-	if ((accel_decimator == cdata->hwfifo_decimator[ST_MASK_ID_ACCEL]) &&
-			(gyro_decimator == cdata->hwfifo_decimator[ST_MASK_ID_GYRO])) {
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
-		return false;
+	if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+		if ((accel_decimator == cdata->hwfifo_decimator[ST_MASK_ID_ACCEL]) &&
+		    (ext_decimator == cdata->hwfifo_decimator[ST_MASK_ID_EXT0]) &&
+		    (gyro_decimator == cdata->hwfifo_decimator[ST_MASK_ID_GYRO])) {
+			return false;
+		}
+	} else {
+		if ((accel_decimator == cdata->hwfifo_decimator[ST_MASK_ID_ACCEL]) &&
+		    (gyro_decimator == cdata->hwfifo_decimator[ST_MASK_ID_GYRO])) {
+			return false;
+		}
 	}
 
 	return true;
@@ -788,8 +791,10 @@ int st_ism330dlc_set_drdy_irq(struct ism330dlc_sensor_data *sdata, bool state)
 		reg_addr = ST_ISM330DLC_MD1_ADDR;
 		mask = ST_ISM330DLC_TILT_DRDY_IRQ_MASK;
 		break;
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
 	case ST_MASK_ID_EXT0:
+		if (!IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT))
+			return -EINVAL;
+
 		reg_addr = sdata->cdata->drdy_reg;
 
 		if (sdata->cdata->hwfifo_enabled[ST_MASK_ID_EXT0]) {
@@ -805,7 +810,6 @@ int st_ism330dlc_set_drdy_irq(struct ism330dlc_sensor_data *sdata, bool state)
 		}
 
 		break;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
 	default:
 		return -EINVAL;
 	}
@@ -889,9 +893,11 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 			temp_hw_odr[ST_MASK_ID_GYRO] = odr;
 			temp_hw_odr[ST_MASK_ID_ACCEL] = sdata->cdata->hw_odr[ST_MASK_ID_ACCEL];
 		}
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-		temp_v_odr[ST_MASK_ID_EXT0] = sdata->cdata->v_odr[ST_MASK_ID_EXT0];
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+
+		if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+			temp_v_odr[ST_MASK_ID_EXT0] =
+					   sdata->cdata->v_odr[ST_MASK_ID_EXT0];
+		}
 
 		fifo_conf_changed = ism330dlc_calculate_fifo_decimators(sdata->cdata,
 				fifo_decimator, samples_in_pattern, temp_v_odr,
@@ -910,11 +916,11 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 				temp_old_decimator[0] = sdata->cdata->fifo_output[ST_MASK_ID_ACCEL].decimator;
 				temp_old_decimator[1] = sdata->cdata->fifo_output[ST_MASK_ID_GYRO].decimator;
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-				temp_num_samples[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].sip;
-				temp_last_timestamp[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].timestamp_p;
-				temp_old_decimator[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].decimator;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+				if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+					temp_num_samples[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].sip;
+					temp_last_timestamp[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].timestamp_p;
+					temp_old_decimator[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].decimator;
+				}
 
 				err = st_ism330dlc_set_fifo_mode(sdata->cdata, BYPASS);
 				if (err < 0)
@@ -922,9 +928,9 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 			} else {
 				temp_num_samples[0] = 0;
 				temp_num_samples[1] = 0;
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-				temp_num_samples[2] = 0;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+
+				if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT))
+					temp_num_samples[2] = 0;
 			}
 
 			err = ism330dlc_write_decimators(sdata->cdata, fifo_decimator);
@@ -1008,13 +1014,13 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 			sdata->cdata->fifo_output[ST_MASK_ID_ACCEL].deltatime_default = new_deltatime[ST_MASK_ID_ACCEL];
 			sdata->cdata->fifo_output[ST_MASK_ID_GYRO].deltatime_default = new_deltatime[ST_MASK_ID_GYRO];
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-			sdata->cdata->hwfifo_decimator[ST_MASK_ID_EXT0] = fifo_decimator[2];
-			sdata->cdata->fifo_output[ST_MASK_ID_EXT0].decimator = new_fifo_decimator[ST_MASK_ID_EXT0];
-			sdata->cdata->fifo_output[ST_MASK_ID_EXT0].num_samples = new_fifo_decimator[ST_MASK_ID_EXT0] - 1;
-			sdata->cdata->fifo_output[ST_MASK_ID_EXT0].sip = samples_in_pattern[2];
-			sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime_default = new_deltatime[ST_MASK_ID_EXT0];
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+			if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+				sdata->cdata->hwfifo_decimator[ST_MASK_ID_EXT0] = fifo_decimator[2];
+				sdata->cdata->fifo_output[ST_MASK_ID_EXT0].decimator = new_fifo_decimator[ST_MASK_ID_EXT0];
+				sdata->cdata->fifo_output[ST_MASK_ID_EXT0].num_samples = new_fifo_decimator[ST_MASK_ID_EXT0] - 1;
+				sdata->cdata->fifo_output[ST_MASK_ID_EXT0].sip = samples_in_pattern[2];
+				sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime_default = new_deltatime[ST_MASK_ID_EXT0];
+			}
 
 			err = ism330dlc_set_watermark(sdata->cdata);
 			if (err < 0)
@@ -1046,8 +1052,9 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 							sdata->cdata->fifo_output[ST_MASK_ID_ACCEL].timestamp_p = temp_last_timestamp[0];
 						}
 					}
-				} else
+				} else {
 					sdata->cdata->fifo_output[ST_MASK_ID_ACCEL].deltatime = new_deltatime[ST_MASK_ID_ACCEL];
+				}
 
 				if (((temp_num_samples[1] > 0) && (samples_in_pattern[1] > 0)) && (sdata->cdata->fifo_output[ST_MASK_ID_GYRO].initialized)) {
 					unsigned int n_gen;
@@ -1070,34 +1077,42 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 							sdata->cdata->fifo_output[ST_MASK_ID_GYRO].timestamp_p = temp_last_timestamp[1];
 						}
 					}
-				} else
+				} else {
 					sdata->cdata->fifo_output[ST_MASK_ID_GYRO].deltatime = new_deltatime[ST_MASK_ID_GYRO];
+				}
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-				if (((temp_num_samples[2] > 0) && (samples_in_pattern[2] > 0)) && (sdata->cdata->fifo_output[ST_MASK_ID_EXT0].initialized)) {
-					unsigned int n_gen;
-					int64_t temp_deltatime = 0;
+				if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+					if (((temp_num_samples[2] > 0) && (samples_in_pattern[2] > 0)) &&
+					    (sdata->cdata->fifo_output[ST_MASK_ID_EXT0].initialized)) {
+						unsigned int n_gen;
+						int64_t temp_deltatime = 0;
 
-					if (sdata->cdata->fifo_enable_timestamp > temp_last_timestamp[2]) {
-						n_gen = div64_s64(sdata->cdata->fifo_enable_timestamp - temp_last_timestamp[2],
-							sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime * temp_old_decimator[2]);
+						if (sdata->cdata->fifo_enable_timestamp > temp_last_timestamp[2]) {
+							n_gen = div64_s64(sdata->cdata->fifo_enable_timestamp -
+									  temp_last_timestamp[2],
+									  sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime *
+									  temp_old_decimator[2]);
 
-						if (n_gen > 0)
-							temp_deltatime = div64_s64(sdata->cdata->fifo_enable_timestamp - temp_last_timestamp[2], n_gen);
+							if (n_gen > 0)
+								temp_deltatime = div64_s64(sdata->cdata->fifo_enable_timestamp -
+											   temp_last_timestamp[2], n_gen);
 
-						for (n = 0; n < n_gen; n++) {
-							temp_last_timestamp[2] += temp_deltatime;
-							err = st_ism330dlc_push_data_with_timestamp(sdata->cdata, ST_MASK_ID_EXT0,
-								sdata->cdata->ext0_last_push, temp_last_timestamp[2]);
-							if (err < 0)
-								break;
+							for (n = 0; n < n_gen; n++) {
+								temp_last_timestamp[2] += temp_deltatime;
+								err = st_ism330dlc_push_data_with_timestamp(sdata->cdata,
+													    ST_MASK_ID_EXT0,
+													    sdata->cdata->ext0_last_push,
+													    temp_last_timestamp[2]);
+								if (err < 0)
+									break;
 
-							sdata->cdata->fifo_output[ST_MASK_ID_EXT0].timestamp_p = temp_last_timestamp[2];
+								sdata->cdata->fifo_output[ST_MASK_ID_EXT0].timestamp_p = temp_last_timestamp[2];
+							}
 						}
+					} else {
+						sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime = new_deltatime[ST_MASK_ID_EXT0];
 					}
-				} else
-					sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime = new_deltatime[ST_MASK_ID_EXT0];
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+				}
 			}
 
 			enable_irq(sdata->cdata->irq);
@@ -1124,11 +1139,11 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 				temp_old_decimator[0] = sdata->cdata->fifo_output[ST_MASK_ID_ACCEL].decimator;
 				temp_old_decimator[1] = sdata->cdata->fifo_output[ST_MASK_ID_GYRO].decimator;
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-				temp_num_samples[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].sip;
-				temp_last_timestamp[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].timestamp_p;
-				temp_old_decimator[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].decimator;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+				if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+					temp_num_samples[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].sip;
+					temp_last_timestamp[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].timestamp_p;
+					temp_old_decimator[2] = sdata->cdata->fifo_output[ST_MASK_ID_EXT0].decimator;
+				}
 
 				err = st_ism330dlc_set_fifo_mode(sdata->cdata, BYPASS);
 				if (err < 0)
@@ -1136,9 +1151,8 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 			} else {
 				temp_num_samples[0] = 0;
 				temp_num_samples[1] = 0;
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-				temp_num_samples[2] = 0;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+				if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT))
+					temp_num_samples[2] = 0;
 			}
 
 			err = st_ism330dlc_write_data_with_mask(sdata->cdata,
@@ -1253,34 +1267,44 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 							sdata->cdata->fifo_output[ST_MASK_ID_GYRO].timestamp_p = temp_last_timestamp[1];
 						}
 					}
-				} else
+				} else {
 					sdata->cdata->fifo_output[ST_MASK_ID_GYRO].deltatime = new_deltatime[ST_MASK_ID_GYRO];
+				}
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-				if (((temp_num_samples[2] > 0) && (samples_in_pattern[2] > 0)) && (sdata->cdata->fifo_output[ST_MASK_ID_EXT0].initialized)) {
-					unsigned int n_gen;
-					int64_t temp_deltatime = 0;
+				if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+					if (((temp_num_samples[2] > 0) &&
+					     (samples_in_pattern[2] > 0)) &&
+					    (sdata->cdata->fifo_output[ST_MASK_ID_EXT0].initialized)) {
+						unsigned int n_gen;
+						int64_t temp_deltatime = 0;
 
-					if (sdata->cdata->fifo_enable_timestamp > temp_last_timestamp[2]) {
-						n_gen = div64_s64(sdata->cdata->fifo_enable_timestamp - temp_last_timestamp[2],
-							sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime * temp_old_decimator[2]);
+						if (sdata->cdata->fifo_enable_timestamp > temp_last_timestamp[2]) {
+							n_gen = div64_s64(sdata->cdata->fifo_enable_timestamp -
+									  temp_last_timestamp[2],
+									  sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime *
+									  temp_old_decimator[2]);
 
-						if (n_gen > 0)
-							temp_deltatime = div64_s64(sdata->cdata->fifo_enable_timestamp - temp_last_timestamp[2], n_gen);
+							if (n_gen > 0)
+								temp_deltatime = div64_s64(sdata->cdata->fifo_enable_timestamp -
+											   temp_last_timestamp[2], n_gen);
 
-						for (n = 0; n < n_gen; n++) {
-							temp_last_timestamp[2] += temp_deltatime;
-							err = st_ism330dlc_push_data_with_timestamp(sdata->cdata, ST_MASK_ID_EXT0,
-								sdata->cdata->ext0_last_push, temp_last_timestamp[2]);
-							if (err < 0)
-								break;
+							for (n = 0; n < n_gen; n++) {
+								temp_last_timestamp[2] += temp_deltatime;
+								err = st_ism330dlc_push_data_with_timestamp(sdata->cdata,
+													    ST_MASK_ID_EXT0,
+													    sdata->cdata->ext0_last_push,
+													    temp_last_timestamp[2]);
+								if (err < 0)
+									break;
 
-							sdata->cdata->fifo_output[ST_MASK_ID_EXT0].timestamp_p = temp_last_timestamp[2];
+								sdata->cdata->fifo_output[ST_MASK_ID_EXT0].timestamp_p =
+													temp_last_timestamp[2];
+							}
 						}
+					} else {
+						sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime = new_deltatime[ST_MASK_ID_EXT0];
 					}
-				} else
-					sdata->cdata->fifo_output[ST_MASK_ID_EXT0].deltatime = new_deltatime[ST_MASK_ID_EXT0];
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+				}
 			}
 
 			enable_irq(sdata->cdata->irq);
@@ -1301,12 +1325,13 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 					sdata->cdata->hw_odr[ST_MASK_ID_ACCEL] / sdata->cdata->v_odr[ST_MASK_ID_ACCEL];
 				sdata->cdata->nofifo_decimation[ST_MASK_ID_ACCEL].num_samples =
 					sdata->cdata->nofifo_decimation[ST_MASK_ID_ACCEL].decimator - 1;
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-				sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator =
-					sdata->cdata->hw_odr[ST_MASK_ID_ACCEL] / sdata->cdata->v_odr[ST_MASK_ID_EXT0];
-				sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples =
-					sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator - 1;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+
+				if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+					sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator =
+						sdata->cdata->hw_odr[ST_MASK_ID_ACCEL] / sdata->cdata->v_odr[ST_MASK_ID_EXT0];
+					sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples =
+						sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator - 1;
+				}
 			}
 
 			enable_irq(sdata->cdata->irq);
@@ -1367,10 +1392,10 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 			if (sdata->cdata->hw_odr[sdata->sindex] > 0) {
 				sdata->cdata->nofifo_decimation[ST_MASK_ID_ACCEL].decimator =
 					sdata->cdata->hw_odr[ST_MASK_ID_ACCEL] / sdata->cdata->v_odr[ST_MASK_ID_ACCEL];
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-				sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator =
-					sdata->cdata->hw_odr[ST_MASK_ID_ACCEL] / sdata->cdata->v_odr[ST_MASK_ID_EXT0];
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+				if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+					sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator =
+						sdata->cdata->hw_odr[ST_MASK_ID_ACCEL] / sdata->cdata->v_odr[ST_MASK_ID_EXT0];
+				}
 			} else {
 				sdata->cdata->nofifo_decimation[ST_MASK_ID_ACCEL].decimator = 1;
 				sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator = 1;
@@ -1378,10 +1403,11 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 
 			sdata->cdata->nofifo_decimation[ST_MASK_ID_ACCEL].num_samples =
 				sdata->cdata->nofifo_decimation[ST_MASK_ID_ACCEL].decimator - 1;
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-			sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples =
-				sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator - 1;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+
+			if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)) {
+				sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples =
+					sdata->cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator - 1;
+			}
 		}
 
 		enable_irq(sdata->cdata->irq);
@@ -1436,10 +1462,9 @@ static int ism330dlc_enable_accel(struct ism330dlc_data *cdata, enum st_mask_id 
 	if (cdata->accel_odr_dependency[2] > odr)
 		odr = cdata->accel_odr_dependency[2];
 
-#ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
-	if (cdata->injection_mode)
+	if (IS_ENABLED(CONFIG_ST_ISM330DLC_XL_DATA_INJECTION) &&
+	    cdata->injection_mode)
 		return 0;
-#endif /* CONFIG_ST_ISM330DLC_XL_DATA_INJECTION */
 
 	return st_ism330dlc_set_odr(sdata_accel, odr, true);
 }
@@ -1488,9 +1513,9 @@ static int ism330dlc_enable_digital_func(struct ism330dlc_data *cdata,
 	return 0;
 }
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)
 int st_ism330dlc_enable_sensor_hub(struct ism330dlc_data *cdata,
-					bool enable, enum st_mask_id id)
+				   bool enable, enum st_mask_id id)
 {
 	int err;
 
@@ -1808,21 +1833,23 @@ static ssize_t st_ism330dlc_sysfs_set_sampling_frequency(struct device *dev,
 		return err;
 
 	mutex_lock(&sdata->cdata->odr_lock);
-#ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
-	if (!((sdata->sindex & ST_MASK_ID_ACCEL) &&
-					sdata->cdata->injection_mode)) {
-		if (sdata->cdata->v_odr[sdata->sindex] != odr)
-			err = st_ism330dlc_set_odr(sdata, odr, false);
+	if (IS_ENABLED(CONFIG_ST_ISM330DLC_XL_DATA_INJECTION)) {
+		if (!((sdata->sindex & ST_MASK_ID_ACCEL) &&
+		      sdata->cdata->injection_mode)) {
+			if (sdata->cdata->v_odr[sdata->sindex] != odr)
+				err = st_ism330dlc_set_odr(sdata, odr, false);
+		}
+	} else {
+		if (sdata->cdata->v_odr[sdata->sindex] != odr) {
+			if ((sdata->sindex == ST_MASK_ID_ACCEL) &&
+			    (sdata->cdata->sensors_enabled & BIT(ST_MASK_ID_ACCEL)))
+				err = ism330dlc_enable_accel(sdata->cdata,
+							     ST_MASK_ID_ACCEL,
+							     odr);
+			else
+				err = st_ism330dlc_set_odr(sdata, odr, false);
+		}
 	}
-#else /* CONFIG_ST_ISM330DLC_XL_DATA_INJECTION */
-	if (sdata->cdata->v_odr[sdata->sindex] != odr) {
-		if ((sdata->sindex == ST_MASK_ID_ACCEL) &&
-		    (sdata->cdata->sensors_enabled & BIT(ST_MASK_ID_ACCEL)))
-			err = ism330dlc_enable_accel(sdata->cdata, ST_MASK_ID_ACCEL, odr);
-		else
-			err = st_ism330dlc_set_odr(sdata, odr, false);
-	}
-#endif /* CONFIG_ST_ISM330DLC_XL_DATA_INJECTION */
 	mutex_unlock(&sdata->cdata->odr_lock);
 
 	iio_device_release_direct_mode(indio_dev);
@@ -2122,7 +2149,7 @@ ssize_t st_ism330dlc_sysfs_flush_fifo(struct device *dev,
 		stype = IIO_ANGL_VEL;
 		break;
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)
 	case ST_MASK_ID_EXT0:
 		stype = IIO_MAGN;
 		break;
@@ -2252,7 +2279,7 @@ ssize_t st_ism330dlc_sysfs_get_hwfifo_watermark_min(struct device *dev,
 	return sprintf(buf, "%d\n", 1);
 }
 
-#ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_XL_DATA_INJECTION)
 static ssize_t st_ism330dlc_sysfs_set_injection_mode(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
@@ -2449,7 +2476,7 @@ static IIO_DEVICE_ATTR(selftest, S_IWUSR | S_IRUGO,
 
 static IIO_DEVICE_ATTR(module_id, 0444, st_ism330dlc_get_module_id, NULL, 0);
 
-#ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_XL_DATA_INJECTION)
 static IIO_DEVICE_ATTR(injection_mode, S_IWUSR | S_IRUGO,
 		       st_ism330dlc_sysfs_get_injection_mode,
 				st_ism330dlc_sysfs_set_injection_mode, 0);
@@ -2488,7 +2515,7 @@ static struct attribute *st_ism330dlc_accel_attributes[] = {
 	&iio_dev_attr_hwfifo_flush.dev_attr.attr,
 	&iio_dev_attr_module_id.dev_attr.attr,
 
-#ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_XL_DATA_INJECTION)
 	&iio_dev_attr_injection_mode.dev_attr.attr,
 	&iio_dev_attr_in_accel_injection_raw.dev_attr.attr,
 #endif /* CONFIG_ST_ISM330DLC_XL_DATA_INJECTION */
@@ -2535,7 +2562,7 @@ static const struct iio_info st_ism330dlc_gyro_info = {
 static struct attribute *st_ism330dlc_tilt_attributes[] = {
 	&iio_dev_attr_module_id.dev_attr.attr,
 
-#ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_XL_DATA_INJECTION)
 	&iio_dev_attr_injection_sensors.dev_attr.attr,
 #endif /* CONFIG_ST_ISM330DLC_XL_DATA_INJECTION */
 	NULL,
@@ -2549,7 +2576,7 @@ static const struct iio_info st_ism330dlc_tilt_info = {
 	.attrs = &st_ism330dlc_tilt_attribute_group,
 };
 
-#ifdef CONFIG_IIO_TRIGGER
+#if IS_ENABLED(CONFIG_IIO_TRIGGER)
 static const struct iio_trigger_ops st_ism330dlc_trigger_ops = {
 	.set_trigger_state = ST_ISM330DLC_TRIGGER_SET_STATE,
 };
@@ -2581,9 +2608,8 @@ int st_ism330dlc_common_probe(struct ism330dlc_data *cdata, int irq)
 	cdata->fifo_status = BYPASS;
 	cdata->enable_digfunc_mask = 0;
 
-#ifdef CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT
-	cdata->enable_sensorhub_mask = 0;
-#endif /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
+	if (IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT))
+		cdata->enable_sensorhub_mask = 0;
 
 	cdata->irq_enable_fifo_mask = 0;
 	cdata->irq_enable_accel_ext_mask = 0;
@@ -2626,7 +2652,7 @@ int st_ism330dlc_common_probe(struct ism330dlc_data *cdata, int irq)
 	if (!cdata->fifo_data)
 		return -ENOMEM;
 
-#ifdef CONFIG_ST_ISM330DLC_XL_DATA_INJECTION
+#if IS_ENABLED(CONFIG_ST_ISM330DLC_XL_DATA_INJECTION)
 	cdata->injection_mode = false;
 	cdata->last_injection_timestamp = 0;
 	cdata->injection_odr = 0;
@@ -2710,7 +2736,7 @@ int st_ism330dlc_common_probe(struct ism330dlc_data *cdata, int irq)
 	cdata->indio_dev[ST_MASK_ID_GYRO]->num_channels =
 					ARRAY_SIZE(st_ism330dlc_gyro_ch);
 
-#ifdef CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES
+#if IS_ENABLED(CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES)
 	cdata->indio_dev[ST_MASK_ID_TILT]->name =
 			kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
 				  ST_ISM330DLC_TILT_SUFFIX_NAME);
@@ -2787,7 +2813,7 @@ void st_ism330dlc_common_remove(struct ism330dlc_data *cdata, int irq)
 }
 EXPORT_SYMBOL(st_ism330dlc_common_remove);
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 int __maybe_unused st_ism330dlc_common_suspend(struct ism330dlc_data *cdata)
 {
 	int err, i;
