@@ -54,23 +54,24 @@ static irqreturn_t lsm6ds3_irq_management(int irq, void *private)
 			goto read_fifo_status;
 
 		if (src_accel_gyro & ST_LSM6DS3_ACCEL_DATA_AVL) {
-#ifdef CONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT
-			if ((cdata->sensors_enabled & ~cdata->sensors_use_fifo)
-						& BIT(ST_MASK_ID_EXT0)) {
-				cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples++;
-				force_read_accel = true;
+			if (IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT)) {
+				if ((cdata->sensors_enabled &
+				     ~cdata->sensors_use_fifo) &
+				    BIT(ST_MASK_ID_EXT0)) {
+					cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples++;
+					force_read_accel = true;
 
-				if ((cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples %
-						cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator) == 0) {
-					push = true;
-					cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples = 0;
-				} else {
-					push = false;
+					if ((cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples %
+					     cdata->nofifo_decimation[ST_MASK_ID_EXT0].decimator) == 0) {
+						push = true;
+						cdata->nofifo_decimation[ST_MASK_ID_EXT0].num_samples = 0;
+					} else {
+						push = false;
+					}
+
+					lsm6ds3_read_output_data(cdata, ST_MASK_ID_EXT0, push);
 				}
-
-				lsm6ds3_read_output_data(cdata, ST_MASK_ID_EXT0, push);
 			}
-#endif /* CONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT */
 
 			if ((cdata->sensors_enabled & ~cdata->sensors_use_fifo) &
 							BIT(ST_MASK_ID_ACCEL)) {

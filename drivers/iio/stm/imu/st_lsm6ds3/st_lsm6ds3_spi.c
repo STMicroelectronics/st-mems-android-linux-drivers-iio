@@ -144,7 +144,7 @@ static int st_lsm6ds3_spi_remove(struct spi_device *spi)
 }
 #endif /* LINUX_VERSION_CODE */
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_lsm6ds3_suspend(struct device *dev)
 {
 	struct lsm6ds3_data *cdata = spi_get_drvdata(to_spi_device(dev));
@@ -175,7 +175,7 @@ static const struct spi_device_id st_lsm6ds3_id_table[] = {
 };
 MODULE_DEVICE_TABLE(spi, st_lsm6ds3_id_table);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id lsm6ds3_of_match[] = {
 	{
 		.compatible = "st,lsm6ds3",
