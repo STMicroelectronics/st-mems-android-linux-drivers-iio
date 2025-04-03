@@ -20,9 +20,7 @@
 #include <linux/iio/iio-opaque.h>
 #endif /* LINUX_VERSION_CODE */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
 #include <linux/i2c.h>
-#endif /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
 
 #define LSM6DSM_DEV_NAME			"lsm6dsm"
 #define LSM6DSL_DEV_NAME			"lsm6dsl"
@@ -65,7 +63,7 @@ enum st_mask_id {
 #define ST_LSM6DSM_WAKE_UP_SENSORS	(BIT(ST_MASK_ID_SIGN_MOTION) | \
 					BIT(ST_MASK_ID_TILT) | BIT(ST_MASK_ID_WTILT))
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT)
 #define ST_LSM6DSM_NUM_CLIENTS			1
 #else /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
 #define ST_LSM6DSM_NUM_CLIENTS			0
@@ -185,9 +183,7 @@ struct lsm6dsm_data {
 
 	u16 enable_digfunc_mask;
 	u16 enable_pedometer_mask;
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
 	u16 enable_sensorhub_mask;
-#endif /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
 
 	u16 irq_enable_fifo_mask;
 	u16 irq_enable_accel_ext_mask;
@@ -235,11 +231,9 @@ struct lsm6dsm_data {
 	int64_t slower_counter;
 	uint8_t slower_id;
 
-#ifdef CONFIG_ST_LSM6DSM_XL_DATA_INJECTION
 	bool injection_mode;
 	s64 last_injection_timestamp;
 	u8 injection_odr;
-#endif /* CONFIG_ST_LSM6DSM_XL_DATA_INJECTION */
 
 	struct work_struct data_work;
 
@@ -250,11 +244,9 @@ struct lsm6dsm_data {
 	struct mutex fifo_lock;
 	u32 module_id;
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
 	bool ext0_available;
 	int8_t ext0_selftest_status;
 	struct mutex i2c_transfer_lock;
-#endif /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
 
 	const struct st_lsm6dsm_transfer_function *tf;
 	struct st_lsm6dsm_transfer_buffer tb;
@@ -279,7 +271,7 @@ struct lsm6dsm_sensor_data {
 
 static bool __maybe_unused st_lsm6dsm_skip_basic_features(enum st_mask_id i)
 {
-#ifndef CONFIG_IIO_ST_LSM6DSM_EN_BASIC_FEATURES
+#if !IS_ENABLED(CONFIG_IIO_ST_LSM6DSM_EN_BASIC_FEATURES)
 	if (i >= ST_MASK_ID_SIGN_MOTION &&
 	    i <= ST_MASK_ID_TAP_TAP)
 		return true;
@@ -322,7 +314,7 @@ ssize_t st_lsm6dsm_get_module_id(struct device *dev,
 				 struct device_attribute *attr,
 				 char *buf);
 
-#ifdef CONFIG_IIO_BUFFER
+#if IS_ENABLED(CONFIG_IIO_BUFFER)
 int st_lsm6dsm_allocate_rings(struct lsm6dsm_data *cdata);
 void st_lsm6dsm_deallocate_rings(struct lsm6dsm_data *cdata);
 int st_lsm6dsm_trig_set_state(struct iio_trigger *trig, bool state);
@@ -343,7 +335,7 @@ static inline int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 #define ST_LSM6DSM_TRIGGER_SET_STATE NULL
 #endif /* CONFIG_IIO_BUFFER */
 
-#ifdef CONFIG_IIO_TRIGGER
+#if IS_ENABLED(CONFIG_IIO_TRIGGER)
 int st_lsm6dsm_allocate_triggers(struct lsm6dsm_data *cdata,
 				const struct iio_trigger_ops *trigger_ops);
 void st_lsm6dsm_deallocate_triggers(struct lsm6dsm_data *cdata);
@@ -365,12 +357,12 @@ static inline void st_lsm6dsm_flush_works(void)
 }
 #endif /* CONFIG_IIO_TRIGGER */
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 int st_lsm6dsm_common_suspend(struct lsm6dsm_data *cdata);
 int st_lsm6dsm_common_resume(struct lsm6dsm_data *cdata);
 #endif /* CONFIG_PM */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT)
 int st_lsm6dsm_write_embedded_registers(struct lsm6dsm_data *cdata,
 					u8 reg_addr, u8 *data, int len);
 int st_lsm6dsm_i2c_master_probe(struct lsm6dsm_data *cdata);

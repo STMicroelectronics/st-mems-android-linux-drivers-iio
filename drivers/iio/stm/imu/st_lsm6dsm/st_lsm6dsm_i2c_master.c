@@ -53,7 +53,7 @@
 #define ST_LSM6DSM_SLVX_READ			0x01
 
 /* External sensors configuration */
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL)
 static int lis3mdl_initialization(struct lsm6dsm_sensor_data *sdata);
 
 #define ST_LSM6DSM_EXT0_ADDR			0x1e
@@ -101,7 +101,7 @@ static int lis3mdl_initialization(struct lsm6dsm_sensor_data *sdata);
 #define ST_LSM6DSM_SELFTEST_ENABLE		0x1d
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911)
 static int akm09911_initialization(struct lsm6dsm_sensor_data *sdata);
 
 #define ST_LSM6DSM_EXT0_ADDR			0x0c
@@ -143,7 +143,7 @@ static int akm09911_initialization(struct lsm6dsm_sensor_data *sdata);
 #define ST_LSM6DSM_SELFTEST_EXT0_MAX_Z		(-50)
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911 */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912)
 static int akm09912_initialization(struct lsm6dsm_sensor_data *sdata);
 
 #define ST_LSM6DSM_EXT0_ADDR			0x0c
@@ -185,7 +185,7 @@ static int akm09912_initialization(struct lsm6dsm_sensor_data *sdata);
 #define ST_LSM6DSM_SELFTEST_EXT0_MAX_Z		(-400)
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912 */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09916
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09916)
 #define ST_LSM6DSM_EXT0_ADDR			0x0c
 #define ST_LSM6DSM_EXT0_ADDR2			0x0c
 #define ST_LSM6DSM_EXT0_WAI_ADDR		0x01
@@ -226,7 +226,7 @@ static int akm09912_initialization(struct lsm6dsm_sensor_data *sdata);
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09916 */
 
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HB
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HB)
 static int lps22hx_initialization(struct lsm6dsm_sensor_data *sdata);
 
 #define ST_LSM6DSM_EXT0_ADDR			0x5d
@@ -262,7 +262,7 @@ static int lps22hx_initialization(struct lsm6dsm_sensor_data *sdata);
 #define ST_LSM6DSM_EXT0_BOOT_FUNCTION		(&lps22hx_initialization)
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HB */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HH
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HH)
 static int lps22hx_initialization(struct lsm6dsm_sensor_data *sdata);
 
 #define ST_LSM6DSM_EXT0_ADDR			0x5d
@@ -298,7 +298,7 @@ static int lps22hx_initialization(struct lsm6dsm_sensor_data *sdata);
 #define ST_LSM6DSM_EXT0_BOOT_FUNCTION		(&lps22hx_initialization)
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HH */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LIS2MDL
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS2MDL)
 static int lis2mdl_initialization(struct lsm6dsm_sensor_data *sdata);
 
 #define ST_LSM6DSM_EXT0_ADDR			0x1e
@@ -340,31 +340,30 @@ static int lis2mdl_initialization(struct lsm6dsm_sensor_data *sdata);
 #define ST_LSM6DSM_EXT0_SUFFIX_NAME		"magn"
 #define ST_LSM6DSM_EXT1_SUFFIX_NAME		"press"
 
-#if defined(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL) || \
-			defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912) || \
-			defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09916) || \
-			defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911)
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09916) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911)
 #define ST_LSM6DSM_EXT0_HAS_SELFTEST		1
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_MAGN */
 
-#if defined(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL) || \
-    defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912) || \
-    defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09916) || \
-    defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911) || \
-    defined(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HB) || \
-    defined(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HH)
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09916) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HB) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HH)
 #define ST_LSM6DSM_EXT0_HAS_FULLSCALE		1
 #endif
 
-#if defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912) || \
-			defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09916) || \
-			defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911)
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09916) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911)
 #define ST_LSM6DSM_EXT0_IS_AKM			1
 #define ST_LSM6DSM_SELFTEST_STATUS_REG		0x10
 #define ST_LSM6DSM_SELFTEST_ADDR		0x31
 #define ST_LSM6DSM_SELFTEST_ENABLE		0x10
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_AKM0099xx */
-
 
 struct st_lsm6dsm_i2c_master_odr_reg {
 	unsigned int hz;
@@ -380,8 +379,8 @@ struct st_lsm6dsm_i2c_master_odr_table {
 static int st_lsm6dsm_i2c_master_read_raw(struct iio_dev *indio_dev,
 		struct iio_chan_spec const *ch, int *val, int *val2, long mask);
 
-#if defined(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HB) || \
-    defined(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HH)
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HB) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HH)
 static const struct iio_chan_spec st_lsm6dsm_ext0_ch[] = {
 	ST_LSM6DSM_LSM_CHANNELS(IIO_PRESSURE, 0, 0, IIO_NO_MOD, IIO_LE,
 				24, 24, ST_LSM6DSM_EXT0_OUT_P_L_ADDR, 'u'),
@@ -452,6 +451,7 @@ static ssize_t st_lsm6dsm_i2c_master_sysfs_set_sampling_frequency(
 	err = iio_device_claim_direct_mode(indio_dev);
 	if (err)
 		return err;
+
 	mutex_lock(&sdata->cdata->odr_lock);
 
 	if (sdata->cdata->v_odr[sdata->sindex] != odr)
@@ -475,6 +475,7 @@ static ST_LSM6DSM_HWFIFO_WATERMARK();
 static ST_LSM6DSM_HWFIFO_WATERMARK_MIN();
 static ST_LSM6DSM_HWFIFO_WATERMARK_MAX();
 static ST_LSM6DSM_HWFIFO_FLUSH();
+
 static IIO_DEVICE_ATTR(module_id, 0444, st_lsm6dsm_get_module_id, NULL, 0);
 
 #ifdef ST_LSM6DSM_EXT0_HAS_SELFTEST
@@ -786,10 +787,9 @@ static int st_lsm6dsm_i2c_master_write_data_with_mask(
 	return err;
 }
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL)
 static int lis3mdl_initialization(struct lsm6dsm_sensor_data *sdata)
 {
-
 	return st_lsm6dsm_i2c_master_write_data_with_mask(
 				sdata->cdata,
 				ST_LSM6DSM_EXT0_BDU_ADDR,
@@ -797,10 +797,11 @@ static int lis3mdl_initialization(struct lsm6dsm_sensor_data *sdata)
 }
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911)
 static int akm09911_initialization(struct lsm6dsm_sensor_data *sdata)
 {
-	int err; u8 data[ST_LSM6DSM_EXT0_SENSITIVITY_LEN];
+	u8 data[ST_LSM6DSM_EXT0_SENSITIVITY_LEN];
+	int err;
 
 	err = st_lsm6dsm_i2c_master_read(sdata->cdata,
 				ST_LSM6DSM_EXT0_SENSITIVITY_ADDR,
@@ -824,7 +825,7 @@ static int akm09911_initialization(struct lsm6dsm_sensor_data *sdata)
 }
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911 */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912)
 static int akm09912_initialization(struct lsm6dsm_sensor_data *sdata)
 {
 	int err; u8 data[ST_LSM6DSM_EXT0_SENSITIVITY_LEN];
@@ -851,8 +852,8 @@ static int akm09912_initialization(struct lsm6dsm_sensor_data *sdata)
 }
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912 */
 
-#if defined(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HB) || \
-    defined(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HH)
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HB) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22HH)
 static int lps22hx_initialization(struct lsm6dsm_sensor_data *sdata)
 {
 
@@ -863,7 +864,7 @@ static int lps22hx_initialization(struct lsm6dsm_sensor_data *sdata)
 }
 #endif /* CONFIG_ST_LSM6DSM_IIO_EXT0_LPS22Hx */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LIS2MDL
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS2MDL)
 static int lis2mdl_initialization(struct lsm6dsm_sensor_data *sdata)
 {
 	int err;
@@ -924,7 +925,7 @@ static ssize_t st_lsm6dsm_i2c_master_sysfs_start_selftest(struct device *dev,
 	int err;
 	int x_selftest = 0, y_selftest = 0, z_selftest = 0;
 	u8 outdata[8], reg_addr, reg_status = 0, temp_reg_status;
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL)
 	int i, x = 0, y = 0, z = 0;
 	u8 reg_status2 = 0, reg_status3 = 0;
 	u8 reg_addr2, reg_addr3, temp_reg_status2, temp_reg_status3;
@@ -954,7 +955,7 @@ static ssize_t st_lsm6dsm_i2c_master_sysfs_start_selftest(struct device *dev,
 		return err;
 	}
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL)
 	reg_addr = ST_LSM6DSM_SELFTEST_ADDR1;
 	temp_reg_status = ST_LSM6DSM_SELFTEST_ADDR1_VALUE;
 	reg_addr2 = ST_LSM6DSM_SELFTEST_ADDR2;
@@ -998,7 +999,7 @@ static ssize_t st_lsm6dsm_i2c_master_sysfs_start_selftest(struct device *dev,
 		goto disable_sensor_hub;
 #endif /* ST_LSM6DSM_EXT0_IS_AKM */
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL)
 	err = st_lsm6dsm_i2c_master_read(sdata->cdata, reg_addr2, 1,
 					&reg_status2, false, true, false,
 					st_lsm6dsm_exs_list[0].read_data_len);
@@ -1017,7 +1018,7 @@ static ssize_t st_lsm6dsm_i2c_master_sysfs_start_selftest(struct device *dev,
 	if (err < 0)
 		goto disable_sensor_hub;
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL)
 	err = st_lsm6dsm_i2c_master_write(sdata->cdata, reg_addr2, 1,
 					&temp_reg_status2, false, true);
 	if (err < 0)
@@ -1165,8 +1166,8 @@ static ssize_t st_lsm6dsm_i2c_master_sysfs_start_selftest(struct device *dev,
 	y_selftest = ((s16)*(u16 *)&outdata[2]);
 	z_selftest = ((s16)*(u16 *)&outdata[4]);
 
-#if defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912) || \
-			defined(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911)
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09912) || \
+    IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_AKM09911)
 	x_selftest *= sdata->c_gain[0];
 	y_selftest *= sdata->c_gain[1];
 	z_selftest *= sdata->c_gain[2];
@@ -1204,7 +1205,7 @@ static ssize_t st_lsm6dsm_i2c_master_sysfs_start_selftest(struct device *dev,
 
 	return size;
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_EXT0_LIS3MDL)
 restore_status_reg3:
 	st_lsm6dsm_i2c_master_write(sdata->cdata, reg_addr3, 1,
 						&reg_status3, false, true);
@@ -1445,7 +1446,7 @@ static int st_lsm6dsm_i2c_master_read_raw(struct iio_dev *indio_dev,
 
 static int st_lsm6dsm_i2c_master_buffer_preenable(struct iio_dev *indio_dev)
 {
-#ifdef CONFIG_ST_LSM6DSM_XL_DATA_INJECTION
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_XL_DATA_INJECTION)
 	struct lsm6dsm_sensor_data *sdata = iio_priv(indio_dev);
 
 	if (sdata->cdata->injection_mode)
@@ -1509,7 +1510,6 @@ static int st_lsm6dsm_i2c_master_allocate_trigger(struct lsm6dsm_data *cdata)
 	cdata->trig[ST_MASK_ID_EXT0] = iio_trigger_alloc("%s-trigger",
 				cdata->indio_dev[ST_MASK_ID_EXT0]->name);
 #endif /* LINUX_VERSION_CODE */
-
 
 	if (!cdata->trig[ST_MASK_ID_EXT0]) {
 		dev_err(cdata->dev, "failed to allocate iio trigger.\n");
@@ -1716,14 +1716,14 @@ int st_lsm6dsm_i2c_master_probe(struct lsm6dsm_data *cdata)
 	cdata->ext0_available = false;
 	cdata->ext0_selftest_status = false;
 
-#ifdef CONFIG_ST_LSM6DSM_ENABLE_INTERNAL_PULLUP
-	err = st_lsm6dsm_write_data_with_mask(cdata,
-					ST_LSM6DSM_INTER_PULLUP_ADDR,
-					ST_LSM6DSM_INTER_PULLUP_MASK,
-					ST_LSM6DSM_EN_BIT, true);
-	if (err < 0)
-		return err;
-#endif /* CONFIG_ST_LSM6DSM_ENABLE_INTERNAL_PULLUP */
+	if (IS_ENABLED(CONFIG_ST_LSM6DSM_ENABLE_INTERNAL_PULLUP)) {
+		err = st_lsm6dsm_write_data_with_mask(cdata,
+						ST_LSM6DSM_INTER_PULLUP_ADDR,
+						ST_LSM6DSM_INTER_PULLUP_MASK,
+						ST_LSM6DSM_EN_BIT, true);
+		if (err < 0)
+			return err;
+	}
 
 	err = st_lsm6dsm_write_data_with_mask(cdata,
 					ST_LSM6DSM_FUNC_MAX_RATE_ADDR,

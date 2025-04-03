@@ -37,6 +37,11 @@
 						(d) : (c)) : ((b == 0) ? \
 						(c) : (d)))
 
+/* avoid undefined parameter */
+#ifndef CONFIG_ST_LSM6DSM_IIO_LIMIT_FIFO
+#define CONFIG_ST_LSM6DSM_IIO_LIMIT_FIFO 0
+#endif
+
 int st_lsm6dsm_push_data_with_timestamp(struct lsm6dsm_data *cdata,
 					u8 index, u8 *data, int64_t timestamp)
 {
@@ -75,16 +80,14 @@ static void st_lsm6dsm_parse_fifo_data(struct lsm6dsm_data *cdata,
 	int err;
 	u16 fifo_offset = 0;
 	u8 gyro_sip, accel_sip;
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
 	u8 ext0_sip;
-#endif /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
 
 	while (fifo_offset < read_len) {
 		gyro_sip = cdata->fifo_output[ST_MASK_ID_GYRO].sip;
 		accel_sip = cdata->fifo_output[ST_MASK_ID_ACCEL].sip;
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
-		ext0_sip = cdata->fifo_output[ST_MASK_ID_EXT0].sip;
-#endif /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
+		if (IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT)) {
+			ext0_sip = cdata->fifo_output[ST_MASK_ID_EXT0].sip;
+		}
 
 		do {
 			if (gyro_sip > 0) {
@@ -195,7 +198,6 @@ static void st_lsm6dsm_parse_fifo_data(struct lsm6dsm_data *cdata,
 				accel_sip--;
 			}
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
 			if (ext0_sip > 0) {
 				if (cdata->fifo_output[ST_MASK_ID_EXT0].timestamp == 0) {
 					if (cdata->slower_id == ST_MASK_ID_EXT0)
@@ -251,9 +253,6 @@ static void st_lsm6dsm_parse_fifo_data(struct lsm6dsm_data *cdata,
 			}
 
 		} while ((accel_sip > 0) || (gyro_sip > 0) || (ext0_sip > 0));
-#else /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
-		} while ((accel_sip > 0) || (gyro_sip > 0));
-#endif /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
 	}
 }
 
@@ -287,16 +286,17 @@ int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 	read_len = ((fifo_status[1] & ST_LSM6DSM_FIFO_DIFF_MASK) << 8) | fifo_status[0];
 	read_len *= ST_LSM6DSM_BYTE_FOR_CHANNEL;
 
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
-	byte_in_pattern = (cdata->fifo_output[ST_MASK_ID_ACCEL].sip +
-				cdata->fifo_output[ST_MASK_ID_GYRO].sip +
-				cdata->fifo_output[ST_MASK_ID_EXT0].sip) *
-				ST_LSM6DSM_FIFO_ELEMENT_LEN_BYTE;
-#else /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
-	byte_in_pattern = (cdata->fifo_output[ST_MASK_ID_ACCEL].sip +
-				cdata->fifo_output[ST_MASK_ID_GYRO].sip) *
-				ST_LSM6DSM_FIFO_ELEMENT_LEN_BYTE;
-#endif /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
+	if (IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT)) {
+		byte_in_pattern = (cdata->fifo_output[ST_MASK_ID_ACCEL].sip +
+				   cdata->fifo_output[ST_MASK_ID_GYRO].sip +
+				   cdata->fifo_output[ST_MASK_ID_EXT0].sip) *
+				   ST_LSM6DSM_FIFO_ELEMENT_LEN_BYTE;
+	} else {
+		byte_in_pattern = (cdata->fifo_output[ST_MASK_ID_ACCEL].sip +
+				   cdata->fifo_output[ST_MASK_ID_GYRO].sip) *
+				   ST_LSM6DSM_FIFO_ELEMENT_LEN_BYTE;
+	}
+
 	if (byte_in_pattern == 0)
 		return 0;
 
@@ -333,11 +333,11 @@ int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 	cdata->slower_id = MIN_ID(cdata->fifo_output[ST_MASK_ID_GYRO].sip,
 				cdata->fifo_output[ST_MASK_ID_ACCEL].sip,
 				ST_MASK_ID_GYRO, ST_MASK_ID_ACCEL);
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
-	cdata->slower_id = MIN_ID(cdata->fifo_output[cdata->slower_id].sip,
-				cdata->fifo_output[ST_MASK_ID_EXT0].sip,
-				cdata->slower_id, ST_MASK_ID_EXT0);
-#endif /* CONFIG_ST_LSM6DSM_IIO_LIMIT_FIFO */
+	if (IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT)) {
+		cdata->slower_id = MIN_ID(cdata->fifo_output[cdata->slower_id].sip,
+					  cdata->fifo_output[ST_MASK_ID_EXT0].sip,
+					  cdata->slower_id, ST_MASK_ID_EXT0);
+	}
 
 	temp_counter = cdata->slower_counter;
 	cdata->slower_counter += (read_len / byte_in_pattern) * cdata->fifo_output[cdata->slower_id].sip;
@@ -391,9 +391,11 @@ int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 	} else {
 		cdata->fifo_output[ST_MASK_ID_ACCEL].deltatime = cdata->fifo_output[ST_MASK_ID_ACCEL].deltatime_default;
 		cdata->fifo_output[ST_MASK_ID_GYRO].deltatime = cdata->fifo_output[ST_MASK_ID_GYRO].deltatime_default;
-#ifdef CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT
-		cdata->fifo_output[ST_MASK_ID_EXT0].deltatime = cdata->fifo_output[ST_MASK_ID_EXT0].deltatime_default;
-#endif /* CONFIG_ST_LSM6DSM_IIO_LIMIT_FIFO */
+
+		if (IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT)) {
+			cdata->fifo_output[ST_MASK_ID_EXT0].deltatime =
+				cdata->fifo_output[ST_MASK_ID_EXT0].deltatime_default;
+		}
 	}
 
 parse_fifo:
@@ -506,7 +508,7 @@ int st_lsm6dsm_trig_set_state(struct iio_trigger *trig, bool state)
 
 static int st_lsm6dsm_buffer_preenable(struct iio_dev *indio_dev)
 {
-#ifdef CONFIG_ST_LSM6DSM_XL_DATA_INJECTION
+#if IS_ENABLED(CONFIG_ST_LSM6DSM_XL_DATA_INJECTION)
 	struct lsm6dsm_sensor_data *sdata = iio_priv(indio_dev);
 
 	if (sdata->cdata->injection_mode) {
@@ -597,7 +599,7 @@ int st_lsm6dsm_allocate_rings(struct lsm6dsm_data *cdata)
 	if (err < 0)
 		goto buffer_cleanup_accel;
 
-#ifdef CONFIG_IIO_ST_LSM6DSM_EN_BASIC_FEATURES
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSM_EN_BASIC_FEATURES)
 	err = iio_triggered_buffer_setup(
 				cdata->indio_dev[ST_MASK_ID_SIGN_MOTION],
 				&st_lsm6dsm_handler_empty, NULL,
@@ -652,7 +654,7 @@ int st_lsm6dsm_allocate_rings(struct lsm6dsm_data *cdata)
 
 	return 0;
 
-#ifdef CONFIG_IIO_ST_LSM6DSM_EN_BASIC_FEATURES
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSM_EN_BASIC_FEATURES)
 buffer_cleanup_tap:
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_TAP]);
 buffer_cleanup_wtilt:
@@ -681,7 +683,7 @@ buffer_cleanup_accel:
 void st_lsm6dsm_deallocate_rings(struct lsm6dsm_data *cdata)
 {
 
-#ifdef CONFIG_IIO_ST_LSM6DSM_EN_BASIC_FEATURES
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSM_EN_BASIC_FEATURES)
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_TAP_TAP]);
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_TAP]);
 	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_WTILT]);
