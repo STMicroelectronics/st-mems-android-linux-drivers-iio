@@ -92,7 +92,7 @@ static int st_mag40_i2c_probe(struct i2c_client *client,
 	return st_mag40_common_probe(iio_dev);
 }
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_mag40_i2c_suspend(struct device *dev)
 {
 	struct iio_dev *iio_dev = dev_get_drvdata(dev);
@@ -127,7 +127,7 @@ static const struct i2c_device_id st_mag40_ids[] = {
 };
 MODULE_DEVICE_TABLE(i2c, st_mag40_ids);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id st_mag40_id_table[] = {
 	{
 		.compatible = "st,lsm303ah_magn",
@@ -160,7 +160,7 @@ static struct i2c_driver st_mag40_i2c_driver = {
 		   .owner = THIS_MODULE,
 		   .name = ST_MAG40_DEV_NAME,
 		   .pm = ST_MAG40_PM_OPS,
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 		   .of_match_table = st_mag40_id_table,
 #endif /* CONFIG_OF */
 		   },

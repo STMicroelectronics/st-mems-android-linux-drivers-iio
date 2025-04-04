@@ -583,7 +583,7 @@ int st_mag40_common_probe(struct iio_dev *iio_dev)
 }
 EXPORT_SYMBOL(st_mag40_common_probe);
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 int st_mag40_common_suspend(struct st_mag40_data *cdata)
 {
 	return 0;

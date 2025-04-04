@@ -72,7 +72,7 @@ static const struct i2c_device_id st_mag3d_ids[] = {
 };
 MODULE_DEVICE_TABLE(i2c, st_mag3d_ids);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id st_mag3d_id_table[] = {
 	{
 		.compatible = "st,lis3mdl_magn",
@@ -89,7 +89,7 @@ static struct i2c_driver st_mag3d_i2c_driver = {
 	.driver = {
 		   .owner = THIS_MODULE,
 		   .name = "st_mag3d_i2c",
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 		   .of_match_table = st_mag3d_id_table,
 #endif /* CONFIG_OF */
 		   },

@@ -101,7 +101,7 @@ static const struct spi_device_id st_mag3d_ids[] = {
 };
 MODULE_DEVICE_TABLE(spi, st_mag3d_ids);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id st_mag3d_id_table[] = {
 	{
 		.compatible = "st,lis3mdl_magn",
@@ -118,7 +118,7 @@ static struct spi_driver st_mag3d_spi_driver = {
 	.driver = {
 		   .owner = THIS_MODULE,
 		   .name = "st_mag3d_spi",
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 		   .of_match_table = st_mag3d_id_table,
 #endif /* CONFIG_OF */
 		   },

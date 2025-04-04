@@ -134,7 +134,7 @@ static inline s64 st_mag40_get_timestamp(struct iio_dev *iio_dev)
 
 int st_mag40_common_probe(struct iio_dev *iio_dev);
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 int st_mag40_common_suspend(struct st_mag40_data *cdata);
 int st_mag40_common_resume(struct st_mag40_data *cdata);
 #endif /* CONFIG_PM */
