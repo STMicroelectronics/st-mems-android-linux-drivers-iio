@@ -1122,7 +1122,7 @@ static const struct iio_info st_lis2duxs12_acc_info = {
 	.write_event_value = st_lis2duxs12_write_event_value,
 	.read_event_value = st_lis2duxs12_read_event_value,
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	.debugfs_reg_access = &st_lis2duxs12_reg_access,
 #endif /* CONFIG_DEBUG_FS */
 
@@ -1425,9 +1425,8 @@ int st_lis2duxs12_probe(struct device *dev, int irq,
 			return err;
 	}
 
-#if defined(CONFIG_PM)
-	device_init_wakeup(dev, 1);
-#endif /* CONFIG_PM && CONFIG */
+	if (IS_ENABLED(CONFIG_PM))
+		device_init_wakeup(dev, 1);
 
 	return 0;
 }

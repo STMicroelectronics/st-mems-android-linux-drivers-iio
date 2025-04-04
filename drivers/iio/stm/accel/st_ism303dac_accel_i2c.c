@@ -100,7 +100,7 @@ static int ism303dac_i2c_probe(struct i2c_client *client,
 	return ism303dac_common_probe(cdata, client->irq);
 }
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused ism303dac_suspend(struct device *dev)
 {
 	struct ism303dac_data *cdata = i2c_get_clientdata(to_i2c_client(dev));
@@ -131,23 +131,23 @@ static const struct i2c_device_id ism303dac_ids[] = {
 
 MODULE_DEVICE_TABLE(i2c, ism303dac_ids);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id ism303dac_id_table[] = {
 	{.compatible = "st,ism303dac_accel",},
 	{},
 };
 
 MODULE_DEVICE_TABLE(of, ism303dac_id_table);
-#endif
+#endif /* CONFIG_OF */
 
 static struct i2c_driver ism303dac_i2c_driver = {
 	.driver = {
 		   .owner = THIS_MODULE,
 		   .name = ISM303DAC_DEV_NAME,
 		   .pm = ISM303DAC_PM_OPS,
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 		   .of_match_table = ism303dac_id_table,
-#endif
+#endif /* CONFIG_OF */
 		   },
 	.probe = ism303dac_i2c_probe,
 	.id_table = ism303dac_ids,

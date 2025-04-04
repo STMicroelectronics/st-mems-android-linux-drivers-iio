@@ -1192,34 +1192,34 @@ static int st_lis2dw12_configure_wake_up(struct st_lis2dw12_hw *hw)
 	if (err < 0)
 		goto restore_cache;
 
-#if defined(CONFIG_IIO_ST_LIS2DW12_STORE_SAMPLE_FIFO_SUSPEND)
-	/* disable interrupt on FIFO watermark */
-	err = regmap_update_bits(hw->regmap, hw->irq_reg,
-				 ST_LIS2DW12_FTH_INT_MASK,
-				 FIELD_PREP(ST_LIS2DW12_FTH_INT_MASK, 0));
-	if (err < 0)
-		goto restore_cache;
+	if (IS_ENABLED(CONFIG_IIO_ST_LIS2DW12_STORE_SAMPLE_FIFO_SUSPEND)) {
+		/* disable interrupt on FIFO watermark */
+		err = regmap_update_bits(hw->regmap, hw->irq_reg,
+					 ST_LIS2DW12_FTH_INT_MASK,
+					 FIELD_PREP(ST_LIS2DW12_FTH_INT_MASK, 0));
+		if (err < 0)
+			goto restore_cache;
 
-	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_FIFO_CTRL_ADDR,
-				 ST_LIS2DW12_FIFOMODE_MASK,
-				 FIELD_PREP(ST_LIS2DW12_FIFOMODE_MASK,
-					    ST_LIS2DW12_FIFO_BYPASS));
-	if (err < 0)
-		goto restore_cache;
+		err = regmap_update_bits(hw->regmap, ST_LIS2DW12_FIFO_CTRL_ADDR,
+					 ST_LIS2DW12_FIFOMODE_MASK,
+					 FIELD_PREP(ST_LIS2DW12_FIFOMODE_MASK,
+						    ST_LIS2DW12_FIFO_BYPASS));
+		if (err < 0)
+			goto restore_cache;
 
-	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_FIFO_CTRL_ADDR,
-				 ST_LIS2DW12_FTH_MASK,
-				 FIELD_PREP(ST_LIS2DW12_FTH_MASK, 31));
-	if (err < 0)
-		goto restore_cache;
+		err = regmap_update_bits(hw->regmap, ST_LIS2DW12_FIFO_CTRL_ADDR,
+					 ST_LIS2DW12_FTH_MASK,
+					 FIELD_PREP(ST_LIS2DW12_FTH_MASK, 31));
+		if (err < 0)
+			goto restore_cache;
 
-	err = regmap_update_bits(hw->regmap, ST_LIS2DW12_FIFO_CTRL_ADDR,
-				 ST_LIS2DW12_FIFOMODE_MASK,
-				 FIELD_PREP(ST_LIS2DW12_FIFOMODE_MASK,
-					    ST_LIS2DW12_FIFO_CONTINUOUS));
-	if (err < 0)
-		goto restore_cache;
-#endif /* CONFIG_IIO_ST_LIS2DW12_STORE_SAMPLE_FIFO_SUSPEND */
+		err = regmap_update_bits(hw->regmap, ST_LIS2DW12_FIFO_CTRL_ADDR,
+					 ST_LIS2DW12_FIFOMODE_MASK,
+					 FIELD_PREP(ST_LIS2DW12_FIFOMODE_MASK,
+						    ST_LIS2DW12_FIFO_CONTINUOUS));
+		if (err < 0)
+			goto restore_cache;
+	}
 
 	/* set sensor odr to 25 Hz */
 	val = hw->settings->id.st_lis2dw12_odr_table[ST_LIS2DW12_ID_ACC].odr[2].val <<

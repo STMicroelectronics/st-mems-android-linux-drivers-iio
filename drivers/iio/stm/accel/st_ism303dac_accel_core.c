@@ -1401,16 +1401,15 @@ static const struct iio_info ism303dac_info[ISM303DAC_SENSORS_NUMB] = {
 	},
 };
 
-#ifdef CONFIG_IIO_TRIGGER
+#if IS_ENABLED(CONFIG_IIO_TRIGGER)
 static const struct iio_trigger_ops ism303dac_trigger_ops = {
 	.set_trigger_state = (&ism303dac_trig_set_state),
 };
 #define ISM303DAC_TRIGGER_OPS (&ism303dac_trigger_ops)
-#else
+#else /* CONFIG_IIO_TRIGGER */
 #define ISM303DAC_TRIGGER_OPS NULL
-#endif
+#endif /* CONFIG_IIO_TRIGGER */
 
-#ifdef CONFIG_OF
 static u32 ism303dac_parse_dt(struct ism303dac_data *cdata)
 {
 	u32 val;
@@ -1428,7 +1427,6 @@ static u32 ism303dac_parse_dt(struct ism303dac_data *cdata)
 
 	return 0;
 }
-#endif
 
 static int ism303dac_init_interface(struct ism303dac_data *cdata)
 {
@@ -1488,21 +1486,23 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 
 	if (irq > 0) {
 		cdata->irq = irq;
-#ifdef CONFIG_OF
-		err = ism303dac_parse_dt(cdata);
-		if (err < 0)
-			return err;
-#else /* CONFIG_OF */
-		if (cdata->dev->platform_data) {
-			cdata->drdy_int_pin = ((struct ism303dac_platform_data *)
-				cdata->dev->platform_data)->drdy_int_pin;
 
-			if ((cdata->drdy_int_pin > 2) ||
-			    (cdata->drdy_int_pin < 1))
-				cdata->drdy_int_pin = 1;
-		} else
+		if (IS_ENABLED(CONFIG_OF)) {
+			err = ism303dac_parse_dt(cdata);
+			if (err < 0)
+				return err;
+		} else {
+			if (cdata->dev->platform_data) {
+				cdata->drdy_int_pin = ((struct ism303dac_platform_data *)
+					cdata->dev->platform_data)->drdy_int_pin;
+
+				if ((cdata->drdy_int_pin > 2) ||
+				    (cdata->drdy_int_pin < 1))
+					cdata->drdy_int_pin = 1;
+			} else {
 			cdata->drdy_int_pin = 1;
-#endif /* CONFIG_OF */
+			}
+		}
 
 		dev_info(cdata->dev, "driver use DRDY int pin %d\n",
 			 cdata->drdy_int_pin);
@@ -1577,7 +1577,7 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 }
 EXPORT_SYMBOL(ism303dac_common_probe);
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 int __maybe_unused ism303dac_common_suspend(struct ism303dac_data *cdata)
 {
 	return 0;

@@ -111,7 +111,7 @@ static int ism303dac_spi_probe(struct spi_device *spi)
 	return ism303dac_common_probe(cdata, spi->irq);
 }
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused ism303dac_suspend(struct device *dev)
 {
 	struct ism303dac_data *cdata = spi_get_drvdata(to_spi_device(dev));
@@ -142,7 +142,7 @@ static const struct spi_device_id ism303dac_ids[] = {
 
 MODULE_DEVICE_TABLE(spi, ism303dac_ids);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id ism303dac_id_table[] = {
 	{.compatible = "st,ism303dac_accel",},
 	{},
@@ -156,7 +156,7 @@ static struct spi_driver ism303dac_spi_driver = {
 		   .owner = THIS_MODULE,
 		   .name = ISM303DAC_DEV_NAME,
 		   .pm = ISM303DAC_PM_OPS,
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 		   .of_match_table = ism303dac_id_table,
 #endif /* CONFIG_OF */
 		   },

@@ -134,7 +134,7 @@ static int lis2hh12_spi_remove(struct spi_device *spi)
 }
 #endif /* LINUX_VERSION_CODE */
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused lis2hh12_suspend(struct device *dev)
 {
 	struct lis2hh12_data *cdata = spi_get_drvdata(to_spi_device(dev));
@@ -165,7 +165,7 @@ static const struct spi_device_id lis2hh12_ids[] = {
 
 MODULE_DEVICE_TABLE(spi, lis2hh12_ids);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id lis2hh12_id_table[] = {
 	{ .compatible = "st,lis2hh12"},
 	{},
@@ -179,7 +179,7 @@ static struct spi_driver lis2hh12_spi_driver = {
 		   .owner = THIS_MODULE,
 		   .name = LIS2HH12_DEV_NAME,
 		   .pm = LIS2HH12_PM_OPS,
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 		   .of_match_table = lis2hh12_id_table,
 #endif /* CONFIG_OF */
 		   },

@@ -385,7 +385,7 @@ static __maybe_unused const struct iio_chan_spec st_iis2iclx_temp_channels[] = {
 	},
 	ST_IIS2ICLX_EVENT_CHANNEL(IIO_TEMP, flush),
 
-#if defined(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
 	IIO_CHAN_HW_TIMESTAMP(1),
 	IIO_CHAN_SOFT_TIMESTAMP(2),
 #else /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
@@ -1638,7 +1638,7 @@ static const struct iio_info st_iis2iclx_acc_info = {
 	.write_event_value = st_iis2iclx_write_event_value,
 	.read_event_value = st_iis2iclx_read_event_value,
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	.debugfs_reg_access = &st_iis2iclx_reg_access,
 #endif /* CONFIG_DEBUG_FS */
 };
@@ -1694,7 +1694,7 @@ static const struct iio_info st_iis2iclx_temp_info = {
 
 static const unsigned long st_iis2iclx_available_scan_masks[] = {
 
-#if defined(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
 	GENMASK(2, 0), 0x0
 #else /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 	GENMASK(1, 0), 0x0
@@ -1703,7 +1703,7 @@ static const unsigned long st_iis2iclx_available_scan_masks[] = {
 };
 
 static const unsigned long st_iis2iclx_temp_available_scan_masks[] = {
-#if defined(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
+#if IS_ENABLED(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP)
 	GENMASK(1, 0), 0x0
 #else /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 	BIT(0), 0x0

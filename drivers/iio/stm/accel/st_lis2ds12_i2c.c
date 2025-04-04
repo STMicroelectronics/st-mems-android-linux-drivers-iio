@@ -102,7 +102,7 @@ static int lis2ds12_i2c_probe(struct i2c_client *client,
 	return lis2ds12_common_probe(cdata, client->irq);
 }
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused lis2ds12_suspend(struct device *dev)
 {
 	struct lis2ds12_data *cdata = i2c_get_clientdata(to_i2c_client(dev));
@@ -135,7 +135,7 @@ static const struct i2c_device_id lis2ds12_ids[] = {
 
 MODULE_DEVICE_TABLE(i2c, lis2ds12_ids);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id lis2ds12_id_table[] = {
 	{.compatible = "st,lis2ds12",},
 	{.compatible = "st,lsm303ah",},
@@ -151,7 +151,7 @@ static struct i2c_driver lis2ds12_i2c_driver = {
 		   .owner = THIS_MODULE,
 		   .name = LIS2DS12_DEV_NAME,
 		   .pm = LIS2DS12_PM_OPS,
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 		   .of_match_table = lis2ds12_id_table,
 #endif
 		   },

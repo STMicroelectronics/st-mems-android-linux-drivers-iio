@@ -31,7 +31,7 @@
 
 #define ST_LIS2DUXS12_LOADER_CMD_WAIT		0xff
 
-#ifdef CONFIG_IIO_LIS2DUXS12_MLC_BUILTIN_FIRMWARE
+#if IS_ENABLED(CONFIG_IIO_LIS2DUXS12_MLC_BUILTIN_FIRMWARE)
 static const u8 st_lis2duxs12_mlc_fw[] = {
 	#include "st_lis2duxs12_mlc.fw"
 };

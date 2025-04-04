@@ -1015,7 +1015,7 @@ static const struct iio_info lis2hh12_info[LIS2HH12_SENSORS_NUMB] = {
 	},
 };
 
-#ifdef CONFIG_IIO_TRIGGER
+#if IS_ENABLED(CONFIG_IIO_TRIGGER)
 static const struct iio_trigger_ops lis2hh12_trigger_ops = {
 	.set_trigger_state = (&lis2hh12_trig_set_state),
 };
@@ -1024,7 +1024,6 @@ static const struct iio_trigger_ops lis2hh12_trigger_ops = {
 #define LIS2HH12_TRIGGER_OPS NULL
 #endif /*CONFIG_IIO_TRIGGER */
 
-#ifdef CONFIG_OF
 static u32 lis2hh12_parse_dt(struct lis2hh12_data *cdata)
 {
 	u32 val;
@@ -1042,7 +1041,6 @@ static u32 lis2hh12_parse_dt(struct lis2hh12_data *cdata)
 
 	return 0;
 }
-#endif /*CONFIG_OF */
 
 int lis2hh12_common_probe(struct lis2hh12_data *cdata, int irq)
 {
@@ -1071,20 +1069,23 @@ int lis2hh12_common_probe(struct lis2hh12_data *cdata, int irq)
 
 	if (irq > 0) {
 		cdata->irq = irq;
-#ifdef CONFIG_OF
-		err = lis2hh12_parse_dt(cdata);
-		if (err < 0)
-			return err;
-#else /* CONFIG_OF */
-		if (cdata->dev->platform_data) {
-			cdata->drdy_int_pin = ((struct lis2hh12_platform_data *)
-					cdata->dev->platform_data)->drdy_int_pin;
 
-			if ((cdata->drdy_int_pin > 1) || (cdata->drdy_int_pin < 1))
+		if (IS_ENABLED(CONFIG_OF)) {
+			err = lis2hh12_parse_dt(cdata);
+			if (err < 0)
+				return err;
+		} else {
+			if (cdata->dev->platform_data) {
+				cdata->drdy_int_pin = ((struct lis2hh12_platform_data *)
+						cdata->dev->platform_data)->drdy_int_pin;
+
+				if ((cdata->drdy_int_pin > 1) ||
+				    (cdata->drdy_int_pin < 1))
+					cdata->drdy_int_pin = 1;
+			} else {
 				cdata->drdy_int_pin = 1;
-		} else
-			cdata->drdy_int_pin = 1;
-#endif /* CONFIG_OF */
+			}
+		}
 
 		dev_info(cdata->dev, "driver use DRDY int pin %d\n",
 						cdata->drdy_int_pin);
@@ -1188,7 +1189,7 @@ void lis2hh12_common_remove(struct lis2hh12_data *cdata, int irq)
 
 EXPORT_SYMBOL(lis2hh12_common_remove);
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 int __maybe_unused lis2hh12_common_suspend(struct lis2hh12_data *cdata)
 {
 	return 0;

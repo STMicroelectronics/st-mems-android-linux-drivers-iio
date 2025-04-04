@@ -345,10 +345,10 @@ static bool __maybe_unused lis2ds12_skip_basic_features(int i)
 
 int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq);
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 int lis2ds12_common_suspend(struct lis2ds12_data *cdata);
 int lis2ds12_common_resume(struct lis2ds12_data *cdata);
-#endif
+#endif /* CONFIG_PM */
 
 int lis2ds12_allocate_rings(struct lis2ds12_data *cdata);
 int lis2ds12_allocate_triggers(struct lis2ds12_data *cdata,

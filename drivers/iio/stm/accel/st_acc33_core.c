@@ -445,7 +445,7 @@ static const struct iio_info st_acc33_info = {
 	.write_event_value = st_acc33_write_event_value,
 	.read_event_value = st_acc33_read_event_value,
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	.debugfs_reg_access = &st_acc33_reg_access,
 #endif /* CONFIG_DEBUG_FS */
 

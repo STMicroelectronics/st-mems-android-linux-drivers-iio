@@ -111,7 +111,7 @@ static int lis2ds12_spi_probe(struct spi_device *spi)
 	return lis2ds12_common_probe(cdata, spi->irq);
 }
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused lis2ds12_suspend(struct device *dev)
 {
 	struct lis2ds12_data *cdata = spi_get_drvdata(to_spi_device(dev));
@@ -144,7 +144,7 @@ static const struct spi_device_id lis2ds12_ids[] = {
 
 MODULE_DEVICE_TABLE(spi, lis2ds12_ids);
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id lis2ds12_id_table[] = {
 	{.compatible = "st,lis2ds12",},
 	{.compatible = "st,lsm303ah",},
@@ -160,7 +160,7 @@ static struct spi_driver lis2ds12_spi_driver = {
 		   .owner = THIS_MODULE,
 		   .name = LIS2DS12_DEV_NAME,
 		   .pm = LIS2DS12_PM_OPS,
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 		   .of_match_table = lis2ds12_id_table,
 #endif /* CONFIG_OF */
 		   },

@@ -324,10 +324,10 @@ static bool __maybe_unused ism303dac_skip_basic_features(int i)
 
 int ism303dac_common_probe(struct ism303dac_data *cdata, int irq);
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 int ism303dac_common_suspend(struct ism303dac_data *cdata);
 int ism303dac_common_resume(struct ism303dac_data *cdata);
-#endif
+#endif /* CONFIG_PM */
 
 int ism303dac_allocate_rings(struct ism303dac_data *cdata);
 int ism303dac_allocate_triggers(struct ism303dac_data *cdata,

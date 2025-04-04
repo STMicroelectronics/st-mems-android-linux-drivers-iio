@@ -226,10 +226,12 @@ static inline int lis2hh12_iio_dev_currentmode(struct iio_dev *indio_dev)
 }
 
 int lis2hh12_common_probe(struct lis2hh12_data *cdata, int irq);
-#ifdef CONFIG_PM
+
+#if IS_ENABLED(CONFIG_PM)
 int lis2hh12_common_suspend(struct lis2hh12_data *cdata);
 int lis2hh12_common_resume(struct lis2hh12_data *cdata);
-#endif
+#endif /* CONFIG_PM */
+
 int lis2hh12_allocate_rings(struct lis2hh12_data *cdata);
 int lis2hh12_allocate_triggers(struct lis2hh12_data *cdata,
 			     const struct iio_trigger_ops *trigger_ops);

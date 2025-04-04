@@ -376,9 +376,11 @@ static const struct iio_info st_h3lis331dl_acc_info = {
 	.read_raw = st_h3lis331dl_read_raw,
 	.write_raw = st_h3lis331dl_write_raw,
 	.write_raw_get_fmt = &st_h3lis331dl_write_raw_get_fmt,
-#ifdef CONFIG_DEBUG_FS
+
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	.debugfs_reg_access = &st_h3lis331dl_reg_access,
 #endif /* CONFIG_DEBUG_FS */
+
 };
 
 static const unsigned long st_h3lis331dl_available_scan_masks[] = {
