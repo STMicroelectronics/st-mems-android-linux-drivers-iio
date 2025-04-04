@@ -358,7 +358,7 @@ static const struct iio_info st_stts22h_info = {
 	.read_raw = st_stts22h_read_raw,
 	.write_raw = st_stts22h_write_raw,
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	.debugfs_reg_access = &st_stts22h_reg_access,
 #endif /* CONFIG_DEBUG_FS */
 };
@@ -610,7 +610,7 @@ static int __maybe_unused st_stts22h_resume(struct device *dev)
 	return err;
 }
 
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 const struct dev_pm_ops st_stts22h_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(st_stts22h_suspend, st_stts22h_resume)
 };
@@ -633,7 +633,7 @@ MODULE_DEVICE_TABLE(i2c, st_stts22h_id_table);
 static struct i2c_driver st_stts22h_driver = {
 	.driver = {
 		.name = "st_stts22h_i2c",
-#ifdef CONFIG_PM
+#if IS_ENABLED(CONFIG_PM)
 		.pm = &st_stts22h_pm_ops,
 #endif /* CONFIG_PM */
 		.of_match_table = of_match_ptr(st_stts22h_of_match),
