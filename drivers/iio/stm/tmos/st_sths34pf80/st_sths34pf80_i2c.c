@@ -69,7 +69,7 @@ MODULE_DEVICE_TABLE(i2c, st_sths34pf80_i2c_id_table);
 static struct i2c_driver st_sths34pf80_driver = {
 	.driver = {
 		.name = "st_" ST_STHS34PF80_DEV_NAME "_i2c",
-#ifdef CONFIG_PM_SLEEP
+#if IS_ENABLED(CONFIG_PM_SLEEP)
 		.pm = &st_sths34pf80_pm_ops,
 #endif /* CONFIG_PM_SLEEP */
 		.of_match_table =

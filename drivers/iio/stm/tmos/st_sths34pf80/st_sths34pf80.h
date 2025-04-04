@@ -397,7 +397,7 @@ int st_sths34pf80_probe(struct device *dev, int irq,
 			struct regmap *regmap);
 int st_sths34pf80_remove(struct device *dev);
 
-#ifdef CONFIG_PM_SLEEP
+#if IS_ENABLED(CONFIG_PM_SLEEP)
 extern const struct dev_pm_ops st_sths34pf80_pm_ops;
 #endif /* CONFIG_PM_SLEEP */
 #endif /* ST_STHS34PF80_H */

@@ -64,7 +64,7 @@ MODULE_DEVICE_TABLE(spi, st_sths34pf80_spi_id_table);
 static struct spi_driver st_sths34pf80_driver = {
 	.driver = {
 		.name = "st_" ST_STHS34PF80_DEV_NAME "_spi",
-#ifdef CONFIG_PM_SLEEP
+#if IS_ENABLED(CONFIG_PM_SLEEP)
 		.pm = &st_sths34pf80_pm_ops,
 #endif /* CONFIG_PM_SLEEP */
 		.of_match_table =

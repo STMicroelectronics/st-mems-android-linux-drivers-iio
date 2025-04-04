@@ -1677,9 +1677,11 @@ static const struct iio_info st_sths34pf80_tobj_amb_info = {
 	.attrs = &st_sths34pf80_tobj_amb_attribute_group,
 	.read_raw = st_sths34pf80_read_raw,
 	.write_raw = st_sths34pf80_write_raw,
-#ifdef CONFIG_DEBUG_FS
+
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	.debugfs_reg_access = &st_sths34pf80_reg_access,
 #endif /* CONFIG_DEBUG_FS */
+
 };
 
 static IIO_DEVICE_ATTR(lpf, 0644,
@@ -1713,9 +1715,11 @@ static const struct iio_info st_sths34pf80_tpresence_info = {
 	.write_raw = st_sths34pf80_write_raw,
 	.read_event_config = st_sths34pf80_read_event_config,
 	.write_event_config = st_sths34pf80_write_event_config,
-#ifdef CONFIG_DEBUG_FS
+
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	.debugfs_reg_access = &st_sths34pf80_reg_access,
 #endif /* CONFIG_DEBUG_FS */
+
 };
 
 static struct attribute *st_sths34pf80_tmotion_attributes[] = {
@@ -2152,7 +2156,7 @@ static int __maybe_unused st_sths34pf80_resume(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
+#if IS_ENABLED(CONFIG_PM_SLEEP)
 const struct dev_pm_ops st_sths34pf80_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(st_sths34pf80_suspend,
 				st_sths34pf80_resume)
