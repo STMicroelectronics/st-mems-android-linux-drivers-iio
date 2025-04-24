@@ -1255,7 +1255,7 @@ static int __maybe_unused st_lis2dw12_suspend(struct device *dev)
 	int i, err = 0;
 
 	if (hw->irq > 0)
-		disable_hardirq(hw->irq);
+		disable_irq(hw->irq);
 
 	/* cancel any pending work */
 	st_lis2dw12_cancel_workqueue(hw);

@@ -2091,7 +2091,7 @@ static int __maybe_unused st_iis2iclx_suspend(struct device *dev)
 
 	dev_info(dev, "Suspending device\n");
 
-	disable_hardirq(hw->irq);
+	disable_irq(hw->irq);
 
 	for (i = 0; i < ST_IIS2ICLX_ID_MAX; i++) {
 		if (!hw->iio_devs[i])

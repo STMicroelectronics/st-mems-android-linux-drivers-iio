@@ -571,7 +571,7 @@ static int st_asm330lhhx_check_irq_config_pin(struct st_asm330lhhx_hw *hw)
 	if (!fwnode)
 		return -EINVAL;
 
-	irq = fwnode_irq_get(fwnode, 0);
+	irq = of_irq_get(to_of_node(fwnode), 0);
 	if (irq <= 0) {
 		dev_err(dev, "failed to get interrupt configuration line\n");
 
@@ -595,7 +595,7 @@ static int st_asm330lhhx_check_irq_config_pin(struct st_asm330lhhx_hw *hw)
 
 	if (emb_pin != int_pin) {
 		/* read irq configuration at index 1 if set in DT */
-		irq_emb = fwnode_irq_get(fwnode, 1);
+		irq_emb = of_irq_get(to_of_node(fwnode), 1);
 		if (irq_emb <= 0)
 			irq_emb = irq;
 	}
@@ -2638,9 +2638,9 @@ static int __maybe_unused st_asm330lhhx_suspend(struct device *dev)
 
 	dev_info(dev, "Suspending device\n");
 
-	disable_hardirq(hw->irq);
+	disable_irq(hw->irq);
 	if (hw->irq != hw->irq_emb)
-		disable_hardirq(hw->irq_emb);
+		disable_irq(hw->irq_emb);
 
 	for (i = 0; i < ST_ASM330LHHX_ID_MAX; i++) {
 		struct st_asm330lhhx_sensor *sensor;
