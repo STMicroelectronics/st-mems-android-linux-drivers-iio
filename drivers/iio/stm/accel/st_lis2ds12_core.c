@@ -1436,7 +1436,7 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 				return err;
 		} else {
 			if (cdata->dev->platform_data) {
-				cdata->drdy_int_pin = ((struct lis2ds12_platform_data *)
+				cdata->drdy_int_pin = ((struct st_sensors_platform_data *)
 					cdata->dev->platform_data)->drdy_int_pin;
 
 				if ((cdata->drdy_int_pin > 2) ||

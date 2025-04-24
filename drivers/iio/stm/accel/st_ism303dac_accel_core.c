@@ -1493,14 +1493,14 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 				return err;
 		} else {
 			if (cdata->dev->platform_data) {
-				cdata->drdy_int_pin = ((struct ism303dac_platform_data *)
+				cdata->drdy_int_pin = ((struct st_sensors_platform_data *)
 					cdata->dev->platform_data)->drdy_int_pin;
 
 				if ((cdata->drdy_int_pin > 2) ||
 				    (cdata->drdy_int_pin < 1))
 					cdata->drdy_int_pin = 1;
 			} else {
-			cdata->drdy_int_pin = 1;
+				cdata->drdy_int_pin = 1;
 			}
 		}
 

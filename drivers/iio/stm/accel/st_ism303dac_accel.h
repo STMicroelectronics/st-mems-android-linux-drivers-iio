@@ -13,7 +13,7 @@
 #include <linux/types.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/trigger.h>
-#include <linux/platform_data/stm/ism303dac.h>
+#include <linux/platform_data/st_sensors_pdata.h>
 #include <linux/version.h>
 
 #include "../common/stm_iio_types.h"

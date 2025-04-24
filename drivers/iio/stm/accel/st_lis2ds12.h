@@ -13,8 +13,8 @@
 #include <linux/types.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/trigger.h>
-#include <linux/platform_data/stm/lis2ds12.h>
 #include <linux/version.h>
+#include <linux/platform_data/st_sensors_pdata.h>
 
 #include "../common/stm_iio_types.h"
 

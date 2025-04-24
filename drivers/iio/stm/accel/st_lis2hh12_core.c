@@ -24,7 +24,7 @@
 #include <linux/iio/events.h>
 #include <linux/of.h>
 #include <linux/property.h>
-#include <linux/platform_data/stm/lis2hh12.h>
+#include <linux/platform_data/st_sensors_pdata.h>
 #include <linux/version.h>
 
 #if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
@@ -1076,7 +1076,7 @@ int lis2hh12_common_probe(struct lis2hh12_data *cdata, int irq)
 				return err;
 		} else {
 			if (cdata->dev->platform_data) {
-				cdata->drdy_int_pin = ((struct lis2hh12_platform_data *)
+				cdata->drdy_int_pin = ((struct st_sensors_platform_data *)
 						cdata->dev->platform_data)->drdy_int_pin;
 
 				if ((cdata->drdy_int_pin > 1) ||
