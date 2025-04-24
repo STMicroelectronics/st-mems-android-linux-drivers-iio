@@ -163,24 +163,11 @@ static const struct iio_chan_spec st_imu68_gyro_channels[] = {
 
 int st_imu68_write_with_mask(struct st_imu68_hw *hw, u8 addr, u8 mask, u8 val)
 {
-	u8 data;
+	unsigned int data = ST_IMU68_SHIFT_VAL(val, mask);
 	int err;
 
 	mutex_lock(&hw->lock);
-
-	err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to read %02x register\n", addr);
-		goto out;
-	}
-
-	data = (data & ~mask) | ((val << __ffs(mask)) & mask);
-
-	err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
-	if (err < 0)
-		dev_err(hw->dev, "failed to write %02x register\n", addr);
-
-out:
+	err = regmap_update_bits(hw->regmap, addr, mask, data);
 	mutex_unlock(&hw->lock);
 
 	return err;
@@ -189,10 +176,9 @@ out:
 static int st_imu68_check_whoami(struct st_imu68_hw *hw)
 {
 	int err;
-	u8 data;
+	int data;
 
-	err = hw->tf->read(hw->dev, ST_IMU68_WHOAMI_ADDR, sizeof(data),
-			   &data);
+	err = regmap_read(hw->regmap, ST_IMU68_WHOAMI_ADDR, &data);
 	if (err < 0) {
 		dev_err(hw->dev, "failed to read whoami register\n");
 		return err;
@@ -293,6 +279,7 @@ static ssize_t st_imu68_sysfs_scale_avail(struct device *dev,
 static int st_imu68_read_oneshot(struct st_imu68_sensor *sensor, u8 addr,
 				 int *val)
 {
+	struct st_imu68_hw *hw;
 	int err, delay;
 	__le16 data;
 
@@ -300,11 +287,13 @@ static int st_imu68_read_oneshot(struct st_imu68_sensor *sensor, u8 addr,
 	if (err < 0)
 		return err;
 
+	hw = sensor->hw;
 	delay = 1000000 / sensor->odr;
 	usleep_range(delay, 2 * delay);
 
-	err = sensor->hw->tf->read(sensor->hw->dev, addr, sizeof(data),
-				   (u8 *)&data);
+	mutex_lock(&hw->lock);
+	err = regmap_bulk_read(hw->regmap, addr, &data, sizeof(data));
+	mutex_unlock(&hw->lock);
 	if (err < 0)
 		return err;
 
@@ -560,7 +549,7 @@ static void st_imu68_get_properties(struct st_imu68_hw *hw)
 }
 
 int st_imu68_probe(struct device *dev, int irq, const char *name,
-		   const struct st_imu68_transfer_function *tf_ops)
+		   struct regmap *regmap)
 {
 	struct st_imu68_hw *hw;
 	int err, i;
@@ -573,9 +562,9 @@ int st_imu68_probe(struct device *dev, int irq, const char *name,
 
 	mutex_init(&hw->lock);
 	hw->name = name;
+	hw->regmap = regmap;
 	hw->dev = dev;
 	hw->irq = irq;
-	hw->tf = tf_ops;
 	hw->enabled_mask = 0;
 
 	err = st_imu68_check_whoami(hw);

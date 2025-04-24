@@ -15,21 +15,9 @@
 
 #include "st_imu68.h"
 
-static int st_imu68_i2c_read(struct device *dev, u8 addr, int len, u8 *data)
-{
-	return i2c_smbus_read_i2c_block_data_or_emulated(to_i2c_client(dev),
-							 addr, len, data);
-}
-
-static int st_imu68_i2c_write(struct device *dev, u8 addr, int len, u8 *data)
-{
-	return i2c_smbus_write_i2c_block_data(to_i2c_client(dev), addr, len,
-					      data);
-}
-
-static const struct st_imu68_transfer_function st_imu68_transfer_fn = {
-	.read = st_imu68_i2c_read,
-	.write = st_imu68_i2c_write,
+static const struct regmap_config st_imu68_i2c_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 #if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
@@ -38,9 +26,19 @@ static int st_imu68_i2c_probe(struct i2c_client *client)
 static int st_imu68_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
 #endif /* LINUX_VERSION_CODE */
+
 {
-	return st_imu68_probe(&client->dev, client->irq, client->name,
-			      &st_imu68_transfer_fn);
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_i2c(client, &st_imu68_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+		return PTR_ERR(regmap);
+	}
+
+	return st_imu68_probe(&client->dev, client->irq, client->name, regmap);
 }
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE

@@ -12,6 +12,7 @@
 
 #include <linux/device.h>
 #include <linux/of_device.h>
+#include <linux/regmap.h>
 #include <linux/version.h>
 
 #include "../../common/stm_iio_types.h"
@@ -19,21 +20,7 @@
 #define ST_LSM9DS1_DEV_NAME		"lsm9ds1"
 
 #define ST_IMU68_OUT_LEN		6
-
-#if IS_ENABLED(CONFIG_SPI_MASTER)
-#define ST_IMU68_RX_MAX_LENGTH		8
-#define ST_IMU68_TX_MAX_LENGTH		8
-
-struct st_imu68_transfer_buffer {
-	u8 rx_buf[ST_IMU68_RX_MAX_LENGTH];
-	u8 tx_buf[ST_IMU68_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-#endif /* CONFIG_SPI_MASTER */
-
-struct st_imu68_transfer_function {
-	int (*read)(struct device *dev, u8 addr, int len, u8 *data);
-	int (*write)(struct device *dev, u8 addr, int len, u8 *data);
-};
+#define ST_IMU68_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
 
 enum st_imu68_sensor_id {
 	ST_IMU68_ID_ACC,
@@ -62,6 +49,7 @@ struct st_imu68_sensor {
 struct st_imu68_hw {
 	const char *name;
 	struct device *dev;
+	struct regmap *regmap;
 	int irq;
 
 	struct mutex lock;
@@ -71,17 +59,11 @@ struct st_imu68_hw {
 	u32 module_id;
 
 	struct iio_dev *iio_devs[ST_IMU68_ID_MAX];
-
-	const struct st_imu68_transfer_function *tf;
-#if IS_ENABLED(CONFIG_SPI_MASTER)
-	struct st_imu68_transfer_buffer tb;
-#endif /* CONFIG_SPI_MASTER */
 };
 
-int st_imu68_write_with_mask(struct st_imu68_hw *hw, u8 addr, u8 mask,
-			     u8 val);
+int st_imu68_write_with_mask(struct st_imu68_hw *hw, u8 addr, u8 mask, u8 val);
 int st_imu68_probe(struct device *dev, int irq, const char *name,
-		   const struct st_imu68_transfer_function *tf_ops);
+		   struct regmap *regmap);
 int st_imu68_remove(struct device *dev);
 int st_imu68_sensor_enable(struct st_imu68_sensor *sensor, bool enable);
 int st_imu68_allocate_buffers(struct st_imu68_hw *hw);

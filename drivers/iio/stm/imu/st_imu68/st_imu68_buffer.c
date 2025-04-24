@@ -53,17 +53,16 @@ static irqreturn_t st_imu68_trigger_thread_handler(int irq, void *p)
 	struct st_imu68_hw *hw = (struct st_imu68_hw *)p;
 	struct st_imu68_sensor *sensor;
 	int i, err, count = 0;
-	u8 status;
+	int status = 0;
 
-	err = hw->tf->read(hw->dev, ST_IMU68_REG_STATUS_ADDR, sizeof(status),
-			   &status);
+	err = regmap_read(hw->regmap, ST_IMU68_REG_STATUS_ADDR, &status);
 	if (err < 0)
 		return IRQ_HANDLED;
 
 	for (i = 0; i < ST_IMU68_ID_MAX; i++) {
 		sensor = iio_priv(hw->iio_devs[i]);
 
-		if (status & sensor->status_mask) {
+		if (((u8)status) & sensor->status_mask) {
 
 #if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
 			iio_trigger_poll_nested(sensor->trigger);
@@ -163,7 +162,8 @@ static irqreturn_t st_imu68_buffer_thread_handler(int irq, void *p)
 	struct st_imu68_hw *hw = sensor->hw;
 	int err;
 
-	err = hw->tf->read(hw->dev, ch->address, ST_IMU68_OUT_LEN, buffer);
+	err = regmap_bulk_read(hw->regmap, ch->address,
+			       buffer, ST_IMU68_OUT_LEN);
 	if (err < 0)
 		goto out;
 
