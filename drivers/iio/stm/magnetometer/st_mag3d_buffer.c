@@ -58,19 +58,18 @@ static irqreturn_t st_mag3d_trigger_handler_thread(int irq, void *p)
 	struct st_mag3d_hw *hw = (struct st_mag3d_hw *)p;
 	struct iio_dev *iio_dev = hw->iio_dev;
 	struct iio_chan_spec const *ch = iio_dev->channels;
-	u8 status;
+	int status = 0;
 	int err;
 
-	err = hw->tf->read(hw->dev, ST_MAG3D_STATUS_ADDR, sizeof(status),
-			   &status);
+	err = regmap_read(hw->regmap, ST_MAG3D_STATUS_ADDR, &status);
 	if (err < 0)
 		goto out;
 
 	if (!(status & ST_MAG3D_DA_MASK))
 		return IRQ_NONE;
 
-	err = hw->tf->read(hw->dev, ch->address, ST_MAG3D_SAMPLE_SIZE,
-			   hw->buffer);
+	err = regmap_bulk_read(hw->regmap, ch->address,
+			       hw->buffer, ST_MAG3D_SAMPLE_SIZE);
 	if (err < 0)
 		goto out;
 

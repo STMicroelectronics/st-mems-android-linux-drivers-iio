@@ -7,33 +7,16 @@
  * Copyright 2016 STMicroelectronics Inc.
  */
 
+#include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/types.h>
-#include <linux/i2c.h>
 #include <linux/version.h>
 
 #include "st_mag3d.h"
 
-#define I2C_AUTO_INCREMENT	BIT(7)
-
-static int st_mag3d_i2c_read(struct device *dev, u8 addr, int len, u8 *data)
-{
-	if (len > 1)
-		addr |= I2C_AUTO_INCREMENT;
-
-	return i2c_smbus_read_i2c_block_data_or_emulated(to_i2c_client(dev),
-							 addr, len, data);
-}
-
-static int st_mag3d_i2c_write(struct device *dev, u8 addr, int len, u8 *data)
-{
-	return i2c_smbus_write_i2c_block_data(to_i2c_client(dev), addr,
-					      len, data);
-}
-
-static const struct st_mag3d_transfer_function st_mag3d_tf_i2c = {
-	.write = st_mag3d_i2c_write,
-	.read = st_mag3d_i2c_read,
+static const struct regmap_config st_mag3d_i2c_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 #if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
@@ -42,9 +25,19 @@ static int st_mag3d_i2c_probe(struct i2c_client *client)
 static int st_mag3d_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
 #endif /* LINUX_VERSION_CODE */
+
 {
-	return st_mag3d_probe(&client->dev, client->irq, client->name,
-			      &st_mag3d_tf_i2c);
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_i2c(client, &st_mag3d_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+		return PTR_ERR(regmap);
+	}
+
+	return st_mag3d_probe(&client->dev, client->irq, client->name, regmap);
 }
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE

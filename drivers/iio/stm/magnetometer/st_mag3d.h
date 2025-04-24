@@ -11,6 +11,7 @@
 #define __ST_MAG3D_H
 
 #include <linux/iio/iio.h>
+#include <linux/regmap.h>
 #include <linux/version.h>
 
 #define LIS3MDL_DEV_NAME		"lis3mdl_magn"
@@ -24,17 +25,9 @@
 #define ST_MAG3D_EWMA_DIV		128
 #define ST_MAG3D_EWMA_WEIGHT		96
 
+#define ST_MAG3D_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
+
 struct iio_dev;
-
-struct st_mag3d_transfer_buffer {
-	u8 rx_buf[ST_MAG3D_RX_MAX_LENGTH];
-	u8 tx_buf[ST_MAG3D_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
-struct st_mag3d_transfer_function {
-	int (*write)(struct device *dev, u8 addr, int len, u8 *data);
-	int (*read)(struct device *dev, u8 addr, int len, u8 *data);
-};
 
 struct st_mag3d_hw {
 	struct device *dev;
@@ -51,8 +44,7 @@ struct st_mag3d_hw {
 	struct iio_trigger *trig;
 	int irq;
 
-	const struct st_mag3d_transfer_function *tf;
-	struct st_mag3d_transfer_buffer tb;
+	struct regmap *regmap;
 	struct iio_dev *iio_dev;
 };
 
@@ -62,7 +54,7 @@ static inline s64 st_mag3d_get_time_ns(struct iio_dev *iio_dev)
 }
 
 int st_mag3d_probe(struct device *dev, int irq, const char *name,
-		   const struct st_mag3d_transfer_function *tf_ops);
+		   struct regmap *regmap);
 void st_mag3d_remove(struct iio_dev *iio_dev);
 int st_mag3d_allocate_buffer(struct iio_dev *iio_dev);
 void st_mag3d_deallocate_buffer(struct iio_dev *iio_dev);

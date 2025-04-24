@@ -9,71 +9,28 @@
 
 #include <linux/module.h>
 #include <linux/types.h>
-#include <linux/spi/spi.h>
 #include <linux/iio/iio.h>
+#include <linux/spi/spi.h>
 
 #include "st_mag3d.h"
 
-#define ST_SENSORS_SPI_READ	BIT(7)
-
-static int st_mag3d_spi_read(struct device *dev, u8 addr, int len, u8 *data)
-{
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
-	struct st_mag3d_hw *hw = iio_priv(iio_dev);
-	int err;
-
-	struct spi_transfer xfers[] = {
-		{
-			.tx_buf = hw->tb.tx_buf,
-			.bits_per_word = 8,
-			.len = 1,
-		},
-		{
-			.rx_buf = hw->tb.rx_buf,
-			.bits_per_word = 8,
-			.len = len,
-		}
-	};
-
-	hw->tb.tx_buf[0] = addr | ST_SENSORS_SPI_READ;
-
-	err = spi_sync_transfer(to_spi_device(hw->dev), xfers,
-				ARRAY_SIZE(xfers));
-	if (err)
-		return err;
-
-	memcpy(data, hw->tb.rx_buf, len*sizeof(u8));
-
-	return len;
-}
-
-static int st_mag3d_spi_write(struct device *dev, u8 addr, int len, u8 *data)
-{
-
-	struct st_mag3d_hw *hw;
-	struct iio_dev *iio_dev;
-
-	if (len >= ST_MAG3D_TX_MAX_LENGTH)
-		return -ENOMEM;
-
-	iio_dev = dev_get_drvdata(dev);
-	hw = iio_priv(iio_dev);
-
-	hw->tb.tx_buf[0] = addr;
-	memcpy(&hw->tb.tx_buf[1], data, len);
-
-	return spi_write(to_spi_device(hw->dev), hw->tb.tx_buf, len + 1);
-}
-
-static const struct st_mag3d_transfer_function st_mag3d_tf_spi = {
-	.write = st_mag3d_spi_write,
-	.read = st_mag3d_spi_read,
+static const struct regmap_config st_mag3d_spi_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 static int st_mag3d_spi_probe(struct spi_device *spi)
 {
-	return st_mag3d_probe(&spi->dev, spi->irq, spi->modalias,
-			      &st_mag3d_tf_spi);
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_spi(spi, &st_mag3d_spi_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
+			(int)PTR_ERR(regmap));
+		return PTR_ERR(regmap);
+	}
+
+	return st_mag3d_probe(&spi->dev, spi->irq, spi->modalias, regmap);
 }
 
 #if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE

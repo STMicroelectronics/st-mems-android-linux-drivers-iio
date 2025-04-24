@@ -100,24 +100,11 @@ static const struct iio_chan_spec st_mag3d_channels[] = {
 static int st_mag3d_write_with_mask(struct st_mag3d_hw *hw, u8 addr,
 				    u8 mask, u8 val)
 {
-	u8 data;
+	unsigned int data = ST_MAG3D_SHIFT_VAL(val, mask);
 	int err;
 
 	mutex_lock(&hw->lock);
-
-	err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to read %02x register\n", addr);
-		goto out;
-	}
-
-	data = (data & ~mask) | ((val << __ffs(mask)) & mask);
-
-	err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
-	if (err < 0)
-		dev_err(hw->dev, "failed to write %02x register\n", addr);
-
-out:
+	err = regmap_update_bits(hw->regmap, addr, mask, data);
 	mutex_unlock(&hw->lock);
 
 	return err;
@@ -189,10 +176,9 @@ int st_mag3d_enable_sensor(struct st_mag3d_hw *hw, bool enable)
 static int st_mag3d_check_whoami(struct st_mag3d_hw *hw)
 {
 	int err;
-	u8 data;
+	int data;
 
-	err = hw->tf->read(hw->dev, ST_MAG3D_WHOAMI_ADDR, sizeof(data),
-			   &data);
+	err = regmap_read(hw->regmap, ST_MAG3D_WHOAMI_ADDR, &data);
 	if (err < 0) {
 		dev_err(hw->dev, "failed to read whoami register\n");
 		return err;
@@ -219,7 +205,9 @@ static int st_mag3d_read_oneshot(struct st_mag3d_hw *hw,
 	delay = 1000000 / hw->odr;
 	usleep_range(delay, 2 * delay);
 
-	err = hw->tf->read(hw->dev, addr, sizeof(data), (u8 *)&data);
+	mutex_lock(&hw->lock);
+	err = regmap_bulk_read(hw->regmap, addr, &data, sizeof(data));
+	mutex_unlock(&hw->lock);
 	if (err < 0)
 		return err;
 
@@ -353,7 +341,7 @@ static const struct iio_info st_mag3d_info = {
 static const unsigned long st_mag3d_available_scan_masks[] = {0x7, 0x0};
 
 int st_mag3d_probe(struct device *dev, int irq, const char *name,
-		   const struct st_mag3d_transfer_function *tf_ops)
+		   struct regmap *regmap)
 {
 	struct st_mag3d_hw *hw;
 	struct iio_dev *iio_dev;
@@ -376,7 +364,7 @@ int st_mag3d_probe(struct device *dev, int irq, const char *name,
 	hw = iio_priv(iio_dev);
 	mutex_init(&hw->lock);
 	hw->dev = dev;
-	hw->tf = tf_ops;
+	hw->regmap = regmap;
 	hw->irq = irq;
 	hw->iio_dev = iio_dev;
 
