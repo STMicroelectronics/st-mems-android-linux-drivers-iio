@@ -333,7 +333,7 @@ static const struct iio_event_spec singol_thr_event = {
 };
 
 const struct iio_event_spec lsm6dsm_fifo_flush_event = {
-	.type = STM_IIO_EV_TYPE_FIFO_FLUSH,
+	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
 };
 
@@ -361,7 +361,7 @@ static const struct iio_chan_spec st_lsm6dsm_gyro_ch[] = {
 
 static const struct iio_chan_spec st_lsm6dsm_sign_motion_ch[] = {
 	{
-		.type = STM_IIO_SIGN_MOTION,
+		.type = (enum iio_chan_type)STM_IIO_SIGN_MOTION,
 		.channel = 0,
 		.modified = 0,
 		.event_spec = &singol_thr_event,
@@ -372,7 +372,7 @@ static const struct iio_chan_spec st_lsm6dsm_sign_motion_ch[] = {
 
 static const struct iio_chan_spec st_lsm6dsm_step_c_ch[] = {
 	{
-		.type = STM_IIO_STEP_COUNTER,
+		.type = (enum iio_chan_type)STM_IIO_STEP_COUNTER,
 		.modified = 0,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),
 		.address = ST_LSM6DSM_STEP_COUNTER_OUT_L_ADDR,
@@ -399,7 +399,7 @@ static const struct iio_chan_spec st_lsm6dsm_tilt_ch[] = {
 
 static const struct iio_chan_spec st_lsm6dsm_wtilt_ch[] = {
 	{
-		.type = STM_IIO_WRIST_TILT_GESTURE,
+		.type = (enum iio_chan_type)STM_IIO_WRIST_TILT_GESTURE,
 		.modified = 0,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),
 		.address = ST_LSM6DSM_WRIST_TILT_IA,
@@ -416,7 +416,7 @@ static const struct iio_chan_spec st_lsm6dsm_wtilt_ch[] = {
 
 static const struct iio_chan_spec st_lsm6dsm_tap_ch[] = {
 	{
-		.type = STM_IIO_TAP,
+		.type = (enum iio_chan_type)STM_IIO_TAP,
 		.channel = 0,
 		.modified = 0,
 		.event_spec = &singol_thr_event,
@@ -427,7 +427,7 @@ static const struct iio_chan_spec st_lsm6dsm_tap_ch[] = {
 
 static const struct iio_chan_spec st_lsm6dsm_tap_tap_ch[] = {
 	{
-		.type = STM_IIO_TAP_TAP,
+		.type = (enum iio_chan_type)STM_IIO_TAP_TAP,
 		.channel = 0,
 		.modified = 0,
 		.event_spec = &singol_thr_event,

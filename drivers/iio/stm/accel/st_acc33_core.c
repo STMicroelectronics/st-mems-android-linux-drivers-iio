@@ -94,7 +94,7 @@ static const struct st_acc33_fs st_acc33_fs_table[] = {
 };
 
 const struct iio_event_spec st_acc33_fifo_flush_event = {
-	.type = STM_IIO_EV_TYPE_FIFO_FLUSH,
+	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
 };
 

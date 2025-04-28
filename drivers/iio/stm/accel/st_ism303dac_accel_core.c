@@ -181,7 +181,7 @@ static const struct iio_event_spec singol_thr_event = {
 };
 
 const struct iio_event_spec ism303dac_fifo_flush_event = {
-	.type = STM_IIO_EV_TYPE_FIFO_FLUSH,
+	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
 };
 
@@ -214,7 +214,7 @@ static const struct ism303dac_sensors_table {
 		.min_odr_hz = ISM303DAC_TAP_ODR,
 		.iio_channel = {
 			{
-				.type = STM_IIO_TAP,
+				.type = (enum iio_chan_type)STM_IIO_TAP,
 				.channel = 0,
 				.modified = 0,
 				.event_spec = &singol_thr_event,
@@ -230,7 +230,7 @@ static const struct ism303dac_sensors_table {
 		.min_odr_hz = ISM303DAC_TAP_ODR,
 		.iio_channel = {
 			{
-				.type = STM_IIO_TAP_TAP,
+				.type = (enum iio_chan_type)STM_IIO_TAP_TAP,
 				.channel = 0,
 				.modified = 0,
 				.event_spec = &singol_thr_event,

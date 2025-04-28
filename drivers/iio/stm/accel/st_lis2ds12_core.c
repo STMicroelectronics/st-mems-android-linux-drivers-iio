@@ -23,8 +23,13 @@
 #include <linux/iio/buffer.h>
 #include <linux/iio/events.h>
 #include <linux/of_device.h>
-#include <asm/unaligned.h>
+#include <linux/version.h>
 
+#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
+#include <linux/unaligned.h>
+#else /* LINUX_VERSION_CODE */
+#include <asm/unaligned.h>
+#endif /* LINUX_VERSION_CODE */
 #include "st_lis2ds12.h"
 
 #define LIS2DS12_FS_LIST_NUM			4
@@ -169,7 +174,7 @@ static const struct iio_event_spec singol_thr_event = {
 };
 
 const struct iio_event_spec lis2ds12_fifo_flush_event = {
-	.type = STM_IIO_EV_TYPE_FIFO_FLUSH,
+	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
 };
 
@@ -202,7 +207,7 @@ static const struct lis2ds12_sensors_table {
 		.min_odr_hz = LIS2DS12_STEP_D_ODR,
 		.iio_channel = {
 			{
-				.type = STM_IIO_STEP_COUNTER,
+				.type = (enum iio_chan_type)STM_IIO_STEP_COUNTER,
 				.channel = 0,
 				.modified = 0,
 				.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),
@@ -226,7 +231,7 @@ static const struct lis2ds12_sensors_table {
 		.min_odr_hz = LIS2DS12_TAP_ODR,
 		.iio_channel = {
 			{
-				.type = STM_IIO_TAP,
+				.type = (enum iio_chan_type)STM_IIO_TAP,
 				.channel = 0,
 				.modified = 0,
 				.event_spec = &singol_thr_event,
@@ -242,7 +247,7 @@ static const struct lis2ds12_sensors_table {
 		.min_odr_hz = LIS2DS12_TAP_ODR,
 		.iio_channel = {
 			{
-				.type = STM_IIO_TAP_TAP,
+				.type = (enum iio_chan_type)STM_IIO_TAP_TAP,
 				.channel = 0,
 				.modified = 0,
 				.event_spec = &singol_thr_event,
@@ -258,7 +263,7 @@ static const struct lis2ds12_sensors_table {
 		.min_odr_hz = LIS2DS12_STEP_D_ODR,
 		.iio_channel = {
 			{
-				.type = IIO_STEPS,
+				.type = (enum iio_chan_type)IIO_STEPS,
 				.channel = 0,
 				.modified = 0,
 				.event_spec = &singol_thr_event,
@@ -274,7 +279,7 @@ static const struct lis2ds12_sensors_table {
 		.min_odr_hz = LIS2DS12_TILT_ODR,
 		.iio_channel = {
 			{
-				.type = STM_IIO_TILT,
+				.type = (enum iio_chan_type)STM_IIO_TILT,
 				.channel = 0,
 				.modified = 0,
 				.event_spec = &singol_thr_event,
@@ -290,7 +295,7 @@ static const struct lis2ds12_sensors_table {
 		.min_odr_hz = LIS2DS12_SIGN_M_ODR,
 		.iio_channel = {
 			{
-				.type = STM_IIO_SIGN_MOTION,
+				.type = (enum iio_chan_type)STM_IIO_SIGN_MOTION,
 				.channel = 0,
 				.modified = 0,
 				.event_spec = &singol_thr_event,

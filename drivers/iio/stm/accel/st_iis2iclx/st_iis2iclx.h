@@ -271,7 +271,7 @@
 }
 
 static const struct iio_event_spec st_iis2iclx_flush_event = {
-	.type = STM_IIO_EV_TYPE_FIFO_FLUSH,
+	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
 };
 

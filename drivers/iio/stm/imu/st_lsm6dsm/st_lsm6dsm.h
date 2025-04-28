@@ -94,7 +94,7 @@ extern const struct iio_event_spec lsm6dsm_fifo_flush_event;
 
 #define ST_LSM6DSM_FLUSH_CHANNEL(device_type) \
 { \
-	.type = device_type, \
+	.type = (enum iio_chan_type)device_type, \
 	.modified = 0, \
 	.scan_index = -1, \
 	.indexed = -1, \
