@@ -16,7 +16,7 @@
 #include <linux/version.h>
 #include <linux/platform_data/st_sensors_pdata.h>
 
-#include "../common/stm_iio_types.h"
+#include "../../common/stm_iio_types.h"
 
 #if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
 #include <linux/iio/iio-opaque.h>

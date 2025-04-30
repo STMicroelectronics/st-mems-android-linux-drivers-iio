@@ -15,7 +15,7 @@
 #include <linux/iio/iio.h>
 #include <linux/iio/trigger.h>
 
-#include "../common/stm_iio_types.h"
+#include "../../common/stm_iio_types.h"
 
 #define ST_LPS22HB_MAX_FIFO_LENGTH		31
 

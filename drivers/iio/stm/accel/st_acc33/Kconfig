@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+config IIO_ST_ACC33
+	tristate "STMicroelectronics LIS3DH/LIS2DH/LIS2DH12/LSM303AGR/IIS2DH Accelerometer driver"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	select IIO_ST_ACC33_I2C if (I2C)
+	select IIO_ST_ACC33_SPI if (SPI_MASTER)
+	select IIO_BUFFER
+	select IIO_KFIFO_BUF
+	help
+	 Say yes here to build support for STMicroelectronics accelerometers:
+	 LIS3DH, LIS2DH, LIS2DH12, LSM303AGR, IIS2DH.
+
+	 This driver can also be built as a module. If so, will be created
+	 these modules:
+	 - st_ac33_core (core functions for the driver [it is mandatory]);
+	 - st_ac33_i2c (necessary for the I2C devices [optional*]);
+	 - st_ac33_spi (necessary for the SPI devices [optional*]);
+
+	 (*) one of these is necessary to do something.
+
+config IIO_ST_ACC33_I2C
+	tristate
+	depends on IIO_ST_ACC33
+
+config IIO_ST_ACC33_SPI
+	tristate
+	depends on IIO_ST_ACC33

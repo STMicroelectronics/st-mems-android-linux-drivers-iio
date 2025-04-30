@@ -17,7 +17,7 @@
 #include <linux/regmap.h>
 #include <linux/version.h>
 
-#include "../common/stm_iio_types.h"
+#include "../../common/stm_iio_types.h"
 
 #define ST_LIS2DU12_DEV_NAME			"lis2du12"
 #define ST_LIS2DU12_MAX_WATERMARK		127

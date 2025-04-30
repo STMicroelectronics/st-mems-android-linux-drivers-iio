@@ -1,28 +1,22 @@
 # SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for Temperature sensors
 
 include Kbuild
 
 ifeq ($(KERNELRELEASE),)
 
-# List of subdirectories to build
-SUBDIRS := $(shell ls -d */ | tr -d '/')
+KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2HH12=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2HH12_I2C=m
+KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2HH12_SPI=m
 
-# Default target
-all:
-	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules);)
-
-# Target for building all modules
 modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(EXTRA_CFLAGS) modules $(KBUILD_OPTIONS)
 	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules);)
 
-# Target for installing all modules
 modules_install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
 	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules_install);)
 
-# Target for cleaning all modules
 clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
 	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) clean);)
-
 endif

@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0
+
+st_lis2du12-y:= st_lis2du12_core.o st_lis2du12_buffer.o st_lis2du12_events.o
+
+obj-$(CONFIG_IIO_ST_LIS2DU12) += st_lis2du12.o
+obj-$(CONFIG_IIO_ST_LIS2DU12_I2C) += st_lis2du12_i2c.o
+obj-$(CONFIG_IIO_ST_LIS2DU12_SPI) += st_lis2du12_spi.o
+obj-$(CONFIG_IIO_ST_LIS2DU12_I3C) += st_lis2du12_i3c.o

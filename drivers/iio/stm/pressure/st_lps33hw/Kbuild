@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0
+
+obj-$(CONFIG_ST_LPS33HW_IIO) += st_lps33hw.o
+obj-$(CONFIG_ST_LPS33HW_I2C_IIO) += st_lps33hw_i2c.o
+obj-$(CONFIG_ST_LPS33HW_SPI_IIO) += st_lps33hw_spi.o
+
+st_lps33hw-y += st_lps33hw_core.o st_lps33hw_buffer.o

@@ -1,64 +1,28 @@
 # SPDX-License-Identifier: GPL-2.0
 #
 # Makefile for industrial I/O accelerometer drivers
-#
-
-# SPDX-License-Identifier: GPL-2.0-only
 
 include Kbuild
 
 ifeq ($(KERNELRELEASE),)
 
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DS12=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DS12_I2C=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DS12_SPI=m
-
-KBUILD_OPTIONS += CONFIG_IIO_ST_ACC33=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_ACC33_I2C=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_ACC33_SPI=m
-
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DW12=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DW12_I2C=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DW12_SPI=m
-
-KBUILD_OPTIONS += CONFIG_IIO_ST_ISM303DAC_ACCEL=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_ISM303DAC_ACCEL_I2C=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_ISM303DAC_ACCEL_SPI=m
-
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS3DHH=m
-
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2HH12=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2HH12_I2C=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2HH12_SPI=m
-
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DUXS12=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DUXS12_I2C=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DUXS12_SPI=m
-
-KBUILD_OPTIONS += CONFIG_IIO_ST_H3LIS331DL=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_H3LIS331DL_I2C=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_H3LIS331DL_SPI=m
-
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DU12=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DU12_I2C=m
-KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DU12_SPI=m
-
-EXTRA_CFLAGS += "-I$(PWD)/../../../../include/ \
-		 -DCONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO=0 \
-		 -DCONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO=0"
-
 # List of subdirectories to build
 SUBDIRS := $(shell ls -d */ | tr -d '/')
 
-modules:
-	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(EXTRA_CFLAGS) modules $(KBUILD_OPTIONS)
+# Default target
+all:
 	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules);)
 
+# Target for building all modules
+modules:
+	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules);)
+
+# Target for installing all modules
 modules_install:
-	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
 	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules_install);)
 
+# Target for cleaning all modules
 clean:
-	$(MAKE) -C $(KDIR) M=$(PWD) clean
 	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) clean);)
+
 endif

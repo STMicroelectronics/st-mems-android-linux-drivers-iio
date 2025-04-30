@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0
+
+st_acc33-y := st_acc33_core.o st_acc33_buffer.o st_acc33_events.o
+obj-$(CONFIG_IIO_ST_ACC33) += st_acc33.o
+obj-$(CONFIG_IIO_ST_ACC33_I2C) += st_acc33_i2c.o
+obj-$(CONFIG_IIO_ST_ACC33_SPI) += st_acc33_spi.o

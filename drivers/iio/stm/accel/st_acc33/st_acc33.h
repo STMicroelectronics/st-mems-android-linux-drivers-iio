@@ -13,7 +13,7 @@
 #include <linux/iio/iio.h>
 #include <linux/version.h>
 
-#include "../common/stm_iio_types.h"
+#include "../../common/stm_iio_types.h"
 
 #define LIS2DH_DEV_NAME			"lis2dh_accel"
 #define LIS2DH12_DEV_NAME		"lis2dh12_accel"

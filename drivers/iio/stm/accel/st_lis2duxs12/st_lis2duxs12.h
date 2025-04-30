@@ -17,7 +17,7 @@
 #include <linux/bitfield.h>
 #include <linux/version.h>
 
-#include "../common/stm_iio_types.h"
+#include "../../common/stm_iio_types.h"
 
 #define ST_LIS2DUXS12_ODR_EXPAND(odr, uodr)	(((odr) * 1000000) + (uodr))
 

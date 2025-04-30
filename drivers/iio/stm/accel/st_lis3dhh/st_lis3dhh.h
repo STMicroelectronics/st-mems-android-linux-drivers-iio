@@ -13,7 +13,7 @@
 
 #include <linux/iio/iio.h>
 
-#include "../common/stm_iio_types.h"
+#include "../../common/stm_iio_types.h"
 
 #define ST_LIS3DHH_DATA_SIZE		6
 #define ST_LIS3DHH_RX_MAX_LENGTH	96

@@ -17,7 +17,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/workqueue.h>
 
-#include "../common/stm_iio_types.h"
+#include "../../common/stm_iio_types.h"
 
 #define ST_LPS22DF_DEV_NAME			"lps22df"
 #define ST_LPS28DFW_DEV_NAME			"lps28dfw"

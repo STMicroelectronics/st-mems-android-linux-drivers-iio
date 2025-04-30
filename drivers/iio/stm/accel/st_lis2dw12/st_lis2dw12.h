@@ -20,7 +20,7 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 
-#include "../common/stm_iio_types.h"
+#include "../../common/stm_iio_types.h"
 
 #define ST_LIS2DW12_DEV_NAME			"lis2dw12"
 #define ST_IIS2DLPC_DEV_NAME			"iis2dlpc"

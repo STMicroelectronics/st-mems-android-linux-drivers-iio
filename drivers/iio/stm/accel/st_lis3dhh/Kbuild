@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
+
+st_lis3dhh-y := st_lis3dhh_core.o st_lis3dhh_buffer.o
+obj-$(CONFIG_IIO_ST_LIS3DHH) += st_lis3dhh.o

@@ -1,17 +1,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
-# Temperature sensor drivers
+# IIO temperature drivers configuration
 #
-menu "Temperature sensors"
+# When adding new entries keep the list in alphabetical order
 
-config IIO_STTS22H
-	tristate "STTS22H ST MEMS temperature sensor"
-	depends on I2C
-	help
-	  If you say yes here you get support for STTS22H ST MEMS I2C
-	  temperature sensor.
+menu "Temperature"
 
-	  This driver can also be built as a module. If so, the module
-	  will be called stts22h.
+source "drivers/iio/stm/temperature/stts22h/Kconfig"
 
 endmenu

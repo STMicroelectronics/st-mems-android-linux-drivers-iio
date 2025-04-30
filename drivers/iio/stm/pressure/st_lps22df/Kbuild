@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0
+
+obj-$(CONFIG_ST_LPS22DF_IIO) += st_lps22df.o
+obj-$(CONFIG_ST_LPS22DF_I2C_IIO) += st_lps22df_i2c.o
+obj-$(CONFIG_ST_LPS22DF_SPI_IIO) += st_lps22df_spi.o
+
+st_lps22df-y += st_lps22df_core.o st_lps22df_buffer.o

@@ -7,19 +7,23 @@ include Kbuild
 
 ifeq ($(KERNELRELEASE),)
 
-KBUILD_OPTIONS += CONFIG_ST_MAG3D_IIO=m
-KBUILD_OPTIONS += CONFIG_ST_MAG3D_I2C_IIO=m
-KBUILD_OPTIONS += CONFIG_ST_MAG3D_SPI_IIO=m
-KBUILD_OPTIONS += CONFIG_ST_MAG40_IIO=m
-KBUILD_OPTIONS += CONFIG_ST_MAG40_I2C_IIO=m
-KBUILD_OPTIONS += CONFIG_ST_MAG40_SPI_IIO=m
+# List of subdirectories to build
+SUBDIRS := $(shell ls -d */ | tr -d '/')
 
+# Default target
+all:
+	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules);)
+
+# Target for building all modules
 modules:
-	$(MAKE) -C $(KDIR) M=$(PWD) modules $(KBUILD_OPTIONS)
+	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules);)
 
+# Target for installing all modules
 modules_install:
-	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules_install);)
 
+# Target for cleaning all modules
 clean:
-	$(MAKE) -C $(KDIR) M=$(PWD) clean
+	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) clean);)
+
 endif
