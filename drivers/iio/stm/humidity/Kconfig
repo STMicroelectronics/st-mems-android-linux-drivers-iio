@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# IIO humidity drivers configuration
+#
+# When adding new entries keep the list in alphabetical order
+
+menu "Humidity"
+
+source "drivers/iio/stm/humidity/hts221/Kconfig"
+
+endmenu

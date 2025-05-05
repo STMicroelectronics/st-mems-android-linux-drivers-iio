@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0
+
+obj-$(CONFIG_ST_HTS221_IIO) += st_hts221.o
+obj-$(CONFIG_ST_HTS221_I2C_IIO) += st_hts221_i2c.o
+obj-$(CONFIG_ST_HTS221_SPI_IIO) += st_hts221_spi.o
+
+st_hts221-y += st_hts221_core.o st_hts221_buffer.o

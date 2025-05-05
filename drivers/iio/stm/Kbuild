@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 obj-y += accel/
+obj-y += humidity/
 obj-y += imu/
 obj-y += magnetometer/
 obj-y += pressure/

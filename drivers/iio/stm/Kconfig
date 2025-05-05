@@ -10,6 +10,7 @@ menuconfig IIO_STM
 if IIO_STM
 
 source "drivers/iio/stm/accel/Kconfig"
+source "drivers/iio/stm/humidity/Kconfig"
 source "drivers/iio/stm/imu/Kconfig"
 source "drivers/iio/stm/magnetometer/Kconfig"
 source "drivers/iio/stm/pressure/Kconfig"
