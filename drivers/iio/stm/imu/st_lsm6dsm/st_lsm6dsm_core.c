@@ -32,7 +32,8 @@
 #include <asm/unaligned.h>
 #endif /* LINUX_VERSION_CODE */
 
-#include <linux/iio/common/st_sensors.h>
+#include <linux/platform_data/st_sensors_pdata.h>
+
 #include "st_lsm6dsm.h"
 
 #define MS_TO_NS(msec)				((msec) * 1000 * 1000)
