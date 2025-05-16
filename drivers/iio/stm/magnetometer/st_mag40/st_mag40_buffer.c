@@ -15,6 +15,7 @@
 #include <linux/delay.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/buffer.h>
+#include <linux/iio/events.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
 #include <linux/version.h>
@@ -41,7 +42,7 @@ static void st_mag40_update_timestamp(struct st_mag40_data *cdata)
 
 	ts = st_mag40_get_timestamp(iio_dev);
 	cdata->delta_ts = st_mag40_ewma(cdata->delta_ts,
-					ts - cdata->ts_irq,
+					ts - cdata->ts,
 					weight);
 	cdata->ts_irq = ts;
 }
@@ -78,31 +79,44 @@ static irqreturn_t st_mag40_trigger_thread_handler(int irq, void *private)
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t st_mag40_buffer_thread_handler(int irq, void *p)
+static int st_mag40_push_data(struct iio_dev *iio_dev)
 {
 	u8 buffer[ALIGN(ST_MAG40_OUT_LEN, sizeof(s64)) + sizeof(s64)];
+	struct st_mag40_data *cdata = iio_priv(iio_dev);
+	int err;
+
+	err = cdata->tf->read(cdata, ST_MAG40_OUTX_L_ADDR,
+			      ST_MAG40_OUT_LEN, buffer);
+	if (err < 0)
+		return err;
+
+	/* discard samples generated during the turn-on time */
+	if (cdata->samples_to_discard > 0) {
+		cdata->samples_to_discard--;
+		return 0;
+	}
+
+	/* flush events timestamp must be equal to the last data timestamp */
+	cdata->last_timestamp = cdata->ts;
+	iio_push_to_buffers_with_timestamp(iio_dev, buffer,
+					   cdata->last_timestamp);
+	cdata->ts += cdata->delta_ts;
+
+	return 0;
+}
+
+static irqreturn_t st_mag40_buffer_thread_handler(int irq, void *p)
+{
 	struct iio_poll_func *pf = p;
 	struct iio_dev *iio_dev = pf->indio_dev;
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
 	int err;
 
+	mutex_lock(&cdata->flush_lock);
 	st_mag40_update_timestamp(cdata);
+	err = st_mag40_push_data(iio_dev);
+	mutex_unlock(&cdata->flush_lock);
 
-	err = cdata->tf->read(cdata, ST_MAG40_OUTX_L_ADDR,
-			      ST_MAG40_OUT_LEN, buffer);
-	if (err < 0)
-		goto out;
-
-	/* discard samples generated during the turn-on time */
-	if (cdata->samples_to_discard > 0) {
-		cdata->samples_to_discard--;
-		goto out;
-	}
-
-	iio_push_to_buffers_with_timestamp(iio_dev, buffer, cdata->ts);
-	cdata->ts += cdata->delta_ts;
-
-out:
 	/* check if using irq trigger or external trigger */
 	if (cdata->irq > 0)
 		iio_trigger_notify_done(cdata->iio_trig);
@@ -110,6 +124,40 @@ out:
 		iio_trigger_notify_done(iio_dev->trig);
 
 	return IRQ_HANDLED;
+}
+
+ssize_t st_mag40_flush_hwfifo(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf, size_t count)
+{
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
+	struct st_mag40_data *cdata = iio_priv(iio_dev);
+	s64 timestamp;
+	s64 code;
+	int err;
+	u8 drdy;
+
+	mutex_lock(&cdata->flush_lock);
+	err = cdata->tf->read(cdata, ST_MAG40_STATUS_ADDR,
+			      sizeof(drdy), &drdy);
+	if (err < 0)
+		goto out;
+
+	/* check for any pending data in output registers */
+	if (drdy & ST_MAG40_STATUS_ZYXDA_MASK)
+		err = st_mag40_push_data(iio_dev);
+
+	timestamp = cdata->last_timestamp;
+
+	code = IIO_UNMOD_EVENT_CODE(IIO_MAGN, -1,
+				    STM_IIO_EV_TYPE_FIFO_FLUSH,
+				    IIO_EV_DIR_EITHER);
+	iio_push_event(iio_dev, code, timestamp);
+
+out:
+	mutex_unlock(&cdata->flush_lock);
+
+	return err < 0 ? err : count;
 }
 
 static int st_mag40_buffer_preenable(struct iio_dev *indio_dev)
@@ -141,10 +189,15 @@ static const struct iio_buffer_setup_ops st_mag40_buffer_setup_ops = {
 int st_mag40_trig_set_state(struct iio_trigger *trig, bool state)
 {
 	struct st_mag40_data *cdata = iio_priv(iio_trigger_get_drvdata(trig));
+	struct iio_dev *iio_dev = dev_get_drvdata(cdata->dev);
 	int err;
 
 	err = st_mag40_write_register(cdata, ST_MAG40_INT_DRDY_ADDR,
 				      ST_MAG40_INT_DRDY_MASK, state);
+
+	/* set timestamp after enabling the sensor */
+	if (state)
+		cdata->ts = st_mag40_get_timestamp(iio_dev);
 
 	return err < 0 ? err : 0;
 }

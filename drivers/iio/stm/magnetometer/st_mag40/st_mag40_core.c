@@ -82,6 +82,21 @@ struct st_mag40_selftest_req st_mag40_selftest_table[] = {
 	},							\
 }
 
+const struct iio_event_spec st_mag40_fifo_flush_event = {
+	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
+	.dir = IIO_EV_DIR_EITHER,
+};
+
+#define ST_MAG40_EVENT_CHANNEL(chan_type, evt_spec)	\
+{							\
+	.type = chan_type,				\
+	.modified = 0,					\
+	.scan_index = -1,				\
+	.indexed = -1,					\
+	.event_spec = &st_mag40_##evt_spec##_event,	\
+	.num_event_specs = 1,				\
+}
+
 static const struct iio_chan_spec st_mag40_channels[] = {
 	ST_MAG40_ADD_CHANNEL(IIO_MAGN, 1, 0, IIO_MOD_X, IIO_LE, 16, 16,
 				ST_MAG40_OUTX_L_ADDR, 's'),
@@ -89,6 +104,7 @@ static const struct iio_chan_spec st_mag40_channels[] = {
 				ST_MAG40_OUTY_L_ADDR, 's'),
 	ST_MAG40_ADD_CHANNEL(IIO_MAGN, 1, 2, IIO_MOD_Z, IIO_LE, 16, 16,
 				ST_MAG40_OUTZ_L_ADDR, 's'),
+	ST_MAG40_EVENT_CHANNEL(IIO_MAGN, fifo_flush),
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
@@ -502,6 +518,7 @@ static IIO_DEVICE_ATTR(selftest_available, 0444,
 		       st_mag40_get_selftest_avail, NULL, 0);
 static IIO_DEVICE_ATTR(selftest, 0644, st_mag40_get_selftest_status,
 		       st_mag40_perform_selftest, 0);
+static IIO_DEVICE_ATTR(hwfifo_flush, 0200, NULL, st_mag40_flush_hwfifo, 0);
 
 static struct attribute *st_mag40_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -509,6 +526,7 @@ static struct attribute *st_mag40_attributes[] = {
 	&iio_dev_attr_module_id.dev_attr.attr,
 	&iio_dev_attr_selftest_available.dev_attr.attr,
 	&iio_dev_attr_selftest.dev_attr.attr,
+	&iio_dev_attr_hwfifo_flush.dev_attr.attr,
 	NULL,
 };
 
@@ -536,6 +554,7 @@ int st_mag40_common_probe(struct iio_dev *iio_dev)
 	u8 wai;
 
 	mutex_init(&cdata->lock);
+	mutex_init(&cdata->flush_lock);
 
 	err = cdata->tf->read(cdata, ST_MAG40_WHO_AM_I_ADDR,
 			      sizeof(wai), &wai);

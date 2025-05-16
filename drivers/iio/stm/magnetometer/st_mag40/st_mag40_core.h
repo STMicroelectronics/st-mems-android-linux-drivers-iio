@@ -15,6 +15,8 @@
 #include <linux/iio/trigger.h>
 #include <linux/version.h>
 
+#include "../../common/stm_iio_types.h"
+
 #define ST_MAG40_DEV_NAME			"st_mag40"
 #define LIS2MDL_DEV_NAME			"lis2mdl_magn"
 #define LSM303AH_DEV_NAME			"lsm303ah_magn"
@@ -108,9 +110,11 @@ enum st_mag40_selftest_status {
 struct st_mag40_data {
 	const char *name;
 	struct mutex lock;
+	struct mutex flush_lock;
 	u8 drdy_int_pin;
 	int irq;
 	s64 ts;
+	s64 last_timestamp;
 	s64 ts_irq;
 	s64 delta_ts;
 
@@ -146,5 +150,7 @@ int st_mag40_set_enable(struct st_mag40_data *cdata, bool enable);
 void st_mag40_deallocate_ring(struct iio_dev *iio_dev);
 void st_mag40_deallocate_trigger(struct st_mag40_data *cdata);
 int st_mag40_write_register(struct st_mag40_data *cdata, u8 reg_addr, u8 mask, u8 data);
-
+ssize_t st_mag40_flush_hwfifo(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf, size_t count);
 #endif /* __ST_MAG40_H */
