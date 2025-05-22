@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+st_lsm6dsvxhg-y := st_lsm6dsvxhg_core.o st_lsm6dsvxhg_buffer.o \
+		   st_lsm6dsvxhg_shub.o st_lsm6dsvxhg_mlc.o \
+		   st_lsm6dsvxhg_events.o st_lsm6dsvxhg_embfunc.o
+
+st_lsm6dsvxhg-$(CONFIG_IIO_ST_LSM6DSVXHG_ASYNC_HW_TIMESTAMP) += st_lsm6dsvxhg_hwtimestamp.o
+
+obj-$(CONFIG_IIO_ST_LSM6DSVXHG) += st_lsm6dsvxhg.o
+obj-$(CONFIG_IIO_ST_LSM6DSVXHG_I2C) += st_lsm6dsvxhg_i2c.o
+obj-$(CONFIG_IIO_ST_LSM6DSVXHG_SPI) += st_lsm6dsvxhg_spi.o
+obj-$(CONFIG_IIO_ST_LSM6DSVXHG_I3C) += st_lsm6dsvxhg_i3c.o
