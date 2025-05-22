@@ -67,7 +67,7 @@ static const struct st_acc33_transfer_function st_acc33_transfer_fn = {
 	.write = st_acc33_i2c_write,
 };
 
-#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
 static int st_acc33_i2c_probe(struct i2c_client *client)
 #else /* LINUX_VERSION_CODE */
 static int st_acc33_i2c_probe(struct i2c_client *client,

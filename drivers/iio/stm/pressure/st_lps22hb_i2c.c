@@ -57,7 +57,7 @@ static const struct st_lps22hb_transfer_function st_lps22hb_tf_i2c = {
 	.read = st_lps22hb_i2c_read,
 };
 
-#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
 static int st_lps22hb_i2c_probe(struct i2c_client *client)
 #else /* LINUX_VERSION_CODE */
 static int st_lps22hb_i2c_probe(struct i2c_client *client,

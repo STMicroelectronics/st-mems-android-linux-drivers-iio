@@ -477,7 +477,7 @@ static const struct iio_buffer_setup_ops st_stts22h_buffer_ops = {
 	.postdisable = st_stts22h_postdisable,
 };
 
-#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
 static int st_stts22h_probe(struct i2c_client *client)
 #else /* LINUX_VERSION_CODE */
 static int st_stts22h_probe(struct i2c_client *client,

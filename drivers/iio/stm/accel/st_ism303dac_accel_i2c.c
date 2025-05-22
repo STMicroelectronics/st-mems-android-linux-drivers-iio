@@ -79,7 +79,7 @@ static const struct ism303dac_transfer_function ism303dac_tf_i2c = {
 	.read = ism303dac_i2c_read,
 };
 
-#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
 static int ism303dac_i2c_probe(struct i2c_client *client)
 #else /* LINUX_VERSION_CODE */
 static int ism303dac_i2c_probe(struct i2c_client *client,
