@@ -54,7 +54,7 @@ struct st_lsm6dsvx_ext_pwr {
  * ext_chan_depth: Max number of IIO device channel specifications.
  * data_len: Sensor output data len.
  */
-struct st_lsm6dsvx_ext_dev_settings {
+static const struct st_lsm6dsvx_ext_dev_settings {
 	u8 i2c_addr[2];
 	u8 wai_addr;
 	u8 wai_val;
@@ -68,9 +68,7 @@ struct st_lsm6dsvx_ext_dev_settings {
 	const struct iio_chan_spec ext_channels[5];
 	u8 ext_chan_depth;
 	u8 data_len;
-};
-
-static const struct st_lsm6dsvx_ext_dev_settings st_lsm6dsvx_ext_dev_table[] = {
+} st_lsm6dsvx_ext_dev_table[] = {
 	/* LIS2MDL */
 	{
 		.i2c_addr = { 0x1e },
@@ -169,7 +167,46 @@ static const struct st_lsm6dsvx_ext_dev_settings st_lsm6dsvx_ext_dev_table[] = {
 							    0, IIO_NO_MOD, 0,
 							    24, 32, 'u', NULL),
 		.ext_channels[1] = ST_LSM6DSVX_EVENT_CHANNEL(IIO_PRESSURE,
-							    flush),
+							     flush),
+		.ext_channels[2] = IIO_CHAN_SOFT_TIMESTAMP(1),
+		.ext_chan_depth = 3,
+		.data_len = 3,
+	},
+	{
+		/* LPS22DF */
+		.i2c_addr = { 0x5c, 0x5d },
+		.wai_addr = 0x0f,
+		.wai_val = 0xb4,
+		.odr_table = {
+			.size = 8,
+			.reg = {
+				.addr = 0x10,
+				.mask = GENMASK(6, 3),
+			},
+			.odr_avl[0] = {   1,  0,  0x1,  0x0 },
+			.odr_avl[1] = {   4,  0,  0x2,  0x0 },
+			.odr_avl[2] = {  10,  0,  0x3,  0x0 },
+			.odr_avl[3] = {  25,  0,  0x4,  0x0 },
+			.odr_avl[4] = {  50,  0,  0x5,  0x0 },
+			.odr_avl[5] = {  75,  0,  0x6,  0x0 },
+			.odr_avl[6] = { 100,  0,  0x7,  0x0 },
+			.odr_avl[7] = { 200,  0,  0x8,  0x0 },
+		},
+		.fs_table = {
+			/* hPa micro scale */
+			.fs_avl[0] = { 1000000UL/4096UL, 0x0 },
+			.size = 1,
+		},
+		.bdu_reg = {
+			.addr = 0x11,
+			.mask = BIT(3),
+		},
+		.ext_available_scan_masks = { 0x1, 0x0 },
+		.ext_channels[0] = ST_LSM6DSVX_DATA_CHANNEL(IIO_PRESSURE,
+							 0x28, 0, IIO_NO_MOD, 0,
+							 24, 32, 'u', NULL),
+		.ext_channels[1] = ST_LSM6DSVX_EVENT_CHANNEL(IIO_PRESSURE,
+							     flush),
 		.ext_channels[2] = IIO_CHAN_SOFT_TIMESTAMP(1),
 		.ext_chan_depth = 3,
 		.data_len = 3,

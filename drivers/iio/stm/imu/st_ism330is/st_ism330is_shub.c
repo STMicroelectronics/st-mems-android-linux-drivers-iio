@@ -54,7 +54,7 @@ struct st_ism330is_ext_pwr {
  * ext_chan_depth: Max number of IIO device channel specifications.
  * data_len: Sensor output data len.
  */
-struct st_ism330is_ext_dev_settings {
+static const struct st_ism330is_ext_dev_settings {
 	u8 i2c_addr[2];
 	u8 wai_addr;
 	u8 wai_val;
@@ -67,9 +67,7 @@ struct st_ism330is_ext_dev_settings {
 	const struct iio_chan_spec ext_channels[5];
 	u8 ext_chan_depth;
 	u8 data_len;
-};
-
-static const struct st_ism330is_ext_dev_settings st_ism330is_ext_dev_table[] = {
+} st_ism330is_ext_dev_table[] = {
 	{
 		/* LIS2MDL */
 		.i2c_addr = { 0x1e },
@@ -159,6 +157,44 @@ static const struct st_ism330is_ext_dev_settings st_ism330is_ext_dev_table[] = {
 		.ext_channels[0] = ST_ISM330IS_DATA_CHANNEL(IIO_PRESSURE, 0x28,
 							    0, IIO_NO_MOD, 0,
 							    24, 32, 'u', NULL),
+		.ext_channels[1] = IIO_CHAN_SOFT_TIMESTAMP(1),
+		.ext_chan_depth = 2,
+		.data_len = 3,
+	},
+	{
+		/* LPS22DF */
+		.i2c_addr = { 0x5c, 0x5d },
+		.wai_addr = 0x0f,
+		.wai_val = 0xb4,
+		.odr_table = {
+			.size = 7,
+			.reg = {
+				.addr = 0x10,
+				.mask = GENMASK(6, 3),
+			},
+			.odr_avl[0] = {   1000,  0x1 },
+			.odr_avl[1] = {   4000,  0x2 },
+			.odr_avl[2] = {  10000,  0x3 },
+			.odr_avl[3] = {  25000,  0x4 },
+			.odr_avl[4] = {  50000,  0x5 },
+			.odr_avl[5] = {  75000,  0x6 },
+			.odr_avl[6] = { 100000,  0x7 },
+		},
+		.fs_table = {
+			.fs_len = 1,
+			/* hPa micro scale */
+			.fs_avl[0] = {
+				.gain = 1000000UL / 4096UL,
+				.val = 0x0,
+			},
+		},
+		.bdu_reg = {
+			.addr = 0x11,
+			.mask = BIT(3),
+		},
+		.ext_channels[0] = ST_ISM330IS_DATA_CHANNEL(IIO_PRESSURE,
+							 0x28, 0, IIO_NO_MOD, 0,
+							 24, 32, 'u', NULL),
 		.ext_channels[1] = IIO_CHAN_SOFT_TIMESTAMP(1),
 		.ext_chan_depth = 2,
 		.data_len = 3,
