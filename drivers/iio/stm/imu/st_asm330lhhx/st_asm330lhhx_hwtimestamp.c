@@ -71,9 +71,11 @@ static void st_asm330lhhx_read_hw_timestamp(struct st_asm330lhhx_hw *hw)
 	ST_ASM330LHHX_TSYNC_DECREMENT(ST_ASM330LHHX_ID_ACC);
 	ST_ASM330LHHX_TSYNC_DECREMENT(ST_ASM330LHHX_ID_TEMP);
 
-	if (hw->timesync_c[ST_ASM330LHHX_ID_GYRO] == 0 &&
-	    hw->timesync_c[ST_ASM330LHHX_ID_ACC] == 0 &&
-	    hw->timesync_c[ST_ASM330LHHX_ID_TEMP] == 0) {
+	if ((hw->timesync_c[ST_ASM330LHHX_ID_GYRO] == 0) &&
+	    (hw->timesync_c[ST_ASM330LHHX_ID_ACC] == 0) &&
+	    (hw->timesync_c[ST_ASM330LHHX_ID_TEMP] == 0) &&
+	    (hw->timesync_c[ST_ASM330LHHX_ID_EXT0] == 0) &&
+	    (hw->timesync_c[ST_ASM330LHHX_ID_EXT1] == 0)) {
 		hw->timesync_ktime = ktime_set(0, ST_ASM330LHHX_DEFAULT_KTIME);
 	}
 	spin_unlock_irq(&hw->hwtimestamp_lock);
@@ -100,6 +102,18 @@ static void st_asm330lhhx_read_hw_timestamp(struct st_asm330lhhx_hw *hw)
 		iio_push_event(hw->iio_devs[ST_ASM330LHHX_ID_TEMP], eventLSB,
 			       timestamp_cpu);
 		iio_push_event(hw->iio_devs[ST_ASM330LHHX_ID_TEMP], eventMSB,
+			       timestamp_cpu);
+	}
+	if (hw->enable_mask & BIT_ULL(ST_ASM330LHHX_ID_EXT0)) {
+		iio_push_event(hw->iio_devs[ST_ASM330LHHX_ID_EXT0], eventLSB,
+			       timestamp_cpu);
+		iio_push_event(hw->iio_devs[ST_ASM330LHHX_ID_EXT0], eventMSB,
+			       timestamp_cpu);
+	}
+	if (hw->enable_mask & BIT_ULL(ST_ASM330LHHX_ID_EXT1)) {
+		iio_push_event(hw->iio_devs[ST_ASM330LHHX_ID_EXT1], eventLSB,
+			       timestamp_cpu);
+		iio_push_event(hw->iio_devs[ST_ASM330LHHX_ID_EXT1], eventMSB,
 			       timestamp_cpu);
 	}
 }

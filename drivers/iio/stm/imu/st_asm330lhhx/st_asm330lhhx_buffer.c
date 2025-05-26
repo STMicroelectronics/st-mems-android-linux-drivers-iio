@@ -94,7 +94,7 @@ st_asm330lhhx_init_timesync_counter(struct st_asm330lhhx_sensor *sensor,
 {
 	spin_lock_irq(&hw->hwtimestamp_lock);
 	hw->timesync_ktime = ktime_set(0, ST_ASM330LHHX_FAST_KTIME);
-	if (sensor->id <= ST_ASM330LHHX_ID_HW)
+	if (sensor->id <= ST_ASM330LHHX_ID_EXT1)
 		hw->timesync_c[sensor->id] = enable ? ST_ASM330LHHX_FAST_TO_DEFAULT : 0;
 
 	spin_unlock_irq(&hw->hwtimestamp_lock);

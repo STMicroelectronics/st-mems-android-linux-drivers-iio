@@ -452,18 +452,6 @@ static const struct iio_chan_spec_ext_info st_asm330lhhx_ext_info[] = {
 	{},
 };
 
-#define IIO_CHAN_HW_TIMESTAMP(si) {					\
-	.type = IIO_COUNT,						\
-	.address = ST_ASM330LHHX_REG_TIMESTAMP0_ADDR,			\
-	.scan_index = si,						\
-	.scan_type = {							\
-		.sign = 's',						\
-		.realbits = 64,						\
-		.storagebits = 64,					\
-		.endianness = IIO_LE,					\
-	},								\
-}
-
 static const struct iio_chan_spec st_asm330lhhx_acc_channels[] = {
 	ST_ASM330LHHX_DATA_CHANNEL(IIO_ACCEL, ST_ASM330LHHX_REG_OUTX_L_A_ADDR,
 				1, IIO_MOD_X, 0, 16, 16, 's', st_asm330lhhx_ext_info),

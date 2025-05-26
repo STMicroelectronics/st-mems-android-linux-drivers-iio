@@ -294,6 +294,18 @@
 	.ext_info = ex_info,						\
 }
 
+#define IIO_CHAN_HW_TIMESTAMP(si) {					\
+	.type = IIO_COUNT,						\
+	.address = ST_ASM330LHHX_REG_TIMESTAMP0_ADDR,			\
+	.scan_index = si,						\
+	.scan_type = {							\
+		.sign = 's',						\
+		.realbits = 64,						\
+		.storagebits = 64,					\
+		.endianness = IIO_LE,					\
+	},								\
+}
+
 static const struct iio_event_spec st_asm330lhhx_flush_event = {
 	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
@@ -838,7 +850,7 @@ struct st_asm330lhhx_hw {
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
-	int timesync_c[ST_ASM330LHHX_ID_HW + 1];
+	int timesync_c[ST_ASM330LHHX_ID_EXT1 + 1];
 	u32 hi_hw_timestamp;
 	u32 last_hw_timestamp;
 
