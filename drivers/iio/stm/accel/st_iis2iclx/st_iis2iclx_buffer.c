@@ -92,7 +92,7 @@ st_iis2iclx_init_timesync_counter(struct st_iis2iclx_sensor *sensor,
 				  bool enable)
 {
 	spin_lock_irq(&hw->hwtimestamp_lock);
-	if (sensor->id <= ST_IIS2ICLX_ID_HW)
+	if (sensor->id <= ST_IIS2ICLX_ID_EXT1)
 		hw->timesync_c[sensor->id] = enable ?
 					     ST_IIS2ICLX_FAST_TO_DEFAULT : 0;
 

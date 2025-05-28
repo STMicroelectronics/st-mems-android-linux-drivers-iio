@@ -59,9 +59,13 @@ static void st_iis2iclx_read_hw_timestamp(struct st_iis2iclx_hw *hw)
 
 	ST_IIS2ICLX_TSYNC_DECREMENT(ST_IIS2ICLX_ID_ACC);
 	ST_IIS2ICLX_TSYNC_DECREMENT(ST_IIS2ICLX_ID_TEMP);
+	ST_IIS2ICLX_TSYNC_DECREMENT(ST_IIS2ICLX_ID_EXT0);
+	ST_IIS2ICLX_TSYNC_DECREMENT(ST_IIS2ICLX_ID_EXT1);
 
 	if (hw->timesync_c[ST_IIS2ICLX_ID_ACC] == 0 &&
-	    hw->timesync_c[ST_IIS2ICLX_ID_TEMP] == 0) {
+	    hw->timesync_c[ST_IIS2ICLX_ID_TEMP] == 0 &&
+	    hw->timesync_c[ST_IIS2ICLX_ID_EXT0] == 0 &&
+	    hw->timesync_c[ST_IIS2ICLX_ID_EXT1] == 0) {
 		hw->timesync_ktime = ktime_set(0, ST_IIS2ICLX_DEFAULT_KTIME);
 	}
 	spin_unlock_irq(&hw->hwtimestamp_lock);
@@ -82,6 +86,18 @@ static void st_iis2iclx_read_hw_timestamp(struct st_iis2iclx_hw *hw)
 		iio_push_event(hw->iio_devs[ST_IIS2ICLX_ID_TEMP], eventLSB,
 			       timestamp_cpu);
 		iio_push_event(hw->iio_devs[ST_IIS2ICLX_ID_TEMP], eventMSB,
+			       timestamp_cpu);
+	}
+	if (hw->enable_mask & BIT_ULL(ST_IIS2ICLX_ID_EXT0)) {
+		iio_push_event(hw->iio_devs[ST_IIS2ICLX_ID_EXT0], eventLSB,
+			       timestamp_cpu);
+		iio_push_event(hw->iio_devs[ST_IIS2ICLX_ID_EXT0], eventMSB,
+			       timestamp_cpu);
+	}
+	if (hw->enable_mask & BIT_ULL(ST_IIS2ICLX_ID_EXT1)) {
+		iio_push_event(hw->iio_devs[ST_IIS2ICLX_ID_EXT1], eventLSB,
+			       timestamp_cpu);
+		iio_push_event(hw->iio_devs[ST_IIS2ICLX_ID_EXT1], eventMSB,
 			       timestamp_cpu);
 	}
 }
