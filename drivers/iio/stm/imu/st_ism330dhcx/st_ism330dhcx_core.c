@@ -311,18 +311,6 @@ static const struct st_ism330dhcx_fs_table_entry st_ism330dhcx_fs_table[] = {
 	},
 };
 
-#define IIO_CHAN_HW_TIMESTAMP(si) {					\
-	.type = IIO_COUNT,						\
-	.address = ST_ISM330DHCX_REG_TIMESTAMP0_ADDR,			\
-	.scan_index = si,						\
-	.scan_type = {							\
-		.sign = 's',						\
-		.realbits = 64,						\
-		.storagebits = 64,					\
-		.endianness = IIO_LE,					\
-	},								\
-}
-
 /**
  * Accelerometer IIO channels description
  *
