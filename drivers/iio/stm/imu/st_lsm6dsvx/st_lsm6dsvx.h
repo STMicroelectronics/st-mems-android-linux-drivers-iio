@@ -365,6 +365,18 @@
 	},							      \
 }
 
+#define IIO_CHAN_HW_TIMESTAMP(si) {				      \
+	.type = IIO_COUNT,					      \
+	.address = ST_LSM6DSVX_REG_TIMESTAMP0_ADDR,		      \
+	.scan_index = si,					      \
+	.scan_type = {						      \
+		.sign = 's',					      \
+		.realbits = 64,					      \
+		.storagebits = 64,				      \
+		.endianness = IIO_LE,				      \
+	},							      \
+}
+
 static const struct iio_event_spec st_lsm6dsvx_flush_event = {
 	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
@@ -623,10 +635,10 @@ enum st_lsm6dsvx_sensor_id {
 	ST_LSM6DSVX_ID_ACC,
 	ST_LSM6DSVX_ID_TEMP,
 	ST_LSM6DSVX_ID_HW = ST_LSM6DSVX_ID_TEMP,
-	ST_LSM6DSVX_ID_6X_GAME,
-	ST_LSM6DSVX_ID_QVAR,
 	ST_LSM6DSVX_ID_EXT0,
 	ST_LSM6DSVX_ID_EXT1,
+	ST_LSM6DSVX_ID_6X_GAME,
+	ST_LSM6DSVX_ID_QVAR,
 	ST_LSM6DSVX_ID_MLC,
 	ST_LSM6DSVX_ID_MLC_0,
 	ST_LSM6DSVX_ID_MLC_1,
@@ -653,9 +665,9 @@ static const enum st_lsm6dsvx_sensor_id st_lsm6dsvx_main_sensor_list[] = {
 
 static const enum st_lsm6dsvx_sensor_id st_lsm6dsvx_gyro_dep_sensor_list[] = {
 	[0] = ST_LSM6DSVX_ID_GYRO,
-	[1] = ST_LSM6DSVX_ID_6X_GAME,
-	[2] = ST_LSM6DSVX_ID_EXT0,
-	[3] = ST_LSM6DSVX_ID_EXT1,
+	[1] = ST_LSM6DSVX_ID_EXT0,
+	[2] = ST_LSM6DSVX_ID_EXT1,
+	[3] = ST_LSM6DSVX_ID_6X_GAME,
 	[4] = ST_LSM6DSVX_ID_MLC,
 	[5] = ST_LSM6DSVX_ID_MLC_0,
 	[6] = ST_LSM6DSVX_ID_MLC_1,
@@ -674,10 +686,10 @@ static const enum st_lsm6dsvx_sensor_id st_lsm6dsvx_gyro_dep_sensor_list[] = {
 static const enum st_lsm6dsvx_sensor_id st_lsm6dsvx_acc_dep_sensor_list[] = {
 	[0] = ST_LSM6DSVX_ID_ACC,
 	[1] = ST_LSM6DSVX_ID_TEMP,
-	[2] = ST_LSM6DSVX_ID_6X_GAME,
-	[3] = ST_LSM6DSVX_ID_QVAR,
-	[4] = ST_LSM6DSVX_ID_EXT0,
-	[5] = ST_LSM6DSVX_ID_EXT1,
+	[2] = ST_LSM6DSVX_ID_EXT0,
+	[3] = ST_LSM6DSVX_ID_EXT1,
+	[4] = ST_LSM6DSVX_ID_6X_GAME,
+	[5] = ST_LSM6DSVX_ID_QVAR,
 	[6] = ST_LSM6DSVX_ID_MLC,
 	[7] = ST_LSM6DSVX_ID_MLC_0,
 	[8] = ST_LSM6DSVX_ID_MLC_1,
@@ -698,10 +710,10 @@ static const enum st_lsm6dsvx_sensor_id st_lsm6dsvx_buffered_sensor_list[] = {
 	[0] = ST_LSM6DSVX_ID_GYRO,
 	[1] = ST_LSM6DSVX_ID_ACC,
 	[2] = ST_LSM6DSVX_ID_TEMP,
-	[3] = ST_LSM6DSVX_ID_6X_GAME,
-	[4] = ST_LSM6DSVX_ID_QVAR,
-	[5] = ST_LSM6DSVX_ID_EXT0,
-	[6] = ST_LSM6DSVX_ID_EXT1,
+	[3] = ST_LSM6DSVX_ID_EXT0,
+	[4] = ST_LSM6DSVX_ID_EXT1,
+	[5] = ST_LSM6DSVX_ID_6X_GAME,
+	[6] = ST_LSM6DSVX_ID_QVAR,
 	[7] = ST_LSM6DSVX_ID_STEP_COUNTER,
 };
 
@@ -929,7 +941,7 @@ struct st_lsm6dsvx_hw {
 	struct hrtimer timesync_timer;
 	spinlock_t hwtimestamp_lock;
 	ktime_t timesync_ktime;
-	int timesync_c[ST_LSM6DSVX_ID_HW + 1];
+	int timesync_c[ST_LSM6DSVX_ID_EXT1 + 1];
 
 	u8 int_pin;
 

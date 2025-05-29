@@ -480,18 +480,6 @@ static const struct iio_chan_spec_ext_info st_lsm6dsvx_chan_spec_ext_info[] = {
 	{ }
 };
 
-#define IIO_CHAN_HW_TIMESTAMP(si) {					\
-	.type = IIO_COUNT,						\
-	.address = ST_LSM6DSVX_REG_TIMESTAMP0_ADDR,			\
-	.scan_index = si,						\
-	.scan_type = {							\
-		.sign = 's',						\
-		.realbits = 64,						\
-		.storagebits = 64,					\
-		.endianness = IIO_LE,					\
-	},								\
-}
-
 static const struct iio_chan_spec st_lsm6dsvx_acc_channels[] = {
 	ST_LSM6DSVX_DATA_CHANNEL(IIO_ACCEL,
 				 ST_LSM6DSVX_REG_OUTX_L_A_ADDR,

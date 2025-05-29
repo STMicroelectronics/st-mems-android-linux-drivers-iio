@@ -93,7 +93,7 @@ static void st_lsm6dsvx_init_timesync_counter(struct st_lsm6dsvx_sensor *sensor,
 					      bool enable)
 {
 	spin_lock_irq(&hw->hwtimestamp_lock);
-	if (sensor->id <= ST_LSM6DSVX_ID_HW)
+	if (sensor->id <= ST_LSM6DSVX_ID_EXT1)
 		hw->timesync_c[sensor->id] = enable ? ST_LSM6DSVX_FAST_TO_DEFAULT : 0;
 
 	spin_unlock_irq(&hw->hwtimestamp_lock);
