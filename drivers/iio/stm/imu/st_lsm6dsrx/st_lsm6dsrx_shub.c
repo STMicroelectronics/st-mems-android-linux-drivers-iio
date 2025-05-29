@@ -63,7 +63,13 @@ static const struct st_lsm6dsrx_ext_dev_settings {
 	struct st_lsm6dsrx_reg off_canc_reg;
 	struct st_lsm6dsrx_reg bdu_reg;
 	unsigned long ext_available_scan_masks[2];
+
+#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+	const struct iio_chan_spec ext_channels[6];
+#else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
 	const struct iio_chan_spec ext_channels[5];
+#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+
 	u8 ext_chan_depth;
 	u8 data_len;
 } st_lsm6dsrx_ext_dev_table[] = {
@@ -115,7 +121,7 @@ static const struct st_lsm6dsrx_ext_dev_settings {
 			.addr = 0x62,
 			.mask = BIT(4),
 		},
-		.ext_available_scan_masks = { 0x7, 0x0 },
+
 		.ext_channels[0] = ST_LSM6DSRX_DATA_CHANNEL(IIO_MAGN, 0x68,
 							    1, IIO_MOD_X, 0,
 							    16, 16, 's', NULL),
@@ -126,8 +132,18 @@ static const struct st_lsm6dsrx_ext_dev_settings {
 							    1, IIO_MOD_Z, 2,
 							    16, 16, 's', NULL),
 		.ext_channels[3] = ST_LSM6DSRX_EVENT_CHANNEL(IIO_MAGN, flush),
+
+#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+		.ext_available_scan_masks = { 0xf, 0x0 },
+		.ext_channels[4] = IIO_CHAN_HW_TIMESTAMP(3),
+		.ext_channels[5] = IIO_CHAN_SOFT_TIMESTAMP(4),
+		.ext_chan_depth = 6,
+#else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+		.ext_available_scan_masks = { 0x7, 0x0 },
 		.ext_channels[4] = IIO_CHAN_SOFT_TIMESTAMP(3),
 		.ext_chan_depth = 5,
+#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+
 		.data_len = 6,
 	},
 	{
@@ -172,7 +188,7 @@ static const struct st_lsm6dsrx_ext_dev_settings {
 			.addr = 0x24,
 			.mask = BIT(6),
 		},
-		.ext_available_scan_masks = { 0x7, 0x0 },
+
 		.ext_channels[0] = ST_LSM6DSRX_DATA_CHANNEL(IIO_MAGN, 0x28,
 							    1, IIO_MOD_X, 0,
 							    16, 16, 's', NULL),
@@ -183,8 +199,18 @@ static const struct st_lsm6dsrx_ext_dev_settings {
 							    1, IIO_MOD_Z, 2,
 							    16, 16, 's', NULL),
 		.ext_channels[3] = ST_LSM6DSRX_EVENT_CHANNEL(IIO_MAGN, flush),
+
+#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+		.ext_available_scan_masks = { 0xf, 0x0 },
+		.ext_channels[4] = IIO_CHAN_HW_TIMESTAMP(3),
+		.ext_channels[5] = IIO_CHAN_SOFT_TIMESTAMP(4),
+		.ext_chan_depth = 6,
+#else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+		.ext_available_scan_masks = { 0x7, 0x0 },
 		.ext_channels[4] = IIO_CHAN_SOFT_TIMESTAMP(3),
 		.ext_chan_depth = 5,
+#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+
 		.data_len = 6,
 	},
 	{
@@ -212,14 +238,23 @@ static const struct st_lsm6dsrx_ext_dev_settings {
 			.addr = 0x10,
 			.mask = BIT(1),
 		},
-		.ext_available_scan_masks = { 0x1, 0x0 },
 		.ext_channels[0] = ST_LSM6DSRX_DATA_CHANNEL(IIO_PRESSURE, 0x28,
 							    0, IIO_NO_MOD, 0,
 							    24, 32, 'u', NULL),
 		.ext_channels[1] = ST_LSM6DSRX_EVENT_CHANNEL(IIO_PRESSURE,
 							     flush),
+
+#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+		.ext_available_scan_masks = { 0x3, 0x0 },
+		.ext_channels[2] = IIO_CHAN_HW_TIMESTAMP(1),
+		.ext_channels[3] = IIO_CHAN_SOFT_TIMESTAMP(2),
+		.ext_chan_depth = 4,
+#else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+		.ext_available_scan_masks = { 0x1, 0x0 },
 		.ext_channels[2] = IIO_CHAN_SOFT_TIMESTAMP(1),
 		.ext_chan_depth = 3,
+#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+
 		.data_len = 3,
 	},
 	{
@@ -248,14 +283,23 @@ static const struct st_lsm6dsrx_ext_dev_settings {
 			.addr = 0x10,
 			.mask = BIT(1),
 		},
-		.ext_available_scan_masks = { 0x1, 0x0 },
 		.ext_channels[0] = ST_LSM6DSRX_DATA_CHANNEL(IIO_PRESSURE, 0x28,
 							    0, IIO_NO_MOD, 0,
 							    24, 32, 'u', NULL),
 		.ext_channels[1] = ST_LSM6DSRX_EVENT_CHANNEL(IIO_PRESSURE,
 							     flush),
+
+#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+		.ext_available_scan_masks = { 0x3, 0x0 },
+		.ext_channels[2] = IIO_CHAN_HW_TIMESTAMP(1),
+		.ext_channels[3] = IIO_CHAN_SOFT_TIMESTAMP(2),
+		.ext_chan_depth = 4,
+#else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+		.ext_available_scan_masks = { 0x1, 0x0 },
 		.ext_channels[2] = IIO_CHAN_SOFT_TIMESTAMP(1),
 		.ext_chan_depth = 3,
+#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+
 		.data_len = 3,
 	},
 	{
@@ -286,14 +330,24 @@ static const struct st_lsm6dsrx_ext_dev_settings {
 			.addr = 0x11,
 			.mask = BIT(3),
 		},
-		.ext_available_scan_masks = { 0x1, 0x0 },
+
 		.ext_channels[0] = ST_LSM6DSRX_DATA_CHANNEL(IIO_PRESSURE,
 							 0x28, 0, IIO_NO_MOD, 0,
 							 24, 32, 'u', NULL),
 		.ext_channels[1] = ST_LSM6DSRX_EVENT_CHANNEL(IIO_PRESSURE,
 							     flush),
+
+#if defined(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
+		.ext_available_scan_masks = { 0x3, 0x0 },
+		.ext_channels[2] = IIO_CHAN_HW_TIMESTAMP(1),
+		.ext_channels[3] = IIO_CHAN_SOFT_TIMESTAMP(2),
+		.ext_chan_depth = 4,
+#else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+		.ext_available_scan_masks = { 0x1, 0x0 },
 		.ext_channels[2] = IIO_CHAN_SOFT_TIMESTAMP(1),
 		.ext_chan_depth = 3,
+#endif /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
+
 		.data_len = 3,
 	},
 };
