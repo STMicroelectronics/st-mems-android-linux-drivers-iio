@@ -186,7 +186,7 @@ static int st_asm330lhhx_set_wake_up_thershold(struct st_asm330lhhx_hw *hw,
  * @hw - ST IMU MEMS hw instance
  * @wake_up_duration_ms - wake-up duration in ms
  *
- * wake-up duration register val = (dur_ms * ODR_XL) / (32 * 1000)
+ * wake-up duration register val = (dur_ms * ODR_XL) / 1000
  */
 static int st_asm330lhhx_set_wake_up_duration(struct st_asm330lhhx_hw *hw,
 					      int wake_up_duration_ms)
@@ -199,7 +199,7 @@ static int st_asm330lhhx_set_wake_up_duration(struct st_asm330lhhx_hw *hw,
 	if (err < 0)
 		return err;
 
-	tmp = (wake_up_duration_ms * sensor_odr) / 32000;
+	tmp = (wake_up_duration_ms * sensor_odr) / 1000;
 	wake_up_duration = (u8)tmp;
 	max_dur = ST_ASM330LHHX_WAKE_UP_DUR_MASK >>
 		  __ffs(ST_ASM330LHHX_WAKE_UP_DUR_MASK);
