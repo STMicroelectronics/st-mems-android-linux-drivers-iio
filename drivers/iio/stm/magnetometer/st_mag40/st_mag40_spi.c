@@ -11,6 +11,7 @@
 #include <linux/slab.h>
 #include <linux/spi/spi.h>
 #include <linux/types.h>
+#include <linux/version.h>
 
 #include "st_mag40_core.h"
 
@@ -92,6 +93,20 @@ static int st_mag40_spi_probe(struct spi_device *spi)
 	return st_mag40_common_probe(iio_dev);
 }
 
+#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
+static void st_mag40_spi_remove(struct spi_device *spi)
+{
+	st_mag40_remove(&spi->dev);
+}
+#else /* LINUX_VERSION_CODE */
+static int st_mag40_spi_remove(struct spi_device *spi)
+{
+	st_mag40_remove(&spi->dev);
+
+	return 0;
+}
+#endif /* LINUX_VERSION_CODE */
+
 #if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_mag40_spi_suspend(struct device *dev)
 {
@@ -166,6 +181,7 @@ static struct spi_driver st_mag40_spi_driver = {
 #endif /* CONFIG_OF */
 		   },
 	.probe = st_mag40_spi_probe,
+	.remove = st_mag40_spi_remove,
 	.id_table = st_mag40_ids,
 };
 module_spi_driver(st_mag40_spi_driver);

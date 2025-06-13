@@ -220,13 +220,6 @@ int st_mag40_allocate_trigger(struct iio_dev *iio_dev)
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
 	int err;
 
-	err = devm_request_threaded_irq(cdata->dev, cdata->irq,
-					st_mag40_trigger_irq_handler, st_mag40_trigger_thread_handler,
-					IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
-					cdata->name, cdata);
-	if (err)
-		return err;
-
 	cdata->iio_trig = devm_iio_trigger_alloc(cdata->dev, "%s-trigger",
 						 iio_dev->name);
 	if (!cdata->iio_trig) {
@@ -244,5 +237,9 @@ int st_mag40_allocate_trigger(struct iio_dev *iio_dev)
 	}
 	iio_dev->trig = iio_trigger_get(cdata->iio_trig);
 
-	return 0;
+	return devm_request_threaded_irq(cdata->dev, cdata->irq,
+					 st_mag40_trigger_irq_handler,
+					 st_mag40_trigger_thread_handler,
+					 IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
+					 cdata->name, cdata);
 }

@@ -11,6 +11,7 @@
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/types.h>
+#include <linux/version.h>
 
 #include "st_mag40_core.h"
 
@@ -92,6 +93,20 @@ static int st_mag40_i2c_probe(struct i2c_client *client,
 	return st_mag40_common_probe(iio_dev);
 }
 
+#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+static void st_mag40_i2c_remove(struct i2c_client *client)
+{
+	st_mag40_remove(&client->dev);
+}
+#else /* LINUX_VERSION_CODE */
+static int st_mag40_i2c_remove(struct i2c_client *client)
+{
+	st_mag40_remove(&client->dev);
+
+	return 0;
+}
+#endif /* LINUX_VERSION_CODE */
+
 #if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_mag40_i2c_suspend(struct device *dev)
 {
@@ -165,6 +180,7 @@ static struct i2c_driver st_mag40_i2c_driver = {
 #endif /* CONFIG_OF */
 		   },
 	.probe = st_mag40_i2c_probe,
+	.remove = st_mag40_i2c_remove,
 	.id_table = st_mag40_ids,
 };
 module_i2c_driver(st_mag40_i2c_driver);

@@ -37,6 +37,7 @@ enum {
 /* Magnetometer control registers */
 #define ST_MAG40_CFG_REG_A_ADDR				0x60
 #define ST_MAG40_TEMP_COMP_EN				0x80
+#define ST_MAG40_SOFT_RST				0x20
 #define ST_MAG40_CFG_REG_A_ODR_MASK			0x0c
 #define ST_MAG40_CFG_REG_A_ODR_10Hz			0x00
 #define ST_MAG40_CFG_REG_A_ODR_20Hz			0x01
@@ -137,6 +138,7 @@ static inline s64 st_mag40_get_timestamp(struct iio_dev *iio_dev)
 }
 
 int st_mag40_common_probe(struct iio_dev *iio_dev);
+void st_mag40_remove(struct device *dev);
 
 #if IS_ENABLED(CONFIG_PM)
 int st_mag40_common_suspend(struct st_mag40_data *cdata);

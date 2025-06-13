@@ -201,6 +201,22 @@ static int st_mag40_init_sensors(struct st_mag40_data *cdata)
 	return err < 0 ? err : 0;
 }
 
+static int st_mag40_reset_sensors(struct st_mag40_data *cdata, bool no_wait)
+{
+	int err;
+
+	err = st_mag40_write_register(cdata, ST_MAG40_CFG_REG_A_ADDR,
+				      ST_MAG40_SOFT_RST, 1);
+
+	if (err < 0)
+		return err;
+
+	if (no_wait == false)
+		usleep_range(5, 6);
+
+	return 0;
+}
+
 static ssize_t st_mag40_get_sampling_frequency(struct device *dev,
 					       struct device_attribute *attr,
 					       char *buf)
@@ -569,6 +585,13 @@ int st_mag40_common_probe(struct iio_dev *iio_dev)
 		return -ENODEV;
 	}
 
+	err = st_mag40_reset_sensors(cdata, false);
+	if (err < 0) {
+		dev_err(cdata->dev, "failed to reset sensor\n");
+
+		return err;
+	}
+
 	cdata->odr = st_mag40_odr_table.odr_avl[0].hz;
 
 	iio_dev->channels = st_mag40_channels;
@@ -601,6 +624,15 @@ int st_mag40_common_probe(struct iio_dev *iio_dev)
 	return 0;
 }
 EXPORT_SYMBOL(st_mag40_common_probe);
+
+void st_mag40_remove(struct device *dev)
+{
+	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct st_mag40_data *cdata = iio_priv(iio_dev);
+
+	st_mag40_reset_sensors(cdata, true);
+}
+EXPORT_SYMBOL(st_mag40_remove);
 
 #if IS_ENABLED(CONFIG_PM)
 int st_mag40_common_suspend(struct st_mag40_data *cdata)
