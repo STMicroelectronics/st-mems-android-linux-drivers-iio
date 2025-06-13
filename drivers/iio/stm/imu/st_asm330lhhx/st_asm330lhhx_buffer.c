@@ -311,7 +311,6 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 	__le16 fifo_status;
 	u16 fifo_depth;
 	s16 drdymask;
-	u16 wtm_ia;
 	u32 val;
 
 	/* return if FIFO is already disabled */
@@ -333,11 +332,6 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 	err = st_asm330lhhx_read_locked(hw, ST_ASM330LHHX_REG_FIFO_STATUS1_ADDR,
 				    &fifo_status, sizeof(fifo_status));
 	if (err < 0)
-		goto enable_fifo;
-
-	wtm_ia = le16_to_cpu(fifo_status) &
-		 (ST_ASM330LHHX_REG_FIFO_WTM_IA_MASK << 8);
-	if (!wtm_ia)
 		goto enable_fifo;
 
 	fifo_depth = le16_to_cpu(fifo_status) &
