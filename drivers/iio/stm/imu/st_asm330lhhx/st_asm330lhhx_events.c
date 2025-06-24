@@ -145,16 +145,16 @@ static int st_asm330lhhx_get_default_xl_odr(struct st_asm330lhhx_hw *hw,
 }
 
 /*
- * st_asm330lhhx_set_wake_up_thershold - set wake-up threshold in mg
+ * st_asm330lhhx_set_wake_up_threshold - set wake-up threshold in mg
  * @hw - ST IMU MEMS hw instance
- * @wake_up_thershold_mg - wake-up threshold in mg
+ * @wake_up_threshold_mg - wake-up threshold in mg
  *
- * wake-up thershold register val = (th_mg * 2 ^ 6) / (1000 * FS_XL)
+ * wake-up threshold register val = (th_mg * 2 ^ 6) / (1000 * FS_XL)
  */
-static int st_asm330lhhx_set_wake_up_thershold(struct st_asm330lhhx_hw *hw,
-					       int wake_up_thershold_mg)
+static int st_asm330lhhx_set_wake_up_threshold(struct st_asm330lhhx_hw *hw,
+					       int wake_up_threshold_mg)
 {
-	u8 wake_up_thershold, max_th;
+	u8 wake_up_threshold, max_th;
 	int tmp, err;
 	u8 fs_xl_g;
 
@@ -162,21 +162,21 @@ static int st_asm330lhhx_set_wake_up_thershold(struct st_asm330lhhx_hw *hw,
 	if (err < 0)
 		return err;
 
-	tmp = (wake_up_thershold_mg * 64) / (fs_xl_g * 1000);
-	wake_up_thershold = (u8)tmp;
+	tmp = (wake_up_threshold_mg * 64) / (fs_xl_g * 1000);
+	wake_up_threshold = (u8)tmp;
 	max_th = ST_ASM330LHHX_WAKE_UP_THS_MASK >>
 		  __ffs(ST_ASM330LHHX_WAKE_UP_THS_MASK);
-	if (wake_up_thershold > max_th)
-		wake_up_thershold = max_th;
+	if (wake_up_threshold > max_th)
+		wake_up_threshold = max_th;
 
 	err = st_asm330lhhx_write_with_mask_locked(hw,
 					   ST_ASM330LHHX_REG_WAKE_UP_THS_ADDR,
 					   ST_ASM330LHHX_WAKE_UP_THS_MASK,
-					   wake_up_thershold);
+					   wake_up_threshold);
 	if (err < 0)
 		return err;
 
-	hw->wk_th_mg = wake_up_thershold_mg;
+	hw->wk_th_mg = wake_up_threshold_mg;
 
 	return 0;
 }
@@ -569,7 +569,7 @@ int st_asm330lhhx_write_event_value(struct iio_dev *iio_dev,
 			/* wake-up event configuration */
 			switch (info) {
 			case IIO_EV_INFO_VALUE:
-				err = st_asm330lhhx_set_wake_up_thershold(hw,
+				err = st_asm330lhhx_set_wake_up_threshold(hw,
 									  val);
 				break;
 
@@ -722,7 +722,7 @@ int st_asm330lhhx_update_threshold_events(struct st_asm330lhhx_hw *hw)
 {
 	int ret;
 
-	ret = st_asm330lhhx_set_wake_up_thershold(hw, hw->wk_th_mg);
+	ret = st_asm330lhhx_set_wake_up_threshold(hw, hw->wk_th_mg);
 	if (ret < 0)
 		return ret;
 
@@ -758,8 +758,8 @@ int st_asm330lhhx_event_init(struct st_asm330lhhx_hw *hw)
 	if (err < 0)
 		return err;
 
-	/* Set default wake-up thershold to 100 mg */
-	err = st_asm330lhhx_set_wake_up_thershold(hw, 100);
+	/* Set default wake-up threshold to 100 mg */
+	err = st_asm330lhhx_set_wake_up_threshold(hw, 100);
 	if (err < 0)
 		return err;
 

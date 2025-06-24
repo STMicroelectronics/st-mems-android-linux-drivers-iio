@@ -84,27 +84,27 @@ static int st_acc33_get_xl_odr(struct st_acc33_hw *hw,
 }
 
 /*
- * st_acc33_set_thershold - set accel threshold in mg
+ * st_acc33_set_threshold - set accel threshold in mg
  * @hw - ST IMU MEMS hw instance
- * @thershold_mg - accel threshold in mg
+ * @threshold_mg - accel threshold in mg
  */
-static int st_acc33_set_thershold(struct st_acc33_hw *hw, int thershold_mg)
+static int st_acc33_set_threshold(struct st_acc33_hw *hw, int threshold_mg)
 {
 	u8 threg = REG_INT1_THS_ADDR;
-	u8 thershold;
+	u8 threshold;
 	int err;
 	u8 lsb;
 
 	lsb = st_acc33_get_th_lsb(hw);
 
-	thershold = thershold_mg / lsb;
-	thershold = min_t(u8, thershold, REG_INT1_THS_MASK);
+	threshold = threshold_mg / lsb;
+	threshold = min_t(u8, threshold, REG_INT1_THS_MASK);
 
-	err = st_acc33_write_with_mask(hw, threg, REG_INT1_THS_MASK, thershold);
+	err = st_acc33_write_with_mask(hw, threg, REG_INT1_THS_MASK, threshold);
 	if (err < 0)
 		return err;
 
-	hw->xl_th_mg = thershold_mg;
+	hw->xl_th_mg = threshold_mg;
 
 	return 0;
 }
@@ -380,7 +380,7 @@ int st_acc33_write_event_value(struct iio_dev *iio_dev,
 			switch (info) {
 			/* free fall event configuration */
 			case IIO_EV_INFO_VALUE:
-				err = st_acc33_set_thershold(hw, val);
+				err = st_acc33_set_threshold(hw, val);
 				break;
 			case IIO_EV_INFO_PERIOD:
 				err = st_acc33_set_duration(hw, val);
@@ -393,7 +393,7 @@ int st_acc33_write_event_value(struct iio_dev *iio_dev,
 			/* wake-up event configuration */
 			switch (info) {
 			case IIO_EV_INFO_VALUE:
-				err = st_acc33_set_thershold(hw, val);
+				err = st_acc33_set_threshold(hw, val);
 				break;
 			default:
 				break;
@@ -451,7 +451,7 @@ int st_acc33_update_threshold_events(struct st_acc33_hw *hw)
 {
 	int ret;
 
-	ret = st_acc33_set_thershold(hw, hw->xl_th_mg);
+	ret = st_acc33_set_threshold(hw, hw->xl_th_mg);
 
 	return ret < 0 ? ret : 0;
 }
@@ -468,15 +468,15 @@ int st_acc33_update_duration_events(struct st_acc33_hw *hw)
 /*
  * Configure the xl based events function default threshold and duration/delay
  *
- * thershold = 100 mg
+ * threshold = 100 mg
  * duration = 0 ms
  */
 int st_acc33_event_init(struct st_acc33_hw *hw)
 {
 	int err;
 
-	/* Set default thershold to 100 mg */
-	err = st_acc33_set_thershold(hw, 100);
+	/* Set default threshold to 100 mg */
+	err = st_acc33_set_threshold(hw, 100);
 	if (err < 0)
 		return err;
 
