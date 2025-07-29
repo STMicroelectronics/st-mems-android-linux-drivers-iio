@@ -10,11 +10,12 @@
 #ifndef __ST_LPS22DF_H
 #define __ST_LPS22DF_H
 
-#include <linux/module.h>
-#include <linux/types.h>
 #include <linux/iio/iio.h>
-#include <linux/property.h>
 #include <linux/iio/trigger.h>
+#include <linux/module.h>
+#include <linux/property.h>
+#include <linux/regmap.h>
+#include <linux/types.h>
 #include <linux/workqueue.h>
 
 #include "../../common/stm_iio_types.h"
@@ -73,6 +74,8 @@
 
 #define ST_LPS22DF_ODR_LIST_NUM			9
 
+#define ST_LPS22DF_SHIFT_VAL(val, mask)		(((val) << __ffs(mask)) & (mask))
+
 enum st_lps22df_sensor_type {
 	ST_LPS22DF_PRESS = 0,
 	ST_LPS22DF_TEMP,
@@ -90,16 +93,6 @@ enum st_lps22df_fifo_mode {
 #define ST_LPS22DF_TX_MAX_LENGTH		64
 #define ST_LPS22DF_RX_MAX_LENGTH		((ST_LPS22DF_MAX_FIFO_LENGTH + 1) * \
 						 ST_LPS22DF_PRESS_SAMPLE_LEN)
-
-struct st_lps22df_transfer_buffer {
-	u8 rx_buf[ST_LPS22DF_RX_MAX_LENGTH];
-	u8 tx_buf[ST_LPS22DF_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
-struct st_lps22df_transfer_function {
-	int (*write)(struct device *dev, u8 addr, int len, u8 *data);
-	int (*read)(struct device *dev, u8 addr, int len, u8 *data);
-};
 
 enum st_lps22df_hw_id {
 	ST_LPS22DF_ID,
@@ -130,6 +123,7 @@ struct st_lps22df_settings {
 
 struct st_lps22df_hw {
 	struct device *dev;
+	struct regmap *regmap;
 	int irq;
 
 	struct mutex fifo_lock;
@@ -151,9 +145,6 @@ struct st_lps22df_hw {
 	struct work_struct iio_work;
 	struct hrtimer hr_timer;
 	ktime_t ktime;
-
-	const struct st_lps22df_transfer_function *tf;
-	struct st_lps22df_transfer_buffer tb;
 };
 
 struct st_lps22df_sensor {
@@ -166,10 +157,35 @@ struct st_lps22df_sensor {
 	u8 odr;
 };
 
-int st_lps22df_common_probe(struct device *dev, int irq, int hw_id,
-			    const struct st_lps22df_transfer_function *tf_ops);
-int st_lps22df_write_with_mask(struct st_lps22df_hw *hw, u8 addr, u8 mask,
-			       u8 data);
+static inline int __st_lps22df_write_with_mask(struct st_lps22df_hw *hw,
+					       unsigned int addr,
+					       unsigned int mask,
+					       unsigned int data)
+{
+	int err;
+	unsigned int val = ST_LPS22DF_SHIFT_VAL(data, mask);
+
+	err = regmap_update_bits(hw->regmap, addr, mask, val);
+
+	return err;
+}
+
+static inline int st_lps22df_write_with_mask(struct st_lps22df_hw *hw,
+					     unsigned int addr,
+					     unsigned int mask,
+					     unsigned int data)
+{
+	int err;
+
+	mutex_lock(&hw->lock);
+	err = __st_lps22df_write_with_mask(hw, addr, mask, data);
+	mutex_unlock(&hw->lock);
+
+	return err;
+}
+
+int st_lps22df_probe(struct device *dev, int irq, int hw_id,
+		     struct regmap *regmap);
 int st_lps22df_allocate_buffers(struct st_lps22df_hw *hw);
 int st_lps22df_set_enable(struct st_lps22df_sensor *sensor, bool enable);
 ssize_t st_lps22df_sysfs_set_hwfifo_watermark(struct device *dev,

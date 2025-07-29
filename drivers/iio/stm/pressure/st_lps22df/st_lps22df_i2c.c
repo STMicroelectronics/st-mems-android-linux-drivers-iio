@@ -13,61 +13,9 @@
 
 #include "st_lps22df.h"
 
-static int st_lps22df_i2c_read(struct device *dev, u8 addr, int len, u8 *data)
-{
-	struct st_lps22df_hw *hw = dev_get_drvdata(dev);
-	struct i2c_client *client = to_i2c_client(dev);
-	struct i2c_msg msg[2];
-	int ret;
-
-	if (len >= ST_LPS22DF_RX_MAX_LENGTH)
-		return -ENOMEM;
-
-	msg[0].addr = client->addr;
-	msg[0].flags = client->flags;
-	msg[0].len = 1;
-	msg[0].buf = &addr;
-
-	msg[1].addr = client->addr;
-	msg[1].flags = client->flags | I2C_M_RD;
-	msg[1].len = len;
-	msg[1].buf = hw->tb.rx_buf;
-
-	ret = i2c_transfer(client->adapter, msg, 2);
-	if (ret < 0)
-		return ret;
-
-	memcpy(data, hw->tb.rx_buf, len * sizeof(u8));
-
-	return 0;
-}
-
-static int st_lps22df_i2c_write(struct device *dev, u8 addr, int len, u8 *data)
-{
-	struct st_lps22df_hw *hw = dev_get_drvdata(dev);
-	struct i2c_client *client = to_i2c_client(dev);
-	struct i2c_msg msg;
-	int ret;
-
-	if (len >= ST_LPS22DF_TX_MAX_LENGTH)
-		return -ENOMEM;
-
-	hw->tb.tx_buf[0] = addr;
-	memcpy(&hw->tb.tx_buf[1], data, len);
-
-	msg.addr = client->addr;
-	msg.flags = client->flags;
-	msg.len = len + 1;
-	msg.buf = hw->tb.tx_buf;
-
-	ret = i2c_transfer(client->adapter, &msg, 1);
-
-	return ret < 0 ? ret : 0;
-}
-
-static const struct st_lps22df_transfer_function st_lps22df_tf_i2c = {
-	.write = st_lps22df_i2c_write,
-	.read = st_lps22df_i2c_read,
+static const struct regmap_config st_lps22df_i2c_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 #if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
@@ -80,8 +28,19 @@ static int st_lps22df_i2c_probe(struct i2c_client *client,
 {
 #endif /* LINUX_VERSION_CODE */
 
-	return st_lps22df_common_probe(&client->dev, client->irq,
-				       id->driver_data, &st_lps22df_tf_i2c);
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_i2c(client, &st_lps22df_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+
+		return PTR_ERR(regmap);
+	}
+
+	return st_lps22df_probe(&client->dev, client->irq,
+				id->driver_data, regmap);
 }
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE

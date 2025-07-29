@@ -141,30 +141,10 @@ static const struct st_lps22df_settings st_lps22df_sensor_settings[] = {
 	},
 };
 
-int st_lps22df_write_with_mask(struct st_lps22df_hw *hw, u8 addr, u8 mask,
-			       u8 val)
-{
-	int err;
-	u8 data;
-
-	mutex_lock(&hw->lock);
-
-	err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
-	if (err < 0)
-		goto unlock;
-
-	data = (data & ~mask) | ((val << __ffs(mask)) & mask);
-	err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
-unlock:
-	mutex_unlock(&hw->lock);
-
-	return err;
-}
-
 static int st_lps22df_check_whoami(struct st_lps22df_hw *hw, int hw_id)
 {
 	int err, i, j;
-	u8 data;
+	int data;
 
 	for (i = 0; i < ARRAY_SIZE(st_lps22df_sensor_settings); i++) {
 		for (j = 0; j < ST_LPS22DF_MAX_ID; j++) {
@@ -183,8 +163,7 @@ static int st_lps22df_check_whoami(struct st_lps22df_hw *hw, int hw_id)
 		return -ENODEV;
 	}
 
-	err = hw->tf->read(hw->dev, ST_LPS22DF_WHO_AM_I_ADDR,
-			   sizeof(data), &data);
+	err = regmap_read(hw->regmap, ST_LPS22DF_WHO_AM_I_ADDR, &data);
 	if (err < 0) {
 		dev_err(hw->dev, "failed to read Who-Am-I register\n");
 
@@ -361,7 +340,7 @@ static int st_lps22df_read_raw(struct iio_dev *indio_dev,
 		delay = 1100000 / sensor->odr;
 		usleep_range(delay, 2 * delay);
 		len = ch->scan_type.realbits >> 3;
-		ret = hw->tf->read(hw->dev, ch->address, len, data);
+		ret = regmap_bulk_read(hw->regmap, ch->address, data, len);
 		if (ret < 0)
 			goto unlock;
 
@@ -557,8 +536,8 @@ static const struct iio_info st_lps22df_temp_info = {
 	.write_raw = st_lps22df_write_raw,
 };
 
-int st_lps22df_common_probe(struct device *dev, int irq, int hw_id,
-			    const struct st_lps22df_transfer_function *tf_ops)
+int st_lps22df_probe(struct device *dev, int irq, int hw_id,
+		     struct regmap *regmap)
 {
 	struct st_lps22df_sensor *sensor;
 	struct st_lps22df_hw *hw;
@@ -572,7 +551,7 @@ int st_lps22df_common_probe(struct device *dev, int irq, int hw_id,
 
 	dev_set_drvdata(dev, (void *)hw);
 	hw->dev = dev;
-	hw->tf = tf_ops;
+	hw->regmap = regmap;
 	hw->irq = irq;
 
 	/* set initial watermark */
@@ -642,7 +621,7 @@ int st_lps22df_common_probe(struct device *dev, int irq, int hw_id,
 
 	return 0;
 }
-EXPORT_SYMBOL(st_lps22df_common_probe);
+EXPORT_SYMBOL(st_lps22df_probe);
 
 int st_lps22df_remove(struct device *dev)
 {

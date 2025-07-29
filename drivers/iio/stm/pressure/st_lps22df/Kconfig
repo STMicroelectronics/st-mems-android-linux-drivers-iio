@@ -6,7 +6,7 @@ config ST_LPS22DF_IIO
 	select IIO_BUFFER
 	select IIO_KFIFO_BUF
 	select ST_LPS22DF_I2C_IIO if (I2C)
-	select ST_LPS22DF_SPI_IIO if (SPI)
+	select ST_LPS22DF_SPI_IIO if (SPI_MASTER)
 	help
 	 Say yes here to build support for the ST MEMS LPS22DF/LPS28DFW
 	 pressure and temperature  sensor.
@@ -16,8 +16,10 @@ config ST_LPS22DF_IIO
 
 config ST_LPS22DF_I2C_IIO
 	tristate
+	select REGMAP_I2C
 	depends on ST_LPS22DF_IIO
 
 config ST_LPS22DF_SPI_IIO
 	tristate
+	select REGMAP_SPI
 	depends on ST_LPS22DF_IIO

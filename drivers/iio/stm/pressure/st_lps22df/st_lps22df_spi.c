@@ -13,68 +13,26 @@
 
 #include "st_lps22df.h"
 
-#define ST_SENSORS_SPI_READ			0x80
-
-static int st_lps22df_spi_read(struct device *dev, u8 addr, int len, u8 *data)
-{
-	struct spi_device *spi = to_spi_device(dev);
-	struct st_lps22df_hw *hw = spi_get_drvdata(spi);
-	struct spi_transfer xfers[] = {
-		{
-			.tx_buf = hw->tb.tx_buf,
-			.bits_per_word = 8,
-			.len = 1,
-		},
-		{
-			.rx_buf = hw->tb.rx_buf,
-			.bits_per_word = 8,
-			.len = len,
-		}
-	};
-	int err;
-
-	if (len >= ST_LPS22DF_RX_MAX_LENGTH)
-		return -ENOMEM;
-
-	hw->tb.tx_buf[0] = addr | ST_SENSORS_SPI_READ;
-	err = spi_sync_transfer(spi, xfers, ARRAY_SIZE(xfers));
-	if (err)
-		return err;
-
-	memcpy(data, hw->tb.rx_buf, len);
-
-	return err;
-}
-
-static int st_lps22df_spi_write(struct device *dev, u8 addr, int len, u8 *data)
-{
-	struct st_lps22df_hw *hw;
-	struct spi_device *spi;
-
-	if (len >= ST_LPS22DF_TX_MAX_LENGTH)
-		return -ENOMEM;
-
-	spi = to_spi_device(dev);
-	hw = spi_get_drvdata(spi);
-
-	hw->tb.tx_buf[0] = addr;
-	memcpy(&hw->tb.tx_buf[1], data, len);
-
-	return spi_write(spi, hw->tb.tx_buf, len + 1);
-}
-
-static const struct st_lps22df_transfer_function st_lps22df_tf_spi = {
-	.write = st_lps22df_spi_write,
-	.read = st_lps22df_spi_read,
+static const struct regmap_config st_lps22df_spi_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 static int st_lps22df_spi_probe(struct spi_device *spi)
 {
 	const struct spi_device_id *id = spi_get_device_id(spi);
-	int hw_id = id->driver_data;
+	struct regmap *regmap;
 
-	return st_lps22df_common_probe(&spi->dev, spi->irq,
-				       hw_id, &st_lps22df_tf_spi);
+	regmap = devm_regmap_init_spi(spi, &st_lps22df_spi_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
+			(int)PTR_ERR(regmap));
+
+		return PTR_ERR(regmap);
+	}
+
+	return st_lps22df_probe(&spi->dev, spi->irq,
+				id->driver_data, regmap);
 }
 
 #if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE

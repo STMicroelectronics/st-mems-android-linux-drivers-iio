@@ -90,8 +90,9 @@ static int st_lps22df_read_fifo(struct st_lps22df_hw *hw, s64 delta_ts)
 	int err, i, read_len;
 	__le16 fifo_status;
 
-	err = hw->tf->read(hw->dev, ST_LPS22DF_FIFO_STATUS1_ADDR,
-			   sizeof(fifo_status), (u8 *)&fifo_status);
+	err = regmap_bulk_read(hw->regmap, ST_LPS22DF_FIFO_STATUS1_ADDR,
+			       (unsigned int *)&fifo_status,
+			       sizeof(fifo_status));
 	if (err < 0)
 		return err;
 
@@ -100,8 +101,9 @@ static int st_lps22df_read_fifo(struct st_lps22df_hw *hw, s64 delta_ts)
 	if (!read_len)
 		return 0;
 
-	err = hw->tf->read(hw->dev, ST_LPS22DF_FIFO_DATA_OUT_PRESS_XL_ADDR,
-			   read_len, buff);
+	err = regmap_bulk_read(hw->regmap,
+			       ST_LPS22DF_FIFO_DATA_OUT_PRESS_XL_ADDR,
+			       (unsigned int *)&buff, read_len);
 	if (err < 0)
 		return err;
 
@@ -325,10 +327,9 @@ static void st_lps22df_poll_function_work(struct work_struct *iio_work)
 	hrtimer_start(&hw->hr_timer, tmpkt, HRTIMER_MODE_REL);
 	mutex_unlock(&hw->lock);
 
-	err = hw->tf->read(hw->dev,
-			   hw->iio_devs[ST_LPS22DF_TEMP]->channels->address,
-			   ARRAY_SIZE(data),
-			   data);
+	err = regmap_bulk_read(hw->regmap,
+			       hw->iio_devs[ST_LPS22DF_TEMP]->channels->address,
+			       (unsigned int *)&data, sizeof(data));
 	mutex_unlock(&hw->lock);
 
 	if (err < 0)
