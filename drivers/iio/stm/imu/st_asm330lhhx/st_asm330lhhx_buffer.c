@@ -431,6 +431,11 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 				/* LPF sample discard */
 				if (sensor->discard_samples) {
 					sensor->discard_samples--;
+
+#ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
+					sensor->discharged_samples++;
+#endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
+
 					continue;
 				}
 

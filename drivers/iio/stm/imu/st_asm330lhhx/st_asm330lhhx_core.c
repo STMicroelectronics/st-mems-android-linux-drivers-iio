@@ -65,8 +65,14 @@ static const struct st_asm330lhhx_lpf_discard_table_t {
 	u32 settling_samples[9][ST_ASM330LHHX_ODR_LIST_SIZE];
 } st_asm330lhhx_lpf_discard_table[ST_ASM330LHHX_ID_HW] = {
 	[ST_ASM330LHHX_ID_GYRO] = {
-		/* samples_to_discard when no filter enabled */
-		.samples_to_discard =    { 2, 2, 3, 3, 3, 3, 3, 3 },
+		/*
+		 * samples_to_discard when no filter enabled
+		 * it include Table 17 plus fixed 70 ms
+		 */
+		.samples_to_discard = {
+			2, 2 + 1, 3 + 2, 3 + 4, 3 + 7,
+			3 + 15, 3 + 30, 3 + 58
+		},
 
 		/* settling_samples vs ODRs and FTYPE table for gyro */
 		.settling_samples[0] = {  0,  0,  0,  0,  0,  0,  2,  3 }, /* FTYPE 0 */
@@ -80,7 +86,7 @@ static const struct st_asm330lhhx_lpf_discard_table_t {
 	},
 	[ST_ASM330LHHX_ID_ACC] = {
 		/* samples_to_discard when no filter enabled */
-		.samples_to_discard =     { 3, 3, 3, 3, 3, 3, 3, 3, 3 },
+		.samples_to_discard =     { 1, 2, 2, 2, 2, 2, 2, 2 },
 
 		/* settling_samples vs ODRs and accel Bandwidth table */
 		.settling_samples[0] = {   0,   0,   0,   0,   0,   0,   0,   0 }, /* ODR/2 */
@@ -1124,12 +1130,6 @@ static int st_asm330lhhx_update_decimator(struct st_asm330lhhx_sensor *sensor,
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	int odr_index, odr_div_index, ret = 0;
 
-	if (hw->enable_drdy_mask) {
-		sensor->decimator = 0;
-
-		return 0;
-	}
-
 	odr_index = st_asm330lhhx_get_odr_index(odr);
 	if (odr_index < 0)
 		return odr_index;
@@ -1145,12 +1145,18 @@ static int st_asm330lhhx_update_decimator(struct st_asm330lhhx_sensor *sensor,
 			goto unlock;
 		}
 
-		sensor->discard_samples = st_asm330lhhx_lpf_discard_table[sensor->id].samples_to_discard[odr_index] +
-				st_asm330lhhx_lpf_discard_table[sensor->id].settling_samples[odr_div_index][odr_index];
+		sensor->decimator = 0;
+		sensor->discard_samples = st_asm330lhhx_lpf_discard_table[sensor->id].samples_to_discard[odr_index];
+
+		if (!hw->enable_drdy_mask)
+			sensor->discard_samples += st_asm330lhhx_lpf_discard_table[sensor->id].settling_samples[odr_div_index][odr_index];
 		break;
 	case ST_ASM330LHHX_ID_GYRO:
-		sensor->discard_samples = st_asm330lhhx_lpf_discard_table[sensor->id].samples_to_discard[odr_index] +
-				st_asm330lhhx_lpf_discard_table[sensor->id].settling_samples[hw->g_ftype][odr_index];
+		sensor->decimator = 0;
+		sensor->discard_samples = st_asm330lhhx_lpf_discard_table[sensor->id].samples_to_discard[odr_index];
+
+		if (!hw->enable_drdy_mask)
+			sensor->discard_samples += st_asm330lhhx_lpf_discard_table[sensor->id].settling_samples[hw->g_ftype][odr_index];
 		break;
 	default:
 		break;

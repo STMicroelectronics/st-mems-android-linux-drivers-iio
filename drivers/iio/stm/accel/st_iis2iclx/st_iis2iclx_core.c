@@ -60,7 +60,7 @@ static const struct st_iis2iclx_lpf_discard_table_t {
 } st_iis2iclx_lpf_discard_table[ST_IIS2ICLX_ODR_LIST_SIZE] = {
 	[ST_IIS2ICLX_ID_ACC] = {
 		/* samples_to_discard when no filter enabled */
-		.samples_to_discard = { 3, 3, 3, 3, 3, 3, 3, 3 },
+		.samples_to_discard = { 1, 2, 2, 2, 2, 2, 2, 2 },
 
 		/* settling_samples vs ODRs and accel Bandwidth table */
 		.settling_samples[0] = {   0,   0,   0,   0,   0,   0,   0 },
@@ -931,12 +931,6 @@ static int st_iis2iclx_update_decimator(struct st_iis2iclx_sensor *sensor,
 	enum st_iis2iclx_sensor_id id = sensor->id;
 	int oix, odix, ret = 0;
 
-	if (hw->enable_drdy_mask) {
-		sensor->decimator = 0;
-
-		return 0;
-	}
-
 	oix = st_iis2iclx_get_odr_index(odr);
 	if (oix < 0)
 		return oix;
@@ -956,9 +950,13 @@ static int st_iis2iclx_update_decimator(struct st_iis2iclx_sensor *sensor,
 		goto unlock;
 	}
 
+	sensor->decimator = 0;
 	sensor->discard_samples =
-		st_iis2iclx_lpf_discard_table[id].samples_to_discard[oix] +
-		st_iis2iclx_lpf_discard_table[id].settling_samples[odix][oix];
+		st_iis2iclx_lpf_discard_table[id].samples_to_discard[oix];
+
+	if (!hw->enable_drdy_mask)
+		sensor->discard_samples +=
+			st_iis2iclx_lpf_discard_table[id].settling_samples[odix][oix];
 
 unlock:
 	mutex_unlock(&hw->fifo_lock);
