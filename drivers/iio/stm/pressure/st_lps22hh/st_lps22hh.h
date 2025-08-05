@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/iio/iio.h>
+#include <linux/regmap.h>
 #include <linux/iio/trigger.h>
 
 #include "../../common/stm_iio_types.h"
@@ -37,6 +38,8 @@
 #define ST_LPS22HH_CTRL3_ADDR			0x12
 #define ST_LPS22HH_INT_FTH_MASK			0x10
 
+#define ST_LPS22HH_SHIFT_VAL(val, mask)		(((val) << __ffs(mask)) & (mask))
+
 enum st_lps22hh_sensor_type {
 	ST_LPS22HH_PRESS = 0,
 	ST_LPS22HH_TEMP,
@@ -55,21 +58,12 @@ enum st_lps22hh_fifo_mode {
 
 #define ST_LPS22HH_TX_MAX_LENGTH		8
 #define ST_LPS22HH_RX_MAX_LENGTH		(ST_LPS22HH_MAX_FIFO_LENGTH + 1) * \
-						ST_LPS22HH_FIFO_SAMPLE_LEN
-
-struct st_lps22hh_transfer_buffer {
-	u8 rx_buf[ST_LPS22HH_RX_MAX_LENGTH];
-	u8 tx_buf[ST_LPS22HH_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
-struct st_lps22hh_transfer_function {
-	int (*write)(struct device *dev, u8 addr, int len, u8 *data);
-	int (*read)(struct device *dev, u8 addr, int len, u8 *data);
-};
+						 ST_LPS22HH_FIFO_SAMPLE_LEN
 
 struct st_lps22hh_hw {
 	struct device *dev;
 	int irq;
+	struct regmap *regmap;
 
 	struct mutex fifo_lock;
 	struct mutex lock;
@@ -82,9 +76,6 @@ struct st_lps22hh_hw {
 	s64 delta_ts;
 	s64 ts_irq;
 	s64 ts;
-
-	const struct st_lps22hh_transfer_function *tf;
-	struct st_lps22hh_transfer_buffer tb;
 };
 
 struct st_lps22hh_sensor {
@@ -97,9 +88,9 @@ struct st_lps22hh_sensor {
 };
 
 int st_lps22hh_common_probe(struct device *dev, int irq, const char *name,
-			    const struct st_lps22hh_transfer_function *tf_ops);
-int st_lps22hh_write_with_mask(struct st_lps22hh_hw *hw, u8 addr, u8 mask,
-			       u8 data);
+			    struct regmap *regmap);
+int st_lps22hh_write_with_mask(struct st_lps22hh_hw *hw, unsigned int addr,
+			       unsigned int mask, unsigned int val);
 int st_lps22hh_allocate_buffers(struct st_lps22hh_hw *hw);
 int st_lps22hh_set_enable(struct st_lps22hh_sensor *sensor, bool enable);
 ssize_t st_lps22hh_sysfs_set_hwfifo_watermark(struct device * dev,
