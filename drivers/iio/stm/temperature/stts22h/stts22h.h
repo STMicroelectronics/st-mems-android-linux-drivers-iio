@@ -13,6 +13,7 @@
 #include <linux/bitops.h>
 #include <linux/device.h>
 #include <linux/err.h>
+#include <linux/regmap.h>
 
 #define ST_STTS22H_DEV_NAME				"stts22h"
 
@@ -49,6 +50,8 @@
 #define HZ_TO_PERIOD_NSEC(hz)				(1000000000 / \
 							 ((u32)(hz)))
 
+#define ST_STTS22H_SHIFT_VAL(val, mask)			(((val) << \
+							  __ffs(mask)) & (mask))
 
 /**
  * struct st_stts22h_reg - Sensor data register and mask
@@ -79,6 +82,7 @@ struct st_stts22h_odr {
  * @iio_work: Work to schedule temperature read function.
  * @iio_devs: Linux Device.
  * @hr_timer: Timer to schedule workeueue.
+ * @regmap: Regmap instance.
  * @sensorktime: Sensor schedule timeout.
  * @dev: I2C client device.
  * @mutex: Mutex lock to access to device registers.
@@ -92,6 +96,7 @@ struct st_stts22h_data {
 	struct work_struct iio_work;
 	struct iio_dev *iio_devs;
 	struct hrtimer hr_timer;
+	struct regmap *regmap;
 	ktime_t sensorktime;
 	struct device *dev;
 	struct mutex lock;

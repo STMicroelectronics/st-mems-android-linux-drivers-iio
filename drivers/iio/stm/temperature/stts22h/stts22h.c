@@ -60,66 +60,32 @@ static const struct st_stts22h_odr_table_entry {
 	.odr_avl[3] = { 200, 0x03 },
 };
 
-static int st_stts22h_read(struct device *dev, u8 addr, int len, u8 *data)
+static const struct regmap_config st_stts22h_i2c_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
+};
+
+static int st_stts22h_read(struct st_stts22h_data *data, u8 addr,
+			   int len, void *val)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct i2c_msg msg[2];
-
-	msg[0].addr = client->addr;
-	msg[0].flags = client->flags;
-	msg[0].len = 1;
-	msg[0].buf = &addr;
-
-	msg[1].addr = client->addr;
-	msg[1].flags = client->flags | I2C_M_RD;
-	msg[1].len = len;
-	msg[1].buf = data;
-
-	return i2c_transfer(client->adapter, msg, 2);
+	return regmap_bulk_read(data->regmap, addr, val, len);
 }
 
-static int st_stts22h_write(struct device *dev, u8 addr, int len,
-			    const u8 *data)
+static int st_stts22h_write(struct st_stts22h_data *data, unsigned int addr,
+			    int len, void *val)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct i2c_msg msg;
-	u8 send[4];
-
-	if (len > ARRAY_SIZE(send))
-		return -ENOMEM;
-
-	send[0] = addr;
-	memcpy(&send[1], data, len * sizeof(u8));
-
-	msg.addr = client->addr;
-	msg.flags = client->flags;
-	msg.len = len + 1;
-	msg.buf = send;
-
-	return i2c_transfer(client->adapter, &msg, 1);
+	return regmap_bulk_write(data->regmap, addr, val, len);
 }
 
 static inline int st_stts22h_write_with_mask(struct st_stts22h_data *data,
-					     u8 addr, u8 mask, u8 val)
+					     unsigned int addr,
+					     unsigned int mask,
+					     unsigned int val)
 {
 	int err;
-	u8 read;
 
-	mutex_lock(&data->lock);
-	err = st_stts22h_read(data->dev, addr, sizeof(read), &read);
-	if (err < 0) {
-		dev_err(data->dev, "failed to read %02x register\n", addr);
-		goto out;
-	}
-
-	read = (read & ~mask) | ((val << __ffs(mask)) & mask);
-
-	err = st_stts22h_write(data->dev, addr, sizeof(read), &read);
-	if (err < 0)
-		dev_err(data->dev, "failed to write %02x register\n", addr);
-
-out:
-	mutex_unlock(&data->lock);
+	err = regmap_update_bits(data->regmap, addr,
+				 mask, ST_STTS22H_SHIFT_VAL(val, mask));
 
 	return err;
 }
@@ -138,9 +104,9 @@ static __maybe_unused int st_stts22h_reg_access(struct iio_dev *iio_dev,
 
 	mutex_lock(&data->lock);
 	if (readval == NULL)
-		err = st_stts22h_write(data->dev, reg, 1, (u8 *)&writeval);
+		err = st_stts22h_write(data, reg, 1, (u8 *)&writeval);
 	else
-		err = st_stts22h_read(data->dev, reg, 1, (u8 *)readval);
+		err = st_stts22h_read(data, reg, 1, (u8 *)readval);
 	mutex_unlock(&data->lock);
 
 	iio_device_release_direct_mode(iio_dev);
@@ -273,7 +239,7 @@ static int st_stts22h_read_oneshot(struct st_stts22h_data *data,
 	delay = 2 * (1000000 / data->odr);
 	usleep_range(delay, 2 * delay);
 
-	err = st_stts22h_read(data->dev, addr, sizeof(temp), (u8 *)&temp);
+	err = st_stts22h_read(data, addr, sizeof(temp), (u8 *)&temp);
 	if (err < 0)
 		return err;
 
@@ -368,7 +334,7 @@ static int st_stts22h_check_whoami(struct st_stts22h_data *data)
 	int err;
 	u8 wai;
 
-	err = st_stts22h_read(data->dev, ST_STTS22H_WHOAMI_ADDR, 1, &wai);
+	err = st_stts22h_read(data, ST_STTS22H_WHOAMI_ADDR, 1, &wai);
 	if (err < 0)
 		return err;
 
@@ -453,7 +419,7 @@ static void st_stts22h_poll_function_work(struct work_struct *iio_work)
 
 	hrtimer_start(&data->hr_timer, tmpkt, HRTIMER_MODE_REL);
 
-	st_stts22h_read(data->dev, ST_STTS22H_TEMP_L_OUT_ADDR,
+	st_stts22h_read(data, ST_STTS22H_TEMP_L_OUT_ADDR,
 			sizeof(temp), (u8 *)&temp);
 	st_stts22h_report_event(data, (u8 *)&temp);
 }
@@ -491,8 +457,18 @@ static int st_stts22h_probe(struct i2c_client *client,
 #endif /* LINUX_VERSION_CODE */
 
 	struct iio_dev *iio_dev;
+	struct regmap *regmap;
 	struct device *dev;
 	int err;
+
+	regmap = devm_regmap_init_i2c(client, &st_stts22h_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+
+		return PTR_ERR(regmap);
+	}
 
 	iio_dev = devm_iio_device_alloc(&client->dev, sizeof(*data));
 	if (!iio_dev)
@@ -503,6 +479,7 @@ static int st_stts22h_probe(struct i2c_client *client,
 
 	dev = &client->dev;
 	data->dev = dev;
+	data->regmap = regmap;
 	dev_set_drvdata(dev, (void *)data);
 
 	mutex_init(&data->lock);
