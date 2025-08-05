@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/iio/iio.h>
+#include <linux/regmap.h>
 #include <linux/iio/trigger.h>
 
 #include "../../common/stm_iio_types.h"
@@ -20,6 +21,8 @@
 #define ST_LPS33HW_MAX_FIFO_LENGTH		31
 
 #define ST_LPS33HW_CTRL3_ADDR			0x12
+
+#define ST_LPS33HW_SHIFT_VAL(val, mask)		(((val) << __ffs(mask)) & (mask))
 
 enum st_lps33hw_sensor_type {
 	ST_LPS33HW_PRESS = 0,
@@ -48,6 +51,7 @@ struct st_lps33hw_transfer_function {
 struct st_lps33hw_hw {
 	struct device *dev;
 	int irq;
+	struct regmap *regmap;
 
 	struct mutex fifo_lock;
 	struct mutex lock;
@@ -60,9 +64,6 @@ struct st_lps33hw_hw {
 	s64 delta_ts;
 	s64 ts_irq;
 	s64 ts;
-
-	const struct st_lps33hw_transfer_function *tf;
-	struct st_lps33hw_transfer_buffer tb;
 };
 
 struct st_lps33hw_sensor {
@@ -75,9 +76,9 @@ struct st_lps33hw_sensor {
 };
 
 int st_lps33hw_common_probe(struct device *dev, int irq, const char *name,
-			    const struct st_lps33hw_transfer_function *tf_ops);
-int st_lps33hw_write_with_mask(struct st_lps33hw_hw *hw, u8 addr, u8 mask,
-			       u8 data);
+			    struct regmap *regmap);
+int st_lps33hw_write_with_mask(struct st_lps33hw_hw *hw, unsigned int addr,
+			       unsigned int mask, unsigned int val);
 int st_lps33hw_allocate_buffers(struct st_lps33hw_hw *hw);
 int st_lps33hw_set_enable(struct st_lps33hw_sensor *sensor, bool enable);
 ssize_t st_lps33hw_sysfs_set_hwfifo_watermark(struct device * dev,

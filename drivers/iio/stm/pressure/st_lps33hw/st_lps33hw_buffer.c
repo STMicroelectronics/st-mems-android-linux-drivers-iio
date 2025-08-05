@@ -99,11 +99,11 @@ ssize_t st_lps33hw_sysfs_set_hwfifo_watermark(struct device * dev,
 static int st_lps33hw_read_fifo(struct st_lps33hw_hw *hw)
 {
 	u8 iio_buff[ALIGN(sizeof(u32) + sizeof(s64), sizeof(s64))];
-	u8 status, buff[ST_LPS33HW_RX_MAX_LENGTH];
+	u8 buff[ST_LPS33HW_RX_MAX_LENGTH];
+	unsigned int status;
 	int err, i, read_len;
 
-	err = hw->tf->read(hw->dev, ST_LPS33HW_FIFO_SRC_ADDR,
-			   sizeof(status), &status);
+	err = regmap_read(hw->regmap, ST_LPS33HW_FIFO_SRC_ADDR, &status);
 	if (err < 0)
 		return err;
 
@@ -112,8 +112,9 @@ static int st_lps33hw_read_fifo(struct st_lps33hw_hw *hw)
 	if (!read_len)
 		return 0;
 
-	err = hw->tf->read(hw->dev, ST_LPS33HW_PRESS_OUT_XL_ADDR,
-			   read_len, buff);
+	err = regmap_bulk_read(hw->regmap,
+			       ST_LPS33HW_PRESS_OUT_XL_ADDR,
+			       (void *)buff, read_len);
 	if (err < 0)
 		return err;
 

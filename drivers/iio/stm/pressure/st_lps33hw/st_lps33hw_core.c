@@ -110,42 +110,37 @@ static const struct iio_chan_spec st_lps33hw_temp_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(1)
 };
 
-int st_lps33hw_write_with_mask(struct st_lps33hw_hw *hw, u8 addr, u8 mask,
-			       u8 val)
+int st_lps33hw_write_with_mask(struct st_lps33hw_hw *hw, unsigned int addr,
+			       unsigned int mask, unsigned int val)
 {
-	int err;
-	u8 data;
+	unsigned int data = ST_LPS33HW_SHIFT_VAL(val, mask);
+	int ret;
 
 	mutex_lock(&hw->lock);
-
-	err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
-	if (err < 0)
-		goto unlock;
-
-	data = (data & ~mask) | ((val << __ffs(mask)) & mask);
-	err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
-unlock:
+	ret = regmap_update_bits(hw->regmap, addr, mask, data);
 	mutex_unlock(&hw->lock);
 
-	return err;
+	return ret;
 }
 
 static int st_lps33hw_check_whoami(struct st_lps33hw_hw *hw)
 {
+	unsigned int data;
 	int err;
-	u8 data;
 
-	err = hw->tf->read(hw->dev, ST_LPS33HW_WHO_AM_I_ADDR, sizeof(data),
-			   &data);
+	err = regmap_read(hw->regmap, ST_LPS33HW_WHO_AM_I_ADDR, &data);
 	if (err < 0) {
 		dev_err(hw->dev, "failed to read Who-Am-I register.\n");
 
 		return err;
 	}
+
 	if (data != ST_LPS33HW_WHO_AM_I_DEF) {
 		dev_err(hw->dev, "Who-Am-I value not valid.\n");
+
 		return -ENODEV;
 	}
+
 	return 0;
 }
 
@@ -296,7 +291,8 @@ static int st_lps33hw_read_raw(struct iio_dev *indio_dev,
 		}
 
 		msleep(40);
-		ret = hw->tf->read(hw->dev, ch->address, len, data);
+		ret = regmap_bulk_read(hw->regmap, ch->address,
+				       (void *)&data, len);
 		if (ret < 0) {
 			iio_device_release_direct_mode(indio_dev);
 			return ret;
@@ -413,7 +409,7 @@ static const struct iio_info st_lps33hw_temp_info = {
 };
 
 int st_lps33hw_common_probe(struct device *dev, int irq, const char *name,
-			 const struct st_lps33hw_transfer_function *tf_ops)
+			    struct regmap *regmap)
 {
 	struct st_lps33hw_sensor *sensor;
 	struct st_lps33hw_hw *hw;
@@ -426,8 +422,9 @@ int st_lps33hw_common_probe(struct device *dev, int irq, const char *name,
 
 	dev_set_drvdata(dev, (void *)hw);
 	hw->dev = dev;
-	hw->tf = tf_ops;
+	hw->regmap = regmap;
 	hw->irq = irq;
+
 	/* set initial watermark */
 	hw->watermark = 1;
 

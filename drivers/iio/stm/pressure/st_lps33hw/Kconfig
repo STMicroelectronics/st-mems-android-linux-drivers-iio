@@ -6,15 +6,17 @@ config ST_LPS33HW_IIO
 	select IIO_BUFFER
 	select IIO_KFIFO_BUF
 	select ST_LPS33HW_I2C_IIO if (I2C)
-	select ST_LPS33HW_SPI_IIO if (SPI)
+	select ST_LPS33HW_SPI_IIO if (SPI_MASTER)
 	help
 	 This driver supports LPS33HW pressure sensors. This driver can be
 	 built as a module. The module will be called st-lps33hw.
 
 config ST_LPS33HW_I2C_IIO
 	tristate
+	select REGMAP_I2C
 	depends on ST_LPS33HW_IIO
 
 config ST_LPS33HW_SPI_IIO
 	tristate
+	select REGMAP_SPI
 	depends on ST_LPS33HW_IIO
