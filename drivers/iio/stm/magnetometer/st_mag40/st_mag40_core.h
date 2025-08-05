@@ -12,6 +12,7 @@
 
 #include <linux/types.h>
 #include <linux/iio/iio.h>
+#include <linux/regmap.h>
 #include <linux/iio/trigger.h>
 #include <linux/version.h>
 
@@ -89,17 +90,8 @@ enum {
 #define ST_MAG40_SELFTEST_MAX				500
 #define ST_MAG40_ST_READ_CYCLES				50
 
-struct st_mag40_transfer_buffer {
-	u8 rx_buf[ST_MAG40_RX_MAX_LENGTH];
-	u8 tx_buf[ST_MAG40_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
-struct st_mag40_data;
-
-struct st_mag40_transfer_function {
-	int (*write)(struct st_mag40_data *cdata, u8 reg_addr, int len, u8 *data);
-	int (*read)(struct st_mag40_data *cdata, u8 reg_addr, int len, u8 *data);
-};
+#define ST_MAG40_SHIFT_VAL(val, mask)			(((val) << \
+							  __ffs(mask)) & (mask))
 
 enum st_mag40_selftest_status {
 	ST_MAG40_ST_RESET,
@@ -112,6 +104,7 @@ struct st_mag40_data {
 	const char *name;
 	struct mutex lock;
 	struct mutex flush_lock;
+	struct regmap *regmap;
 	u8 drdy_int_pin;
 	int irq;
 	s64 ts;
@@ -128,8 +121,6 @@ struct st_mag40_data {
 
 	struct device *dev;
 	struct iio_trigger *iio_trig;
-	const struct st_mag40_transfer_function *tf;
-	struct st_mag40_transfer_buffer tb;
 };
 
 static inline s64 st_mag40_get_timestamp(struct iio_dev *iio_dev)
@@ -151,7 +142,8 @@ int st_mag40_trig_set_state(struct iio_trigger *trig, bool state);
 int st_mag40_set_enable(struct st_mag40_data *cdata, bool enable);
 void st_mag40_deallocate_ring(struct iio_dev *iio_dev);
 void st_mag40_deallocate_trigger(struct st_mag40_data *cdata);
-int st_mag40_write_register(struct st_mag40_data *cdata, u8 reg_addr, u8 mask, u8 data);
+int st_mag40_write_register(struct st_mag40_data *cdata, unsigned int reg_addr,
+			    unsigned int mask, unsigned int val);
 ssize_t st_mag40_flush_hwfifo(struct device *dev,
 			      struct device_attribute *attr,
 			      const char *buf, size_t count);

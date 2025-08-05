@@ -15,66 +15,23 @@
 
 #include "st_mag40_core.h"
 
-#define ST_SENSORS_SPI_READ	0x80
-
-static int st_mag40_spi_read(struct st_mag40_data *cdata,
-			     u8 reg_addr, int len, u8 *data)
-{
-	int err;
-
-	struct spi_transfer xfers[] = {
-		{
-			.tx_buf = cdata->tb.tx_buf,
-			.bits_per_word = 8,
-			.len = 1,
-		},
-		{
-			.rx_buf = cdata->tb.rx_buf,
-			.bits_per_word = 8,
-			.len = len,
-		}
-	};
-
-	cdata->tb.tx_buf[0] = reg_addr | ST_SENSORS_SPI_READ;
-
-	err = spi_sync_transfer(to_spi_device(cdata->dev),
-						xfers, ARRAY_SIZE(xfers));
-	if (err)
-		return err;
-
-	memcpy(data, cdata->tb.rx_buf, len*sizeof(u8));
-
-	return len;
-}
-
-static int st_mag40_spi_write(struct st_mag40_data *cdata,
-			      u8 reg_addr, int len, u8 *data)
-{
-	struct spi_transfer xfers = {
-		.tx_buf = cdata->tb.tx_buf,
-		.bits_per_word = 8,
-		.len = len + 1,
-	};
-
-	if (len >= ST_MAG40_RX_MAX_LENGTH)
-		return -ENOMEM;
-
-	cdata->tb.tx_buf[0] = reg_addr;
-
-	memcpy(&cdata->tb.tx_buf[1], data, len);
-
-	return spi_sync_transfer(to_spi_device(cdata->dev), &xfers, 1);
-}
-
-static const struct st_mag40_transfer_function st_mag40_tf_spi = {
-	.write = st_mag40_spi_write,
-	.read = st_mag40_spi_read,
+static const struct regmap_config st_mag40_spi_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 static int st_mag40_spi_probe(struct spi_device *spi)
 {
 	struct st_mag40_data *cdata;
 	struct iio_dev *iio_dev;
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_spi(spi, &st_mag40_spi_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
+			(int)PTR_ERR(regmap));
+		return PTR_ERR(regmap);
+	}
 
 	iio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*cdata));
 	if (!iio_dev)
@@ -87,7 +44,7 @@ static int st_mag40_spi_probe(struct spi_device *spi)
 	cdata = iio_priv(iio_dev);
 	cdata->dev = &spi->dev;
 	cdata->name = spi->modalias;
-	cdata->tf = &st_mag40_tf_spi;
+	cdata->regmap = regmap;
 	cdata->irq = spi->irq;
 
 	return st_mag40_common_probe(iio_dev);

@@ -59,11 +59,10 @@ static irqreturn_t st_mag40_trigger_irq_handler(int irq, void *private)
 static irqreturn_t st_mag40_trigger_thread_handler(int irq, void *private)
 {
 	struct st_mag40_data *cdata = private;
-	u8 status;
+	unsigned int status;
 	int err;
 
-	err = cdata->tf->read(cdata, ST_MAG40_STATUS_ADDR,
-			      sizeof(status), &status);
+	err = regmap_read(cdata->regmap, ST_MAG40_STATUS_ADDR, &status);
 	if (err < 0)
 		return IRQ_HANDLED;
 
@@ -85,8 +84,8 @@ static int st_mag40_push_data(struct iio_dev *iio_dev)
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
 	int err;
 
-	err = cdata->tf->read(cdata, ST_MAG40_OUTX_L_ADDR,
-			      ST_MAG40_OUT_LEN, buffer);
+	err = regmap_bulk_read(cdata->regmap, ST_MAG40_OUTX_L_ADDR,
+			       (void *)buffer, ST_MAG40_OUT_LEN);
 	if (err < 0)
 		return err;
 
@@ -132,14 +131,13 @@ ssize_t st_mag40_flush_hwfifo(struct device *dev,
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
+	unsigned int drdy;
 	s64 timestamp;
 	s64 code;
 	int err;
-	u8 drdy;
 
 	mutex_lock(&cdata->flush_lock);
-	err = cdata->tf->read(cdata, ST_MAG40_STATUS_ADDR,
-			      sizeof(drdy), &drdy);
+	err = regmap_read(cdata->regmap, ST_MAG40_STATUS_ADDR, &drdy);
 	if (err < 0)
 		goto out;
 

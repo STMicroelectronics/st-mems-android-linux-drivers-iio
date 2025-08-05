@@ -2,11 +2,11 @@
 
 config ST_MAG40_IIO
 	tristate "STMicroelectronics LIS2MDL/LSM303AH/LSM303AGR/ISM303DAC/IIS2MDC sensor"
-	depends on (I2C || SPI) && SYSFS
+	depends on (I2C || SPI_MASTER) && SYSFS
 	select IIO_BUFFER
 	select IIO_TRIGGERED_BUFFER
 	select ST_MAG40_I2C_IIO if (I2C)
-	select ST_MAG40_SPI_IIO if (SPI)
+	select ST_MAG40_SPI_IIO if (SPI_MASTER)
 	help
 	 Say yes here to build support for STMicroelectronics magnetometers:
 	 LIS2MDL, LSM303AH, LSM303AGR, ISM303DAC, IIS2MDC.
@@ -16,10 +16,12 @@ config ST_MAG40_IIO
 
 config ST_MAG40_I2C_IIO
 	tristate
+	select REGMAP_I2C
 	depends on ST_MAG40_IIO
 	depends on I2C
 
 config ST_MAG40_SPI_IIO
 	tristate
+	select REGMAP_SPI
 	depends on ST_MAG40_IIO
 	depends on SPI

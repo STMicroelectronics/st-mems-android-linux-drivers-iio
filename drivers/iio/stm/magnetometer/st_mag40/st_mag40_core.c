@@ -108,30 +108,17 @@ static const struct iio_chan_spec st_mag40_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
-int st_mag40_write_register(struct st_mag40_data *cdata, u8 reg_addr,
-			    u8 mask, u8 data)
+int st_mag40_write_register(struct st_mag40_data *cdata, unsigned int reg_addr,
+			    unsigned int mask, unsigned int val)
 {
-	int err;
-	u8 val;
+	unsigned int data = ST_MAG40_SHIFT_VAL(val, mask);
+	int ret;
 
 	mutex_lock(&cdata->lock);
-
-	err = cdata->tf->read(cdata, reg_addr, sizeof(val), &val);
-	if (err < 0) {
-		dev_err(cdata->dev, "failed to read %02x register\n", reg_addr);
-		goto unlock;
-	}
-
-	val = ((val & ~mask) | ((data << __ffs(mask)) & mask));
-
-	err = cdata->tf->write(cdata, reg_addr, sizeof(val), &val);
-	if (err < 0)
-		dev_err(cdata->dev, "failed to write %02x register\n", reg_addr);
-
-unlock:
+	ret = regmap_update_bits(cdata->regmap, reg_addr, mask, data);
 	mutex_unlock(&cdata->lock);
 
-	return err < 0 ? err : 0;
+	return ret < 0 ? ret : 0;
 }
 
 static int st_mag40_write_odr(struct st_mag40_data *cdata, uint32_t odr)
@@ -272,7 +259,8 @@ static int st_mag40_read_oneshot(struct st_mag40_data *cdata,
 
 	msleep(40);
 
-	err = cdata->tf->read(cdata, addr, sizeof(data), data);
+	err = regmap_bulk_read(cdata->regmap, addr,
+			       (void *)data, sizeof(data));
 	if (err < 0)
 		return err;
 
@@ -363,8 +351,9 @@ static ssize_t st_mag40_perform_selftest(struct device *dev,
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
+	u8 val, data[ST_MAG40_OUT_LEN];
 	int i, err, try_count = 0;
-	u8 val, status, data[ST_MAG40_OUT_LEN];
+	unsigned int status;
 	u16 previous_odr;
 	s16 avg_acc_x = 0, avg_acc_y = 0, avg_acc_z = 0;
 	s16 avg_st_acc_x = 0, avg_st_acc_y = 0, avg_st_acc_z = 0;
@@ -409,8 +398,8 @@ static ssize_t st_mag40_perform_selftest(struct device *dev,
 			status = 0;
 			/* wait 10 ms */
 			usleep_range(10000, 10000+100);
-			err = cdata->tf->read(cdata, ST_MAG40_STATUS_ADDR,
-				sizeof(status), &status);
+			err = regmap_read(cdata->regmap, ST_MAG40_STATUS_ADDR,
+					  &status);
 			if (err < 0) {
 				cdata->st_status = ST_MAG40_ST_ERROR;
 				goto disable_sensor;
@@ -418,8 +407,10 @@ static ssize_t st_mag40_perform_selftest(struct device *dev,
 
 			if (status & ST_MAG40_STATUS_ZYXDA_MASK) {
 
-				err = cdata->tf->read(cdata, ST_MAG40_OUTX_L_ADDR,
-						sizeof(data), data);
+				err = regmap_bulk_read(cdata->regmap,
+						       ST_MAG40_OUTX_L_ADDR,
+						       (void *)data,
+						       sizeof(data));
 				if (err < 0) {
 					cdata->st_status = ST_MAG40_ST_ERROR;
 					goto disable_selftest;
@@ -459,8 +450,8 @@ static ssize_t st_mag40_perform_selftest(struct device *dev,
 			status = 0;
 			/* wait 10 ms */
 			usleep_range(10000, 10000+100);
-			err = cdata->tf->read(cdata, ST_MAG40_STATUS_ADDR,
-				sizeof(status), &status);
+			err = regmap_read(cdata->regmap, ST_MAG40_STATUS_ADDR,
+					  &status);
 			if (err < 0) {
 				cdata->st_status = ST_MAG40_ST_ERROR;
 				status = 0;
@@ -468,8 +459,10 @@ static ssize_t st_mag40_perform_selftest(struct device *dev,
 
 			if (status & ST_MAG40_STATUS_ZYXDA_MASK) {
 
-				err = cdata->tf->read(cdata, ST_MAG40_OUTX_L_ADDR,
-						sizeof(data), data);
+				err = regmap_bulk_read(cdata->regmap,
+						       ST_MAG40_OUTX_L_ADDR,
+						       (void *)data,
+						       sizeof(data));
 				if (err < 0)  {
 					cdata->st_status = ST_MAG40_ST_ERROR;
 					if (try_count > 1)
@@ -566,14 +559,13 @@ static void st_mag40_get_properties(struct st_mag40_data *cdata)
 int st_mag40_common_probe(struct iio_dev *iio_dev)
 {
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
+	unsigned int wai;
 	int32_t err;
-	u8 wai;
 
 	mutex_init(&cdata->lock);
 	mutex_init(&cdata->flush_lock);
 
-	err = cdata->tf->read(cdata, ST_MAG40_WHO_AM_I_ADDR,
-			      sizeof(wai), &wai);
+	err = regmap_read(cdata->regmap, ST_MAG40_WHO_AM_I_ADDR, &wai);
 	if (err < 0) {
 		dev_err(cdata->dev, "failed to read Who-Am-I register.\n");
 

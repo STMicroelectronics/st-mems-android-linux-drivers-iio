@@ -15,66 +15,32 @@
 
 #include "st_mag40_core.h"
 
-#define I2C_AUTO_INCREMENT	0x80
-
-static int st_mag40_i2c_read(struct st_mag40_data *cdata, u8 reg_addr,
-			     int len, u8 * data)
-{
-	struct i2c_client *client = to_i2c_client(cdata->dev);
-	struct i2c_msg msg[2];
-
-	if (len > 1)
-		reg_addr |= I2C_AUTO_INCREMENT;
-
-	msg[0].addr = client->addr;
-	msg[0].flags = client->flags;
-	msg[0].len = 1;
-	msg[0].buf = &reg_addr;
-
-	msg[1].addr = client->addr;
-	msg[1].flags = client->flags | I2C_M_RD;
-	msg[1].len = len;
-	msg[1].buf = data;
-
-	return i2c_transfer(client->adapter, msg, 2);
-}
-
-static int st_mag40_i2c_write(struct st_mag40_data *cdata, u8 reg_addr,
-			      int len, u8 * data)
-{
-	struct i2c_client *client = to_i2c_client(cdata->dev);
-	struct i2c_msg msg;
-	u8 send[4];
-
-	if (len >= ARRAY_SIZE(send))
-		return -ENOMEM;
-
-	send[0] = reg_addr;
-	memcpy(&send[1], data, len * sizeof(u8));
-	len++;
-
-	msg.addr = client->addr;
-	msg.flags = client->flags;
-	msg.len = len;
-	msg.buf = send;
-
-	return i2c_transfer(client->adapter, &msg, 1);
-}
-
-static const struct st_mag40_transfer_function st_mag40_tf_i2c = {
-	.write = st_mag40_i2c_write,
-	.read = st_mag40_i2c_read,
+static const struct regmap_config st_mag40_i2c_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 #if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
 static int st_mag40_i2c_probe(struct i2c_client *client)
+{
 #else /* LINUX_VERSION_CODE */
 static int st_mag40_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
-#endif /* LINUX_VERSION_CODE */
 {
+#endif /* LINUX_VERSION_CODE */
+
 	struct st_mag40_data *cdata;
 	struct iio_dev *iio_dev;
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_i2c(client, &st_mag40_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+
+		return PTR_ERR(regmap);
+	}
 
 	iio_dev = devm_iio_device_alloc(&client->dev, sizeof(*cdata));
 	if (!iio_dev)
@@ -87,7 +53,7 @@ static int st_mag40_i2c_probe(struct i2c_client *client,
 	cdata = iio_priv(iio_dev);
 	cdata->dev = &client->dev;
 	cdata->name = client->name;
-	cdata->tf = &st_mag40_tf_i2c;
+	cdata->regmap = regmap;
 	cdata->irq = client->irq;
 
 	return st_mag40_common_probe(iio_dev);
