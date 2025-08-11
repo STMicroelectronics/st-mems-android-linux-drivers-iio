@@ -1778,6 +1778,7 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	int ret, test;
 	u32 gain;
+	u32 odr, uodr;
 
 	if (id != ST_ASM330LHHX_ID_ACC &&
 	    id != ST_ASM330LHHX_ID_GYRO)
@@ -1816,11 +1817,14 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 	}
 
 	gain = sensor->gain;
+	odr = sensor->odr;
+	uodr = sensor->uodr;
 	if (id == ST_ASM330LHHX_ID_ACC) {
 		/* set BDU = 1, FS = 4 g, ODR = 52 Hz */
 		st_asm330lhhx_set_full_scale(sensor,
 					    ST_ASM330LHHX_ACC_FS_4G_GAIN);
-		st_asm330lhhx_set_odr(sensor, false, 52, 0);
+		sensor->odr = 52;
+		sensor->uodr = 0;
 		st_asm330lhhx_selftest_sensor(sensor, test);
 
 		/* restore full scale after test */
@@ -1832,12 +1836,17 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 		/* before enable gyro add 150 ms delay when gyro self-test */
 		usleep_range(150000, 151000);
 
-		st_asm330lhhx_set_odr(sensor, false, 208, 0);
+		sensor->odr = 208;
+		sensor->uodr = 0;
 		st_asm330lhhx_selftest_sensor(sensor, test);
 
 		/* restore full scale after test */
 		st_asm330lhhx_set_full_scale(sensor, gain);
 	}
+
+	sensor->gain = gain;
+	sensor->odr = odr;
+	sensor->uodr = uodr;
 
 restore_regs:
 	st_asm330lhhx_restore_regs(hw);
