@@ -81,6 +81,11 @@ Optional properties for all bus drivers:
 
 - wakeup-source:  https://www.kernel.org/doc/Documentation/devicetree/bindings/power/wakeup-source.txt
 
+- st,leave_gyro_on: This property disables the gyroscope shutdown even if it is
+                    not used by any client. This allows for a shorter turn-on
+                    time, speeding up the sensor's power-on operations.
+                    As a consequence, there may be increased power consumption.
+
 Example for an spi asm330lhh device node:
 
 asm330lhh-imu@0 {

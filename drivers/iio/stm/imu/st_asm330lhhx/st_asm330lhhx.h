@@ -822,6 +822,8 @@ struct st_asm330lhhx_sensor {
  * @sixD_threshold: 6D threshold in mg.
  * @wakeup_source: Flag for wakeup source.
  * @wakeup_status: Last wake-up status.
+ * @leave_gyro_on: Flag to leave gyro on even if in power down for turn-on time
+ *                 reducing.
  */
 struct st_asm330lhhx_hw {
 	struct device *dev;
@@ -893,6 +895,7 @@ struct st_asm330lhhx_hw {
 
 	bool wakeup_source;
 	u32 wakeup_status;
+	bool leave_gyro_on;
 };
 
 /**

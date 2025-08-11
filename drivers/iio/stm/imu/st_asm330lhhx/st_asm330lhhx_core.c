@@ -1223,7 +1223,17 @@ int st_asm330lhhx_set_odr(struct st_asm330lhhx_sensor *sensor, bool is_event,
 		}
 		break;
 	}
-	case ST_ASM330LHHX_ID_GYRO:
+	case ST_ASM330LHHX_ID_GYRO: {
+		bool power_off = ((req_hw_odr == 0) &&
+				  (req_hw_uodr == 0)) ? true : false;
+
+		/*
+		 * skip odr setting in case gyro in power down and leave_gyro_on
+		 * true for reduce the turn-on time required by the gyroscope
+		 */
+		if (hw->leave_gyro_on && power_off)
+			return 0;
+		}
 		break;
 	default:
 		return 0;
@@ -2370,6 +2380,9 @@ static void st_asm330lhhx_get_properties(struct st_asm330lhhx_hw *hw)
 
 	if (device_property_read_bool(hw->dev, "wakeup-source"))
 		hw->wakeup_source = true;
+
+	if (device_property_read_bool(hw->dev, "st,leave_gyro_on"))
+		hw->leave_gyro_on = true;
 }
 
 static void st_asm330lhhx_disable_regulator_action(void *_data)
