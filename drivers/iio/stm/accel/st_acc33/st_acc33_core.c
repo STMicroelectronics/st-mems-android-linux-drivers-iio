@@ -131,35 +131,17 @@ static const struct iio_chan_spec st_acc33_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
-int st_acc33_write_with_mask(struct st_acc33_hw *hw, u8 addr, u8 mask,
-			     u8 val)
+int st_acc33_write_with_mask(struct st_acc33_hw *hw, unsigned int addr,
+			     unsigned int mask, unsigned int val)
 {
-	u8 data;
-	int err;
+	unsigned int data = ST_ACC33_SHIFT_VAL(val, mask);
+	int ret;
 
 	mutex_lock(&hw->lock);
-
-	err = hw->tf->read(hw->dev, addr, 1, &data);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to read %02x register\n", addr);
-		mutex_unlock(&hw->lock);
-
-		return err;
-	}
-
-	data = (data & ~mask) | ((val << __ffs(mask)) & mask);
-
-	err = hw->tf->write(hw->dev, addr, 1, &data);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to write %02x register\n", addr);
-		mutex_unlock(&hw->lock);
-
-		return err;
-	}
-
+	ret = regmap_update_bits(hw->regmap, addr, mask, data);
 	mutex_unlock(&hw->lock);
 
-	return 0;
+	return ret;
 }
 
 static int st_acc33_get_odr_val(u16 odr, u8 *val)
@@ -260,8 +242,8 @@ static int st_acc33_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW: {
-		u8 data[2];
 		int err, delay;
+		u8 data[2];
 
 		err = iio_device_claim_direct_mode(iio_dev);
 		if (err)
@@ -277,7 +259,8 @@ static int st_acc33_read_raw(struct iio_dev *iio_dev,
 		delay = 3000000 / hw->odr;
 		usleep_range(delay, delay + 1);
 
-		err = hw->tf->read(hw->dev, ch->address, 2, data);
+		ret = regmap_bulk_read(hw->regmap, ch->address,
+				       (void *)&data, 2);
 		if (err < 0) {
 			iio_device_release_direct_mode(iio_dev);
 			return err;
@@ -402,9 +385,9 @@ static __maybe_unused int st_acc33_reg_access(struct iio_dev *iio_dev,
 		return ret;
 
 	if (readval == NULL)
-		ret = hw->tf->write(hw->dev, reg, 1, (u8 *)&writeval);
+		ret = regmap_write(hw->regmap, reg, writeval);
 	else
-		ret = hw->tf->read(hw->dev, reg, 1, (u8 *)readval);
+		ret = regmap_read(hw->regmap, reg, readval);
 
 	iio_device_release_direct_mode(iio_dev);
 
@@ -453,10 +436,10 @@ static const struct iio_info st_acc33_info = {
 
 static int st_acc33_check_whoami(struct st_acc33_hw *hw)
 {
-	u8 data;
+	unsigned int data;
 	int err;
 
-	err = hw->tf->read(hw->dev, REG_WHOAMI_ADDR, 1, &data);
+	err = regmap_read(hw->regmap, REG_WHOAMI_ADDR, &data);
 	if (err < 0) {
 		dev_err(hw->dev, "failed to read whoami register\n");
 		return err;
@@ -503,18 +486,15 @@ static int st_acc33_init_interface(struct st_acc33_hw *hw)
 {
 	struct device_node *np = hw->dev->of_node;
 
-	if (np && of_find_property(np, "spi-3wire", NULL)) {
-		u8 data = 0x1;
+	if (np && of_find_property(np, "spi-3wire", NULL))
+		return regmap_write(hw->regmap, REG_CTRL4_ADDR,
+				    REG_CTRL4_SIM_MASK);
 
-		return hw->tf->write(hw->dev, REG_CTRL4_ADDR,
-				     sizeof(data), &data);
-	} else {
-		return 0;
-	}
+	return 0;
 }
 
 int st_acc33_probe(struct device *device, int irq, const char *name,
-		   const struct st_acc33_transfer_function *tf_ops)
+		   struct regmap *regmap)
 {
 	struct st_acc33_hw *hw;
 	struct iio_dev *iio_dev;
@@ -541,7 +521,7 @@ int st_acc33_probe(struct device *device, int irq, const char *name,
 	hw->odr = st_acc33_odr_table[1].hz;
 	hw->watermark = 1;
 	hw->dev = device;
-	hw->tf = tf_ops;
+	hw->regmap = regmap;
 	hw->name = name;
 	hw->irq = irq;
 	hw->iio_dev = iio_dev;

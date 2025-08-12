@@ -21,8 +21,10 @@ config IIO_ST_ACC33
 
 config IIO_ST_ACC33_I2C
 	tristate
+	select REGMAP_I2C
 	depends on IIO_ST_ACC33
 
 config IIO_ST_ACC33_SPI
 	tristate
+	select REGMAP_SPI
 	depends on IIO_ST_ACC33

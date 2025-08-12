@@ -16,66 +16,35 @@
 
 #include "st_acc33.h"
 
-#define I2C_AUTO_INCREMENT	BIT(7)
+#define ST_ACC33_AUTO_INCREMENT		BIT(7)
 
-static int st_acc33_i2c_read(struct device *dev, u8 addr, int len, u8 *data)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct i2c_msg msg[2];
-
-	if (len > 1)
-		addr |= I2C_AUTO_INCREMENT;
-
-	msg[0].addr = client->addr;
-	msg[0].flags = client->flags;
-	msg[0].len = 1;
-	msg[0].buf = &addr;
-
-	msg[1].addr = client->addr;
-	msg[1].flags = client->flags | I2C_M_RD;
-	msg[1].len = len;
-	msg[1].buf = data;
-
-	return i2c_transfer(client->adapter, msg, 2);
-}
-
-static int st_acc33_i2c_write(struct device *dev, u8 addr, int len, u8 *data)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct i2c_msg msg;
-	u8 send[4];
-
-	if (len >= ARRAY_SIZE(send))
-		return -ENOMEM;
-
-	if (len > 1)
-		addr |= I2C_AUTO_INCREMENT;
-
-	send[0] = addr;
-	memcpy(&send[1], data, len * sizeof(u8));
-
-	msg.addr = client->addr;
-	msg.flags = client->flags;
-	msg.len = len + 1;
-	msg.buf = send;
-
-	return i2c_transfer(client->adapter, &msg, 1);
-}
-
-static const struct st_acc33_transfer_function st_acc33_transfer_fn = {
-	.read = st_acc33_i2c_read,
-	.write = st_acc33_i2c_write,
+static const struct regmap_config st_acc33_i2c_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
+	.write_flag_mask = ST_ACC33_AUTO_INCREMENT,
+	.read_flag_mask = ST_ACC33_AUTO_INCREMENT,
 };
 
 #if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
 static int st_acc33_i2c_probe(struct i2c_client *client)
+{
 #else /* LINUX_VERSION_CODE */
 static int st_acc33_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
-#endif /* LINUX_VERSION_CODE */
 {
-	return st_acc33_probe(&client->dev, client->irq, client->name,
-			      &st_acc33_transfer_fn);
+#endif /* LINUX_VERSION_CODE */
+
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_i2c(client, &st_acc33_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+		return PTR_ERR(regmap);
+	}
+
+	return st_acc33_probe(&client->dev, client->irq, client->name, regmap);
 }
 
 static const struct of_device_id st_acc33_i2c_of_match[] = {

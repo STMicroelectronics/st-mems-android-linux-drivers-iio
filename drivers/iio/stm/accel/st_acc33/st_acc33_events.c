@@ -194,9 +194,9 @@ int st_acc33_write_event_config(struct iio_dev *iio_dev,
 				int enable)
 {
 	struct st_acc33_hw *hw = iio_priv(iio_dev);
+	unsigned int int_val;
 	int req_odr = 0;
 	int id = -1;
-	u8 int_val;
 	int err;
 
 	if (chan->type == IIO_ACCEL) {
@@ -228,15 +228,15 @@ int st_acc33_write_event_config(struct iio_dev *iio_dev,
 
 #ifdef ST_ACC33_ENABLE_HPF
 				if (!hw->enable) {
-					u8 data;
+					unsigned int data;
 
 					/*
 					 * high-pass filter enabled on
 					 * interrupt activity
 					 */
-					err = hw->tf->read(hw->dev,
-							   REG_CTRL2_ADDR, 1,
-							   &data);
+					err = regmap_read(hw->regmap,
+							  REG_CTRL2_ADDR,
+							  &data);
 					if (err < 0)
 						return err;
 
@@ -247,9 +247,9 @@ int st_acc33_write_event_config(struct iio_dev *iio_dev,
 						data &= ~(REG_CTRL2_FDS_MASK |
 							  REG_CTRL2_HPIS1_MASK);
 
-					err = hw->tf->write(hw->dev,
-							    REG_CTRL2_ADDR, 1,
-							    &data);
+					err = regmap_write(hw->regmap,
+							   REG_CTRL2_ADDR,
+							   data);
 					if (err < 0)
 						return err;
 					}
@@ -280,7 +280,7 @@ int st_acc33_write_event_config(struct iio_dev *iio_dev,
 		return err;
 
 	/* configure interrupt generation */
-	err = hw->tf->write(hw->dev, REG_INT1_CFG_ADDR, 1, &int_val);
+	err = regmap_write(hw->regmap, REG_INT1_CFG_ADDR, int_val);
 	if (err < 0)
 		return err;
 
@@ -412,14 +412,14 @@ int st_acc33_write_event_value(struct iio_dev *iio_dev,
 
 int st_acc33_event_handler(struct st_acc33_hw *hw)
 {
-	u8 int_src;
+	unsigned int int_src;
 	s64 event;
 	int err;
 
 	if (!st_acc33_events_enabled(hw))
 		return IRQ_HANDLED;
 
-	err = hw->tf->read(hw->dev, REG_INT1_SRC_ADDR, 1, &int_src);
+	err = regmap_read(hw->regmap, REG_INT1_SRC_ADDR, &int_src);
 	if (err < 0) {
 		dev_err(hw->dev, "failed to read INT1_SRC register\n");
 

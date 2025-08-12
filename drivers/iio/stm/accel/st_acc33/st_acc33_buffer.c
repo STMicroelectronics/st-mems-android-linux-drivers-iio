@@ -50,13 +50,14 @@ static int st_acc33_set_fifo_mode(struct st_acc33_hw *hw,
 static int st_acc33_read_fifo(struct st_acc33_hw *hw)
 {
 	u8 iio_buff[ALIGN(ST_ACC33_DATA_SIZE, sizeof(s64)) + sizeof(s64)];
-	u8 buff[ST_ACC33_RX_MAX_LENGTH], data, nsamples;
+	u8 buff[ST_ACC33_RX_MAX_LENGTH], nsamples;
 	struct iio_dev *iio_dev = hw->iio_dev;
 	struct iio_chan_spec const *ch = iio_dev->channels;
 	int i, err, word_len, fifo_len, read_len = 0;
+	unsigned int data;
 	s64 delta_ts;
 
-	err = hw->tf->read(hw->dev, REG_FIFO_SRC_ADDR, sizeof(data), &data);
+	err = regmap_read(hw->regmap, REG_FIFO_SRC_ADDR, &data);
 	if (err < 0)
 		return err;
 
@@ -69,7 +70,8 @@ static int st_acc33_read_fifo(struct st_acc33_hw *hw)
 
 	while (read_len < fifo_len) {
 		word_len = min_t(int, fifo_len - read_len, sizeof(buff));
-		err = hw->tf->read(hw->dev, ch[0].address, word_len, buff);
+		err = regmap_bulk_read(hw->regmap, ch[0].address,
+				       (void *)buff, word_len);
 		if (err < 0)
 			return err;
 

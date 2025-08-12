@@ -11,6 +11,7 @@
 #define ST_ACC33_H
 
 #include <linux/iio/iio.h>
+#include <linux/regmap.h>
 #include <linux/version.h>
 
 #include "../../common/stm_iio_types.h"
@@ -40,6 +41,7 @@
 #define REG_CTRL4_ADDR			0x23
 #define REG_CTRL4_BDU_MASK		BIT(7)
 #define REG_CTRL4_FS_MASK		GENMASK(5, 4)
+#define REG_CTRL4_SIM_MASK		BIT(0)
 
 #define REG_CTRL5_ACC_ADDR		0x24
 #define REG_CTRL5_ACC_LIR_INT1_MASK	BIT(3)
@@ -77,8 +79,9 @@
 
 #define ST_ACC33_DATA_SIZE		6
 
-#define ST_ACC33_RX_MAX_LENGTH		96
-#define ST_ACC33_TX_MAX_LENGTH		8
+#define ST_ACC33_RX_MAX_LENGTH         96
+
+#define ST_ACC33_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
 
 enum st_acc33_event_id {
 	ST_ACC33_EVENT_FF,
@@ -93,16 +96,6 @@ enum st_acc33_event_id {
 	ST_ACC33_EVENT_MAX
 };
 
-struct st_acc33_transfer_buffer {
-	u8 rx_buf[ST_ACC33_RX_MAX_LENGTH];
-	u8 tx_buf[ST_ACC33_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
-struct st_acc33_transfer_function {
-	int (*read)(struct device *dev, u8 addr, int len, u8 *data);
-	int (*write)(struct device *dev, u8 addr, int len, u8 *data);
-};
-
 enum st_acc33_fifo_mode {
 	ST_ACC33_FIFO_BYPASS = 0x0,
 	ST_ACC33_FIFO_STREAM = 0x2,
@@ -112,6 +105,7 @@ struct st_acc33_hw {
 	struct device *dev;
 	const char *name;
 	int irq;
+	struct regmap *regmap;
 
 	u32 module_id;
 
@@ -136,18 +130,15 @@ struct st_acc33_hw {
 	int duration_ms;
 
 	struct iio_dev *iio_dev;
-
-	const struct st_acc33_transfer_function *tf;
-	struct st_acc33_transfer_buffer tb;
 };
 
-int st_acc33_write_with_mask(struct st_acc33_hw *hw, u8 addr, u8 mask,
-			     u8 val);
+int st_acc33_write_with_mask(struct st_acc33_hw *hw, unsigned int addr,
+			     unsigned int mask, unsigned int val);
 int st_acc33_update_odr(struct st_acc33_hw *hw, u16 odr,
 			bool is_event, bool enable);
 int st_acc33_set_enable(struct st_acc33_hw *hw, bool enable);
 int st_acc33_probe(struct device *device, int irq, const char *name,
-		   const struct st_acc33_transfer_function *tf_ops);
+		   struct regmap *regmap);
 int st_acc33_fifo_setup(struct st_acc33_hw *hw);
 ssize_t st_acc33_flush_hwfifo(struct device *device,
 			      struct device_attribute *attr,
