@@ -13,6 +13,7 @@
 #include <linux/types.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/trigger.h>
+#include <linux/regmap.h>
 #include <linux/version.h>
 
 #include "../../common/stm_iio_types.h"
@@ -118,6 +119,8 @@
 
 #define LIS2HH12_DATA_SIZE			6
 
+#define LIS2HH12_SHIFT_VAL(val, mask)		(((val) << __ffs(mask)) & (mask))
+
 #define LIS2HH12_SELFTEST_MIN		1147
 #define LIS2HH12_SELFTEST_MAX		24590
 
@@ -164,22 +167,6 @@ enum lis2hh12_selftest_status {
 	LIS2HH12_ST_FAIL,
 };
 
-#define LIS2HH12_TX_MAX_LENGTH		12
-#define LIS2HH12_RX_MAX_LENGTH		8193
-
-struct lis2hh12_transfer_buffer {
-	struct mutex buf_lock;
-	u8 rx_buf[LIS2HH12_RX_MAX_LENGTH];
-	u8 tx_buf[LIS2HH12_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
-struct lis2hh12_data;
-
-struct lis2hh12_transfer_function {
-	int (*write)(struct lis2hh12_data *cdata, u8 reg_addr, int len, u8 *data);
-	int (*read)(struct lis2hh12_data *cdata, u8 reg_addr, int len, u8 *data);
-};
-
 struct lis2hh12_sensor_data {
 	struct lis2hh12_data *cdata;
 	const char *name;
@@ -193,6 +180,8 @@ struct lis2hh12_sensor_data {
 
 struct lis2hh12_data {
 	const char *name;
+	struct mutex lock;
+	struct regmap *regmap;
 	u8 drdy_int_pin;
 	u8 enabled_sensor;
 	u8 hwfifo_enabled;
@@ -208,8 +197,6 @@ struct lis2hh12_data {
 	struct device *dev;
 	struct iio_dev *iio_sensors_dev[LIS2HH12_SENSORS_NUMB];
 	struct iio_trigger *iio_trig[LIS2HH12_SENSORS_NUMB];
-	const struct lis2hh12_transfer_function *tf;
-	struct lis2hh12_transfer_buffer tb;
 };
 
 static inline int lis2hh12_iio_dev_currentmode(struct iio_dev *indio_dev)

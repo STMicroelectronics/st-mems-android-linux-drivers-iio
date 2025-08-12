@@ -27,12 +27,14 @@ static irqreturn_t lis2hh12_irq_management(int irq, void *private)
 			    iio_get_time_ns(cdata->iio_sensors_dev[LIS2HH12_ACCEL]);
 
 	if (cdata->hwfifo_enabled) {
-		cdata->tf->read(cdata, LIS2HH12_FIFO_STATUS_ADDR, 1, &status);
+		lis2hh12_read_register(cdata, LIS2HH12_FIFO_STATUS_ADDR,
+				       1, &status);
 
 		if (status & LIS2HH12_FIFO_SRC_FTH_MASK)
 			lis2hh12_read_fifo(cdata, true);
 	} else {
-		cdata->tf->read(cdata, LIS2HH12_STATUS_ADDR, 1, &status);
+		lis2hh12_read_register(cdata, LIS2HH12_STATUS_ADDR,
+				       1, &status);
 
 		if (status & LIS2HH12_DATA_XYZ_RDY)
 			lis2hh12_read_xyz(cdata);

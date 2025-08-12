@@ -154,27 +154,30 @@ struct lis2hh12_selftest_req {
 	{ "negative-sign", 0x2 },
 };
 
-inline int lis2hh12_read_register(struct lis2hh12_data *cdata, u8 reg_addr, int data_len,
-							u8 *data)
+inline int lis2hh12_read_register(struct lis2hh12_data *cdata, u8 reg_addr,
+				  int data_len, u8 *data)
 {
-	return cdata->tf->read(cdata, reg_addr, data_len, data);
+	int ret;
+
+	mutex_lock(&cdata->lock);
+	ret = regmap_bulk_read(cdata->regmap, reg_addr, (void *)data, data_len);
+	mutex_unlock(&cdata->lock);
+
+	return ret;
 }
 
-static int lis2hh12_write_register(struct lis2hh12_data *cdata, u8 reg_addr,
-							u8 mask, u8 data)
+static int lis2hh12_write_register(struct lis2hh12_data *cdata,
+				   unsigned int reg_addr, unsigned int mask,
+				   unsigned int val)
 {
-	int err;
-	u8 new_data = 0x00, old_data = 0x00;
+	unsigned int data = LIS2HH12_SHIFT_VAL(val, mask);
+	int ret;
 
-	err = lis2hh12_read_register(cdata, reg_addr, 1, &old_data);
-	if (err < 0)
-		return err;
+	mutex_lock(&cdata->lock);
+	ret = regmap_update_bits(cdata->regmap, reg_addr, mask, data);
+	mutex_unlock(&cdata->lock);
 
-	new_data = ((old_data & (~mask)) | ((data << __ffs(mask)) & mask));
-	if (new_data == old_data)
-		return 1;
-
-	return cdata->tf->write(cdata, reg_addr, 1, &new_data);
+	return ret;
 }
 
 int lis2hh12_set_fifo_mode(struct lis2hh12_data *cdata, enum fifo_mode fm)
@@ -1049,7 +1052,7 @@ int lis2hh12_common_probe(struct lis2hh12_data *cdata, int irq)
 	struct iio_dev *piio_dev;
 	struct lis2hh12_sensor_data *sdata;
 
-	mutex_init(&cdata->tb.buf_lock);
+	mutex_init(&cdata->lock);
 
 	cdata->fifo_data = 0;
 	cdata->hwfifo_enabled = 0;
