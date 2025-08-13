@@ -5,6 +5,7 @@ config IIO_ST_LIS3DHH
 	depends on SPI_MASTER && SYSFS
 	select IIO_BUFFER
 	select IIO_KFIFO_BUF
+	select REGMAP_SPI
 	help
 	 Say yes here to build support for STMicroelectronics LIS3DHH and
 	 IIS3DHHC accelerometers

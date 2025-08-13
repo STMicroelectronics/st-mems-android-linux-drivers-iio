@@ -10,7 +10,6 @@
 #ifndef ST_LIS3DHH_H
 #define ST_LIS3DHH_H
 
-
 #include <linux/iio/iio.h>
 
 #include "../../common/stm_iio_types.h"
@@ -21,14 +20,10 @@
 
 #define ST_LIS3DHH_ODR			1100
 
-struct st_lis3dhh_transfer_buffer {
-	u8 rx_buf[ST_LIS3DHH_RX_MAX_LENGTH];
-	u8 tx_buf[ST_LIS3DHH_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
 struct st_lis3dhh_hw {
 	struct device *dev;
 	const char *name;
+	struct regmap *regmap;
 	int irq;
 
 	struct mutex fifo_lock;
@@ -39,11 +34,10 @@ struct st_lis3dhh_hw {
 	s64 ts_irq;
 	s64 ts;
 	struct iio_dev *iio_dev;
-	struct st_lis3dhh_transfer_buffer tb;
 };
 
-int st_lis3dhh_write_with_mask(struct st_lis3dhh_hw *hw, u8 addr, u8 mask,
-			       u8 val);
+int st_lis3dhh_write_with_mask(struct st_lis3dhh_hw *hw, unsigned int addr,
+			       unsigned int mask, unsigned int val);
  int st_lis3dhh_spi_read(struct st_lis3dhh_hw *hw, u8 addr, int len, u8 *data);
 int st_lis3dhh_set_enable(struct st_lis3dhh_hw *hw, bool enable);
 int st_lis3dhh_fifo_setup(struct st_lis3dhh_hw *hw);

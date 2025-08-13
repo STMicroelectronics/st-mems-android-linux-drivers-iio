@@ -15,6 +15,7 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/of.h>
+#include <linux/regmap.h>
 #include <linux/spi/spi.h>
 #include <linux/version.h>
 
@@ -44,6 +45,8 @@
 #define REG_INT_FTM_MASK		BIT(3)
 
 #define ST_LIS3DHH_FS			IIO_G_TO_M_S_2(76)
+
+#define ST_LIS3DHH_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
 
 #define ST_LIS3DHH_DATA_CHANNEL(addr, modx, scan_idx)		\
 {								\
@@ -85,78 +88,34 @@ static const struct iio_chan_spec st_lis3dhh_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
-#define SENSORS_SPI_READ	BIT(7)
- int st_lis3dhh_spi_read(struct st_lis3dhh_hw *hw, u8 addr, int len, u8 *data)
+static const struct regmap_config st_lis3dhh_spi_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
+};
+
+int st_lis3dhh_spi_read(struct st_lis3dhh_hw *hw, u8 addr, int len, u8 *data)
 {
-	struct spi_device *spi = to_spi_device(hw->dev);
 	int err;
 
-	struct spi_transfer xfers[] = {
-		{
-			.tx_buf = hw->tb.tx_buf,
-			.bits_per_word = 8,
-			.len = 1,
-		},
-		{
-			.rx_buf = hw->tb.rx_buf,
-			.bits_per_word = 8,
-			.len = len,
-		}
-	};
-
-	hw->tb.tx_buf[0] = addr | SENSORS_SPI_READ;
-	err = spi_sync_transfer(spi, xfers,  ARRAY_SIZE(xfers));
-	if (err < 0)
-		return err;
-
-	memcpy(data, hw->tb.rx_buf, len * sizeof(u8));
-
-	return len;
-}
-
-static int st_lis3dhh_spi_write(struct st_lis3dhh_hw *hw, u8 addr,
-				int len, u8 *data)
-{
-	struct spi_device *spi = to_spi_device(hw->dev);
-
-	if (len >= ST_LIS3DHH_TX_MAX_LENGTH)
+	if (len >= ST_LIS3DHH_RX_MAX_LENGTH)
 		return -ENOMEM;
 
-	hw->tb.tx_buf[0] = addr;
-	memcpy(&hw->tb.tx_buf[1], data, len);
+	err = regmap_bulk_read(hw->regmap, addr, (void *)data, len);
 
-	return spi_write(spi, hw->tb.tx_buf, len + 1);
+	return err < 0 ? err : len;
 }
 
-int st_lis3dhh_write_with_mask(struct st_lis3dhh_hw *hw, u8 addr, u8 mask,
-			       u8 val)
+int st_lis3dhh_write_with_mask(struct st_lis3dhh_hw *hw, unsigned int addr,
+			       unsigned int mask, unsigned int val)
 {
-	u8 data;
-	int err;
+	unsigned int data = ST_LIS3DHH_SHIFT_VAL(val, mask);
+	int ret;
 
 	mutex_lock(&hw->lock);
-
-	err = st_lis3dhh_spi_read(hw, addr, 1, &data);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to read %02x register\n", addr);
-		mutex_unlock(&hw->lock);
-
-		return err;
-	}
-
-	data = (data & ~mask) | ((val << __ffs(mask)) & mask);
-
-	err = st_lis3dhh_spi_write(hw, addr, 1, &data);
-	if (err < 0) {
-		dev_err(hw->dev, "failed to write %02x register\n", addr);
-		mutex_unlock(&hw->lock);
-
-		return err;
-	}
-
+	ret = regmap_update_bits(hw->regmap, addr, mask, data);
 	mutex_unlock(&hw->lock);
 
-	return 0;
+	return ret;
 }
 
 int st_lis3dhh_set_enable(struct st_lis3dhh_hw *hw, bool enable)
@@ -361,6 +320,7 @@ static int st_lis3dhh_spi_probe(struct spi_device *spi)
 {
 	struct st_lis3dhh_hw *hw;
 	struct iio_dev *iio_dev;
+	struct regmap *regmap;
 	int err;
 
 	iio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*hw));
@@ -369,11 +329,18 @@ static int st_lis3dhh_spi_probe(struct spi_device *spi)
 
 	spi_set_drvdata(spi, iio_dev);
 
+	regmap = devm_regmap_init_spi(spi, &st_lis3dhh_spi_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
+			(int)PTR_ERR(regmap));
+
+		return PTR_ERR(regmap);
+	}
+
 	iio_dev->channels = st_lis3dhh_channels;
 	iio_dev->num_channels = ARRAY_SIZE(st_lis3dhh_channels);
 	iio_dev->modes = INDIO_DIRECT_MODE;
 	iio_dev->info = &st_lis3dhh_info;
-	iio_dev->dev.parent = &spi->dev;
 	iio_dev->name = spi->modalias;
 
 	hw = iio_priv(iio_dev);
@@ -386,6 +353,7 @@ static int st_lis3dhh_spi_probe(struct spi_device *spi)
 	hw->name = spi->modalias;
 	hw->irq = spi->irq;
 	hw->iio_dev = iio_dev;
+	hw->regmap = regmap;
 
 	err = st_lis3dhh_check_whoami(hw);
 	if (err < 0)
