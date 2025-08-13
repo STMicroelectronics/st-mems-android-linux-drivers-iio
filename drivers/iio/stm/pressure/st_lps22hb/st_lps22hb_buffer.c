@@ -31,6 +31,8 @@
 #define ST_LPS22HB_FIFO_SAMPLE_LEN		(ST_LPS22HB_PRESS_SAMPLE_LEN + \
 						 ST_LPS22HB_TEMP_SAMPLE_LEN)
 
+#define ST_LPS22HB_RX_MAX_LENGTH		192
+
 static inline s64 st_lps22hb_get_time_ns(struct iio_dev *iio_dev)
 {
 	return iio_get_time_ns(iio_dev);
@@ -99,11 +101,11 @@ ssize_t st_lps22hb_sysfs_set_hwfifo_watermark(struct device * dev,
 static int st_lps22hb_read_fifo(struct st_lps22hb_hw *hw)
 {
 	u8 iio_buff[ALIGN(sizeof(u32) + sizeof(s64), sizeof(s64))];
-	u8 status, buff[ST_LPS22HB_RX_MAX_LENGTH];
+	u8 buff[ST_LPS22HB_RX_MAX_LENGTH];
 	int err, i, read_len;
+	unsigned int status;
 
-	err = hw->tf->read(hw->dev, ST_LPS22HB_FIFO_SRC_ADDR,
-			   sizeof(status), &status);
+	err = regmap_read(hw->regmap, ST_LPS22HB_FIFO_SRC_ADDR, &status);
 	if (err < 0)
 		return err;
 
@@ -112,8 +114,8 @@ static int st_lps22hb_read_fifo(struct st_lps22hb_hw *hw)
 	if (!read_len)
 		return 0;
 
-	err = hw->tf->read(hw->dev, ST_LPS22HB_PRESS_OUT_XL_ADDR,
-			   read_len, buff);
+	err = regmap_bulk_read(hw->regmap, ST_LPS22HB_PRESS_OUT_XL_ADDR,
+			       (void *)buff, read_len);
 	if (err < 0)
 		return err;
 

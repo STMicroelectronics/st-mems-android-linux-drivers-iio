@@ -13,8 +13,10 @@ config ST_LPS22HB_IIO
 
 config ST_LPS22HB_I2C_IIO
 	tristate
+	select REGMAP_I2C
 	depends on ST_LPS22HB_IIO
 
 config ST_LPS22HB_SPI_IIO
 	tristate
+	select REGMAP_SPI
 	depends on ST_LPS22HB_IIO

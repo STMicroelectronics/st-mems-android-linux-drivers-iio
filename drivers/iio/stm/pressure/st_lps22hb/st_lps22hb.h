@@ -10,10 +10,11 @@
 #ifndef __ST_LPS22HB_H
 #define __ST_LPS22HB_H
 
-#include <linux/module.h>
-#include <linux/types.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/trigger.h>
+#include <linux/module.h>
+#include <linux/regmap.h>
+#include <linux/types.h>
 
 #include "../../common/stm_iio_types.h"
 
@@ -32,22 +33,10 @@ enum st_lps22hb_fifo_mode {
 	ST_LPS22HB_STREAM = 0x6,
 };
 
-#define ST_LPS22HB_TX_MAX_LENGTH		8
-#define ST_LPS22HB_RX_MAX_LENGTH		192
-
-struct st_lps22hb_transfer_buffer {
-	u8 rx_buf[ST_LPS22HB_RX_MAX_LENGTH];
-	u8 tx_buf[ST_LPS22HB_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
-struct st_lps22hb_transfer_function {
-	int (*write)(struct device *dev, u8 addr, int len, u8 *data);
-	int (*read)(struct device *dev, u8 addr, int len, u8 *data);
-};
-
 struct st_lps22hb_hw {
 	struct device *dev;
 	int irq;
+	struct regmap *regmap;
 
 	struct mutex fifo_lock;
 	struct mutex lock;
@@ -60,9 +49,6 @@ struct st_lps22hb_hw {
 	s64 delta_ts;
 	s64 ts_irq;
 	s64 ts;
-
-	const struct st_lps22hb_transfer_function *tf;
-	struct st_lps22hb_transfer_buffer tb;
 };
 
 struct st_lps22hb_sensor {
@@ -75,9 +61,9 @@ struct st_lps22hb_sensor {
 };
 
 int st_lps22hb_common_probe(struct device *dev, int irq, const char *name,
-			    const struct st_lps22hb_transfer_function *tf_ops);
-int st_lps22hb_write_with_mask(struct st_lps22hb_hw *hw, u8 addr, u8 mask,
-			       u8 data);
+			    struct regmap *regmap);
+int st_lps22hb_write_with_mask(struct st_lps22hb_hw *hw, unsigned int addr,
+			       unsigned int mask, unsigned int val);
 int st_lps22hb_allocate_buffers(struct st_lps22hb_hw *hw);
 int st_lps22hb_set_enable(struct st_lps22hb_sensor *sensor, bool enable);
 ssize_t st_lps22hb_sysfs_set_hwfifo_watermark(struct device * dev,
