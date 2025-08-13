@@ -886,12 +886,81 @@ static ssize_t lis2ds12_get_scale_avail(struct device *dev,
 	return len;
 }
 
+static int lis2ds12_enable_for_raw_reading(struct lis2ds12_sensor_data *sdata,
+					   bool enable)
+{
+	u8 power_mode = sdata->cdata->power_mode;
+	unsigned int val = 0;
+	int i, err;
+
+	if (enable) {
+		for (i = 0; i < LIS2DS12_ODR_LP_LIST_NUM; i++) {
+			if (lis2ds12_odr_table.odr_avl[power_mode][i].hz >=
+								     sdata->odr)
+				break;
+		}
+
+		if (i == LIS2DS12_ODR_LP_LIST_NUM)
+			return -EINVAL;
+
+		val = lis2ds12_odr_table.odr_avl[power_mode][i].value;
+		sdata->cdata->std_level =
+			    lis2ds12_odr_table.odr_avl[power_mode][i].std_level;
+	} else {
+		val = 0;
+	}
+
+	err = lis2ds12_write_with_mask(sdata->cdata, lis2ds12_odr_table.addr,
+				       lis2ds12_odr_table.mask, val, true);
+
+	return err < 0 ? err : 0;
+}
+
+static int lis2ds12_read_oneshot(struct lis2ds12_sensor_data *sdata,
+				 struct iio_chan_spec const *ch, int *val)
+{
+	u8 outdata[2];
+	int axis_data;
+	int i = 0;
+	int err;
+
+	err = lis2ds12_enable_for_raw_reading(sdata, true);
+	if (err < 0)
+		return -EBUSY;
+
+	do {
+		u8 status;
+
+		/* wait at least one odr before reading */
+		usleep_range(1000000 / sdata->odr, 1100000 / sdata->odr);
+
+		err = lis2ds12_read(sdata->cdata, LIS2DS12_STATUS_ADDR, 1,
+				    &status, true);
+
+		if (!(status & LIS2DS12_DRDY_MASK))
+			continue;
+
+		err = lis2ds12_read(sdata->cdata, ch->address, 2,
+				    outdata, true);
+		if (err < 0)
+			return err;
+
+		if (sdata->cdata->std_level-- > 0)
+			continue;
+	} while (i++ < 3);
+
+	axis_data = (s16)get_unaligned_le16(outdata);
+	axis_data = axis_data >> ch->scan_type.shift;
+	*val = axis_data;
+
+	return lis2ds12_enable_for_raw_reading(sdata, false);
+}
+
 static int lis2ds12_read_raw(struct iio_dev *indio_dev,
 			     struct iio_chan_spec const *ch, int *val,
 			     int *val2, long mask)
 {
 	int err;
-	u8 outdata[2];
 	struct lis2ds12_sensor_data *sdata = iio_priv(indio_dev);
 
 	switch (mask) {
@@ -900,32 +969,14 @@ static int lis2ds12_read_raw(struct iio_dev *indio_dev,
 		if (err)
 			return err;
 
-		if (lis2ds12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
+		if (lis2ds12_iio_dev_currentmode(indio_dev) ==
+						       INDIO_BUFFER_TRIGGERED) {
 			iio_device_release_direct_mode(indio_dev);
 			return -EBUSY;
 		}
 
-		err = lis2ds12_set_enable(sdata, true);
-		if (err < 0) {
-			iio_device_release_direct_mode(indio_dev);
-			return -EBUSY;
-		}
-
-		msleep(40);
-
-		err = lis2ds12_read(sdata->cdata, ch->address, 2,
-				    outdata, true);
-		if (err < 0) {
-			iio_device_release_direct_mode(indio_dev);
-			return err;
-		}
-
-		*val = (s16)get_unaligned_le16(outdata);
-		*val = *val >> ch->scan_type.shift;
-
-		err = lis2ds12_set_enable(sdata, false);
+		err = lis2ds12_read_oneshot(sdata, ch, val);
 		iio_device_release_direct_mode(indio_dev);
-
 		if (err < 0)
 			return err;
 
