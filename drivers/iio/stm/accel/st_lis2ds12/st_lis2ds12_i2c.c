@@ -15,80 +15,30 @@
 
 #include "st_lis2ds12.h"
 
-static int lis2ds12_i2c_read(struct lis2ds12_data *cdata,
-			     u8 reg_addr, int len,
-			     u8 *data, bool b_lock)
-{
-	int err = 0;
-	struct i2c_msg msg[2];
-	struct i2c_client *client = to_i2c_client(cdata->dev);
-
-	msg[0].addr = client->addr;
-	msg[0].flags = client->flags;
-	msg[0].len = 1;
-	msg[0].buf = &reg_addr;
-
-	msg[1].addr = client->addr;
-	msg[1].flags = client->flags | I2C_M_RD;
-	msg[1].len = len;
-	msg[1].buf = data;
-
-	if (b_lock) {
-		mutex_lock(&cdata->regs_lock);
-		err = i2c_transfer(client->adapter, msg, 2);
-		mutex_unlock(&cdata->regs_lock);
-	} else {
-		err = i2c_transfer(client->adapter, msg, 2);
-	}
-
-	return err;
-}
-
-static int lis2ds12_i2c_write(struct lis2ds12_data *cdata,
-			      u8 reg_addr, int len,
-			      u8 *data, bool b_lock)
-{
-	struct i2c_client *client = to_i2c_client(cdata->dev);
-	struct i2c_msg msg;
-	int err;
-
-	if (len >= LIS2DS12_TX_MAX_LENGTH)
-		return -ENOMEM;
-
-	msg.addr = client->addr;
-	msg.flags = client->flags;
-	msg.len = len + 1;
-	msg.buf = cdata->tb.tx_buf;
-
-	if (b_lock)
-		mutex_lock(&cdata->regs_lock);
-
-	mutex_lock(&cdata->tb.buf_lock);
-	cdata->tb.tx_buf[0] = reg_addr;
-	memcpy(&cdata->tb.tx_buf[1], data, len);
-
-	err = i2c_transfer(client->adapter, &msg, 1);
-	mutex_unlock(&cdata->tb.buf_lock);
-
-	if (b_lock)
-		mutex_unlock(&cdata->regs_lock);
-
-	return err;
-}
-
-static const struct lis2ds12_transfer_function lis2ds12_tf_i2c = {
-	.write = lis2ds12_i2c_write,
-	.read = lis2ds12_i2c_read,
+static const struct regmap_config st_lis2ds12_i2c_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 #if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
 static int lis2ds12_i2c_probe(struct i2c_client *client)
+{
 #else /* LINUX_VERSION_CODE */
 static int lis2ds12_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
-#endif /* LINUX_VERSION_CODE */
 {
+#endif /* LINUX_VERSION_CODE */
+
 	struct lis2ds12_data *cdata;
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_i2c(client, &st_lis2ds12_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+		return PTR_ERR(regmap);
+	}
 
 	cdata = devm_kzalloc(&client->dev, sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
@@ -96,7 +46,7 @@ static int lis2ds12_i2c_probe(struct i2c_client *client,
 
 	cdata->dev = &client->dev;
 	cdata->name = client->name;
-	cdata->tf = &lis2ds12_tf_i2c;
+	cdata->regmap = regmap;
 	i2c_set_clientdata(client, cdata);
 
 	return lis2ds12_common_probe(cdata, client->irq);

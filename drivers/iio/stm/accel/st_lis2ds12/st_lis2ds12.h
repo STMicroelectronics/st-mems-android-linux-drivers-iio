@@ -10,11 +10,12 @@
 #ifndef __LIS2DS12_H
 #define __LIS2DS12_H
 
-#include <linux/types.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/trigger.h>
-#include <linux/version.h>
 #include <linux/platform_data/st_sensors_pdata.h>
+#include <linux/regmap.h>
+#include <linux/types.h>
+#include <linux/version.h>
 
 #include "../../common/stm_iio_types.h"
 
@@ -209,6 +210,8 @@
 #define RESET_BIT(a, b)				{a &= ~(1 << b);}
 #define CHECK_BIT(a, b)				(a & (1 << b))
 
+#define ST_LIS2DS12_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
+
 enum {
 	LIS2DS12_ACCEL = 0,
 	LIS2DS12_STEP_C,
@@ -269,13 +272,6 @@ struct lis2ds12_transfer_buffer {
 
 struct lis2ds12_data;
 
-struct lis2ds12_transfer_function {
-	int (*write)(struct lis2ds12_data *cdata, u8 reg_addr, int len,
-		     u8 *data, bool b_lock);
-	int (*read)(struct lis2ds12_data *cdata, u8 reg_addr, int len,
-		    u8 *data, bool b_lock);
-};
-
 struct lis2ds12_sensor_data {
 	struct lis2ds12_data *cdata;
 	const char *name;
@@ -310,8 +306,7 @@ struct lis2ds12_data {
 	struct iio_dev *iio_sensors_dev[LIS2DS12_SENSORS_NUMB];
 	struct iio_trigger *iio_trig[LIS2DS12_SENSORS_NUMB];
 	struct mutex regs_lock;
-	const struct lis2ds12_transfer_function *tf;
-	struct lis2ds12_transfer_buffer tb;
+	struct regmap *regmap;
 };
 
 static inline s64 lis2ds12_get_time_ns(struct lis2ds12_data *cdata)
@@ -341,6 +336,63 @@ static bool __maybe_unused lis2ds12_skip_basic_features(int i)
 #endif /* CONFIG_IIO_ST_LIS2DS12_EN_BASIC_FEATURES */
 
 	return false;
+}
+
+static inline int lis2ds12_read(struct lis2ds12_data *cdata, u8 addr,
+				int len, u8 *data, bool b_lock)
+{
+	int err;
+
+	if (len >= LIS2DS12_RX_MAX_LENGTH)
+		return -ENOMEM;
+
+	if (b_lock)
+		mutex_lock(&cdata->regs_lock);
+
+	err = regmap_bulk_read(cdata->regmap, addr, (void *)data, len);
+	if (b_lock)
+		mutex_unlock(&cdata->regs_lock);
+
+	return err < 0 ? err : len;
+}
+
+static inline int lis2ds12_write(struct lis2ds12_data *cdata, u8 addr,
+				 int len, u8 *data, bool b_lock)
+{
+	int err;
+
+	if (len >= LIS2DS12_TX_MAX_LENGTH)
+		return -ENOMEM;
+
+	if (b_lock)
+		mutex_lock(&cdata->regs_lock);
+
+	err = regmap_bulk_write(cdata->regmap, addr, (void *)data, len);
+
+	if (b_lock)
+		mutex_unlock(&cdata->regs_lock);
+
+	return err < 0 ? err : len;
+}
+
+static inline int lis2ds12_write_with_mask(struct lis2ds12_data *cdata,
+					   unsigned int addr,
+					   unsigned int  mask,
+					   unsigned int val,
+					   bool b_lock)
+{
+	unsigned int data = ST_LIS2DS12_SHIFT_VAL(val, mask);
+	int ret;
+
+	if (b_lock)
+		mutex_lock(&cdata->regs_lock);
+
+	ret = regmap_update_bits(cdata->regmap, addr, mask, data);
+
+	if (b_lock)
+		mutex_unlock(&cdata->regs_lock);
+
+	return ret;
 }
 
 int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq);

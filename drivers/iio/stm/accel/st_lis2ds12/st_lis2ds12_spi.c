@@ -14,90 +14,23 @@
 
 #include "st_lis2ds12.h"
 
-#define ST_SENSORS_SPI_READ			0x80
-
-static int lis2ds12_spi_read(struct lis2ds12_data *cdata,
-			     u8 reg_addr, int len, u8 *data, bool b_lock)
-{
-	int err;
-
-	struct spi_transfer xfers[] = {
-		{
-			.tx_buf = cdata->tb.tx_buf,
-			.bits_per_word = 8,
-			.len = 1,
-		},
-		{
-			.rx_buf = cdata->tb.rx_buf,
-			.bits_per_word = 8,
-			.len = len,
-		}
-	};
-
-	if (b_lock)
-		mutex_lock(&cdata->regs_lock);
-
-	mutex_lock(&cdata->tb.buf_lock);
-	cdata->tb.tx_buf[0] = reg_addr | ST_SENSORS_SPI_READ;
-
-	err = spi_sync_transfer(to_spi_device(cdata->dev),
-				xfers, ARRAY_SIZE(xfers));
-	if (err)
-		goto acc_spi_read_error;
-
-	memcpy(data, cdata->tb.rx_buf, len*sizeof(u8));
-	mutex_unlock(&cdata->tb.buf_lock);
-	if (b_lock)
-		mutex_unlock(&cdata->regs_lock);
-
-	return len;
-
-acc_spi_read_error:
-	mutex_unlock(&cdata->tb.buf_lock);
-	if (b_lock)
-		mutex_unlock(&cdata->regs_lock);
-
-	return err;
-}
-
-static int lis2ds12_spi_write(struct lis2ds12_data *cdata,
-			      u8 reg_addr, int len, u8 *data, bool b_lock)
-{
-	int err;
-
-	struct spi_transfer xfers = {
-		.tx_buf = cdata->tb.tx_buf,
-		.bits_per_word = 8,
-		.len = len + 1,
-	};
-
-	if (len >= LIS2DS12_TX_MAX_LENGTH)
-		return -ENOMEM;
-
-	if (b_lock)
-		mutex_lock(&cdata->regs_lock);
-
-	mutex_lock(&cdata->tb.buf_lock);
-	cdata->tb.tx_buf[0] = reg_addr;
-
-	memcpy(&cdata->tb.tx_buf[1], data, len);
-
-	err = spi_sync_transfer(to_spi_device(cdata->dev), &xfers, 1);
-	mutex_unlock(&cdata->tb.buf_lock);
-	if (b_lock)
-		mutex_unlock(&cdata->regs_lock);
-
-	return err;
-}
-
-static const struct lis2ds12_transfer_function lis2ds12_tf_spi = {
-	.write = lis2ds12_spi_write,
-	.read = lis2ds12_spi_read,
+static const struct regmap_config st_lis2ds12_spi_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 static int lis2ds12_spi_probe(struct spi_device *spi)
 {
 	struct lis2ds12_data *cdata;
+	struct regmap *regmap;
+
+	regmap = devm_regmap_init_spi(spi, &st_lis2ds12_spi_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
+			(int)PTR_ERR(regmap));
+
+		return PTR_ERR(regmap);
+	}
 
 	cdata = devm_kzalloc(&spi->dev, sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
@@ -105,7 +38,7 @@ static int lis2ds12_spi_probe(struct spi_device *spi)
 
 	cdata->dev = &spi->dev;
 	cdata->name = spi->modalias;
-	cdata->tf = &lis2ds12_tf_spi;
+	cdata->regmap = regmap;
 	spi_set_drvdata(spi, cdata);
 
 	return lis2ds12_common_probe(cdata, spi->irq);

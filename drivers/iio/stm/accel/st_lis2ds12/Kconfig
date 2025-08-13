@@ -6,18 +6,20 @@ config IIO_ST_LIS2DS12
 	select IIO_BUFFER
 	select IIO_TRIGGERED_BUFFER
 	select IIO_ST_LIS2DS12_I2C if (I2C)
-	select IIO_ST_LIS2DS12_SPI if (SPI)
+	select IIO_ST_LIS2DS12_SPI if (SPI_MASTER)
 	help
 	 Say yes here to build support for the LIS2DS12
 	 accelerometer.
 
 config IIO_ST_LIS2DS12_I2C
 	tristate
+	select REGMAP_I2C
 	depends on IIO_ST_LIS2DS12
 	depends on I2C
 
 config IIO_ST_LIS2DS12_SPI
 	tristate
+	select REGMAP_SPI
 	depends on IIO_ST_LIS2DS12
 	depends on SPI
 

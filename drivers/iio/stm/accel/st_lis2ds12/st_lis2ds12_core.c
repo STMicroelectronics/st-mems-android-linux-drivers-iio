@@ -326,50 +326,28 @@ static const struct {
 	},
 };
 
-int lis2ds12_read_register(struct lis2ds12_data *cdata, u8 reg_addr,
-			   int data_len, u8 *data, bool b_lock)
-{
-	return cdata->tf->read(cdata, reg_addr, data_len, data, b_lock);
-}
-
-static int lis2ds12_write_register(struct lis2ds12_data *cdata, u8 reg_addr,
-				   u8 mask, u8 data, bool b_lock)
-{
-	int err;
-	u8 new_data = 0x00, old_data = 0x00;
-
-	err = lis2ds12_read_register(cdata, reg_addr, 1, &old_data, b_lock);
-	if (err < 0)
-		return err;
-
-	new_data = ((old_data & (~mask)) | ((data << __ffs(mask)) & mask));
-	if (new_data == old_data)
-		return 1;
-
-	return cdata->tf->write(cdata, reg_addr, 1, &new_data, b_lock);
-}
-
 static int lis2ds12_write_advanced_cfg_regs(struct lis2ds12_data *cdata,
-					    u8 reg_addr, u8 *data, int len)
+					    unsigned int addr, u8 *data,
+					    int len)
 {
 	int err = 0, err2 = 0;
 	int count = 0;
 
 	mutex_lock(&cdata->regs_lock);
 
-	err = lis2ds12_write_register(cdata, LIS2DS12_FUNC_CFG_ENTER_ADDR,
-				      LIS2DS12_FUNC_CFG_EN_MASK,
-				      LIS2DS12_EN_BIT, false);
+	err = lis2ds12_write_with_mask(cdata, LIS2DS12_FUNC_CFG_ENTER_ADDR,
+				       LIS2DS12_FUNC_CFG_EN_MASK,
+				       LIS2DS12_EN_BIT, false);
 	if (err < 0)
 		goto lis2ds12_write_advanced_cfg_regs_mutex_unlock;
 
-	err = cdata->tf->write(cdata, reg_addr, len, data, false);
+	err = lis2ds12_write(cdata, addr, len, (void *)data, false);
 	if (err < 0)
 		goto lis2ds12_write_advanced_cfg_regs_switch_bank_regs;
 
-	err = lis2ds12_write_register(cdata, LIS2DS12_FUNC_CFG_EXIT_ADDR,
-				      LIS2DS12_FUNC_CFG_EN_MASK,
-				      LIS2DS12_DIS_BIT, false);
+	err = lis2ds12_write_with_mask(cdata, LIS2DS12_FUNC_CFG_EXIT_ADDR,
+				       LIS2DS12_FUNC_CFG_EN_MASK,
+				       LIS2DS12_DIS_BIT, false);
 	if (err < 0)
 		goto lis2ds12_write_advanced_cfg_regs_switch_bank_regs;
 
@@ -380,10 +358,10 @@ static int lis2ds12_write_advanced_cfg_regs(struct lis2ds12_data *cdata,
 lis2ds12_write_advanced_cfg_regs_switch_bank_regs:
 	do {
 		msleep(200);
-		err2 = lis2ds12_write_register(cdata,
-					       LIS2DS12_FUNC_CFG_EXIT_ADDR,
-					       LIS2DS12_FUNC_CFG_EN_MASK,
-					       LIS2DS12_DIS_BIT, false);
+		err2 = lis2ds12_write_with_mask(cdata,
+						LIS2DS12_FUNC_CFG_EXIT_ADDR,
+						LIS2DS12_FUNC_CFG_EN_MASK,
+						LIS2DS12_DIS_BIT, false);
 	} while (err2 < 0 && count++ < 10);
 
 lis2ds12_write_advanced_cfg_regs_mutex_unlock:
@@ -407,9 +385,9 @@ static int lis2ds12_set_fifo_mode(struct lis2ds12_data *cdata, enum fifo_mode fm
 		return -EINVAL;
 	}
 
-	return lis2ds12_write_register(cdata, LIS2DS12_FIFO_MODE_ADDR,
-				       LIS2DS12_FIFO_MODE_MASK, reg_value,
-				       true);
+	return lis2ds12_write_with_mask(cdata, LIS2DS12_FIFO_MODE_ADDR,
+					LIS2DS12_FIFO_MODE_MASK, reg_value,
+					true);
 }
 
 static int lis2ds12_update_event_functions(struct lis2ds12_data *cdata)
@@ -426,11 +404,11 @@ static int lis2ds12_update_event_functions(struct lis2ds12_data *cdata)
 	    (CHECK_BIT(cdata->enabled_sensor, LIS2DS12_STEP_C)))
 		reg_val |= LIS2DS12_FUNC_CTRL_STEP_CNT_MASK;
 
-	return lis2ds12_write_register(cdata,
-				LIS2DS12_FUNC_CTRL_ADDR,
-				LIS2DS12_FUNC_CTRL_EV_MASK,
-				reg_val >> __ffs(LIS2DS12_FUNC_CTRL_EV_MASK),
-				true);
+	return lis2ds12_write_with_mask(cdata,
+				   LIS2DS12_FUNC_CTRL_ADDR,
+				   LIS2DS12_FUNC_CTRL_EV_MASK,
+				   reg_val >> __ffs(LIS2DS12_FUNC_CTRL_EV_MASK),
+				   true);
 }
 
 static int lis2ds12_set_fs(struct lis2ds12_sensor_data *sdata, unsigned int fs)
@@ -445,10 +423,10 @@ static int lis2ds12_set_fs(struct lis2ds12_sensor_data *sdata, unsigned int fs)
 	if (i == LIS2DS12_FS_LIST_NUM)
 		return -EINVAL;
 
-	err = lis2ds12_write_register(sdata->cdata,
-				      lis2ds12_fs_table.addr,
-				      lis2ds12_fs_table.mask,
-				      lis2ds12_fs_table.fs_avl[i].value, true);
+	err = lis2ds12_write_with_mask(sdata->cdata,
+				       lis2ds12_fs_table.addr,
+				       lis2ds12_fs_table.mask,
+				       lis2ds12_fs_table.fs_avl[i].value, true);
 	if (err < 0)
 		return err;
 
@@ -460,7 +438,7 @@ static int lis2ds12_set_fs(struct lis2ds12_sensor_data *sdata, unsigned int fs)
 static int lis2ds12_set_selftest_mode(struct lis2ds12_sensor_data *sdata,
 								u8 index)
 {
-	return lis2ds12_write_register(sdata->cdata, LIS2DS12_SELFTEST_ADDR,
+	return lis2ds12_write_with_mask(sdata->cdata, LIS2DS12_SELFTEST_ADDR,
 				LIS2DS12_SELFTEST_MASK,
 				lis2ds12_selftest_table[index].streg_val, true);
 }
@@ -521,7 +499,7 @@ static int lis2ds12_write_max_odr(struct lis2ds12_sensor_data *sdata)
 	if (i == LIS2DS12_ODR_LP_LIST_NUM)
 		return -EINVAL;
 
-	err = lis2ds12_write_register(sdata->cdata,
+	err = lis2ds12_write_with_mask(sdata->cdata,
 			lis2ds12_odr_table.addr,
 			lis2ds12_odr_table.mask,
 			lis2ds12_odr_table.odr_avl[power_mode][i].value, true);
@@ -589,8 +567,8 @@ int lis2ds12_update_drdy_irq(struct lis2ds12_sensor_data *sdata, bool state)
 		return -EINVAL;
 	}
 
-	return lis2ds12_write_register(sdata->cdata, reg_addr, reg_mask,
-				       reg_val, true);
+	return lis2ds12_write_with_mask(sdata->cdata, reg_addr, reg_mask,
+					reg_val, true);
 }
 EXPORT_SYMBOL(lis2ds12_update_drdy_irq);
 
@@ -603,9 +581,9 @@ int lis2ds12_update_fifo(struct lis2ds12_data *cdata, u16 watermark)
 	cdata->sample_timestamp = cdata->timestamp;
 	cdata->samples = 0;
 
-	err = lis2ds12_write_register(cdata, LIS2DS12_FIFO_THS_ADDR,
-				      LIS2DS12_FIFO_THS_MASK,
-				      watermark, true);
+	err = lis2ds12_write_with_mask(cdata, LIS2DS12_FIFO_THS_ADDR,
+				       LIS2DS12_FIFO_THS_MASK,
+				       watermark, true);
 	if (err < 0)
 		return err;
 
@@ -739,17 +717,16 @@ static int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	/*
 	 * Soft reset the device on power on.
 	 */
-	err = lis2ds12_write_register(cdata, LIS2DS12_SOFT_RESET_ADDR,
-				      LIS2DS12_SOFT_RESET_MASK,
-				      LIS2DS12_EN_BIT, true);
+	err = lis2ds12_write_with_mask(cdata, LIS2DS12_SOFT_RESET_ADDR,
+				       LIS2DS12_SOFT_RESET_MASK,
+				       LIS2DS12_EN_BIT, true);
 	if (err < 0)
 		return err;
 
 	if (cdata->spi_3wire) {
 		u8 data = LIS2DS12_ADD_INC_MASK | LIS2DS12_SIM_MASK;
 
-		err = cdata->tf->write(cdata, LIS2DS12_SIM_ADDR, 1, &data,
-				       false);
+		err = lis2ds12_write(cdata, LIS2DS12_SIM_ADDR, 1, &data, false);
 		if (err < 0)
 			return err;
 	}
@@ -757,72 +734,72 @@ static int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	/*
 	 * Enable latched interrupt mode.
 	 */
-	err = lis2ds12_write_register(cdata, LIS2DS12_LIR_ADDR,
-				      LIS2DS12_LIR_MASK,
-				      LIS2DS12_EN_BIT, true);
+	err = lis2ds12_write_with_mask(cdata, LIS2DS12_LIR_ADDR,
+				       LIS2DS12_LIR_MASK,
+				       LIS2DS12_EN_BIT, true);
 	if (err < 0)
 		return err;
 
 	/*
 	 * Enable block data update feature.
 	 */
-	err = lis2ds12_write_register(cdata, LIS2DS12_BDU_ADDR,
-				      LIS2DS12_BDU_MASK,
-				      LIS2DS12_EN_BIT, true);
+	err = lis2ds12_write_with_mask(cdata, LIS2DS12_BDU_ADDR,
+				       LIS2DS12_BDU_MASK,
+				       LIS2DS12_EN_BIT, true);
 	if (err < 0)
 		return err;
 
 	/*
 	 * Route interrupt from INT2 to INT1 pin.
 	 */
-	err = lis2ds12_write_register(cdata, LIS2DS12_INT2_ON_INT1_ADDR,
-				      LIS2DS12_INT2_ON_INT1_MASK,
-				      LIS2DS12_EN_BIT, true);
+	err = lis2ds12_write_with_mask(cdata, LIS2DS12_INT2_ON_INT1_ADDR,
+				       LIS2DS12_INT2_ON_INT1_MASK,
+				       LIS2DS12_EN_BIT, true);
 	if (err < 0)
 		return err;
 
 	/*
 	 * Configure default free fall event threshold.
 	 */
-	err = lis2ds12_write_register(sdata->cdata, LIS2DS12_FREE_FALL_ADDR,
-				LIS2DS12_FREE_FALL_THS_MASK,
-				LIS2DS12_FREE_FALL_THS_DEFAULT, true);
+	err = lis2ds12_write_with_mask(sdata->cdata, LIS2DS12_FREE_FALL_ADDR,
+				       LIS2DS12_FREE_FALL_THS_MASK,
+				       LIS2DS12_FREE_FALL_THS_DEFAULT, true);
 	if (err < 0)
 		return err;
 
 	/*
 	 * Configure default free fall event duration.
 	 */
-	err = lis2ds12_write_register(sdata->cdata, LIS2DS12_FREE_FALL_ADDR,
-				      LIS2DS12_FREE_FALL_DUR_MASK,
-				      LIS2DS12_FREE_FALL_DUR_DEFAULT, true);
+	err = lis2ds12_write_with_mask(sdata->cdata, LIS2DS12_FREE_FALL_ADDR,
+				       LIS2DS12_FREE_FALL_DUR_MASK,
+				       LIS2DS12_FREE_FALL_DUR_DEFAULT, true);
 	if (err < 0)
 		return err;
 
 	/*
 	 * Configure Tap event recognition on all direction (X, Y and Z axes).
 	 */
-	err = lis2ds12_write_register(sdata->cdata, LIS2DS12_TAP_AXIS_ADDR,
-				      LIS2DS12_TAP_AXIS_MASK,
-				      LIS2DS12_TAP_AXIS_ANABLE_ALL, true);
+	err = lis2ds12_write_with_mask(sdata->cdata, LIS2DS12_TAP_AXIS_ADDR,
+				       LIS2DS12_TAP_AXIS_MASK,
+				       LIS2DS12_TAP_AXIS_ANABLE_ALL, true);
 	if (err < 0)
 		return err;
 
 	/*
 	 * Configure default threshold for Tap event recognition.
 	 */
-	err = lis2ds12_write_register(sdata->cdata, LIS2DS12_TAP_THS_ADDR,
-				      LIS2DS12_TAP_THS_MASK,
-				      LIS2DS12_TAP_THS_DEFAULT, true);
+	err = lis2ds12_write_with_mask(sdata->cdata, LIS2DS12_TAP_THS_ADDR,
+				       LIS2DS12_TAP_THS_MASK,
+				       LIS2DS12_TAP_THS_DEFAULT, true);
 	if (err < 0)
 		return err;
 
 	/*
 	 * Configure default threshold for Wake Up event recognition.
 	 */
-	err = lis2ds12_write_register(sdata->cdata, LIS2DS12_WAKE_UP_THS_ADDR,
-				      LIS2DS12_WAKE_UP_THS_WU_MASK,
-				      LIS2DS12_WAKE_UP_THS_WU_DEFAULT, true);
+	err = lis2ds12_write_with_mask(sdata->cdata, LIS2DS12_WAKE_UP_THS_ADDR,
+				       LIS2DS12_WAKE_UP_THS_WU_MASK,
+				       LIS2DS12_WAKE_UP_THS_WU_DEFAULT, true);
 	if (err < 0)
 		return err;
 
@@ -936,8 +913,8 @@ static int lis2ds12_read_raw(struct iio_dev *indio_dev,
 
 		msleep(40);
 
-		err = lis2ds12_read_register(sdata->cdata, ch->address, 2,
-					     outdata, true);
+		err = lis2ds12_read(sdata->cdata, ch->address, 2,
+				    outdata, true);
 		if (err < 0) {
 			iio_device_release_direct_mode(indio_dev);
 			return err;
@@ -1142,10 +1119,10 @@ static ssize_t lis2ds12_reset_step_counter(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lis2ds12_sensor_data *sdata = iio_priv(indio_dev);
 
-	return lis2ds12_write_register(sdata->cdata,
-				       LIS2DS12_STEP_C_MINTHS_ADDR,
-				       LIS2DS12_STEP_C_MINTHS_RST_NSTEP_MASK,
-				       LIS2DS12_EN_BIT, true);
+	return lis2ds12_write_with_mask(sdata->cdata,
+					LIS2DS12_STEP_C_MINTHS_ADDR,
+					LIS2DS12_STEP_C_MINTHS_RST_NSTEP_MASK,
+					LIS2DS12_EN_BIT, true);
 }
 
 static ssize_t
@@ -1380,8 +1357,7 @@ static int lis2ds12_init_interface(struct lis2ds12_data *cdata)
 		int err;
 
 		data = LIS2DS12_ADD_INC_MASK | LIS2DS12_SIM_MASK;
-		err = cdata->tf->write(cdata, LIS2DS12_SIM_ADDR, 1, &data,
-				       false);
+		err = lis2ds12_write(cdata, LIS2DS12_SIM_ADDR, 1, &data, false);
 		if (err < 0)
 			return err;
 
@@ -1399,7 +1375,6 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 	struct lis2ds12_sensor_data *sdata;
 
 	mutex_init(&cdata->regs_lock);
-	mutex_init(&cdata->tb.buf_lock);
 	mutex_init(&cdata->fifo_lock);
 
 	cdata->fifo_data = 0;
@@ -1408,8 +1383,7 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 	if (err < 0)
 		return err;
 
-	err = lis2ds12_read_register(cdata, LIS2DS12_WHO_AM_I_ADDR, 1,
-				     &wai, true);
+	err = lis2ds12_read(cdata, LIS2DS12_WHO_AM_I_ADDR, 1, &wai, true);
 	if (err < 0) {
 		dev_err(cdata->dev, "failed to read Who-Am-I register.\n");
 

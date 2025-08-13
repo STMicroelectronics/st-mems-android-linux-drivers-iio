@@ -70,9 +70,9 @@ void lis2ds12_read_xyz(struct lis2ds12_data *cdata)
 	int err;
 	u8 xyz_buf[LIS2DS12_FIFO_BYTE_FOR_SAMPLE];
 
-	err = lis2ds12_read_register(cdata, LIS2DS12_OUTX_L_ADDR,
-				     LIS2DS12_FIFO_BYTE_FOR_SAMPLE,
-				     xyz_buf, true);
+	err = lis2ds12_read(cdata, LIS2DS12_OUTX_L_ADDR,
+			    LIS2DS12_FIFO_BYTE_FOR_SAMPLE,
+			    xyz_buf, true);
 	if (err < 0)
 		return;
 
@@ -89,8 +89,7 @@ void lis2ds12_read_fifo(struct lis2ds12_data *cdata, bool check_fifo_len)
 	u16 data_remaining, data_to_read, extra_bytes;
 #endif /* CONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO */
 
-	err = lis2ds12_read_register(cdata, LIS2DS12_FIFO_SRC, 2,
-				     fifo_src, true);
+	err = lis2ds12_read(cdata, LIS2DS12_FIFO_SRC, 2, fifo_src, true);
 	if (err < 0)
 		return;
 
@@ -102,8 +101,8 @@ void lis2ds12_read_fifo(struct lis2ds12_data *cdata, bool check_fifo_len)
 		return;
 
 #if (CONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO == 0)
-	err = lis2ds12_read_register(cdata, LIS2DS12_OUTX_L_ADDR, read_len,
-				     cdata->fifo_data, true);
+	err = lis2ds12_read(cdata, LIS2DS12_OUTX_L_ADDR, read_len,
+			    cdata->fifo_data, true);
 	if (err < 0)
 		return;
 #else /* CONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO */
@@ -123,11 +122,11 @@ void lis2ds12_read_fifo(struct lis2ds12_data *cdata, bool check_fifo_len)
 				data_to_read = LIS2DS12_FIFO_BYTE_FOR_SAMPLE;
 		}
 
-		err = lis2ds12_read_register(cdata, LIS2DS12_OUTX_L_ADDR,
-					     data_to_read,
-					     &cdata->fifo_data[read_len -
-							       data_remaining],
-					     true);
+		err = lis2ds12_read(cdata, LIS2DS12_OUTX_L_ADDR,
+				    data_to_read,
+				    &cdata->fifo_data[read_len -
+						      data_remaining],
+				    true);
 		if (err < 0)
 			return;
 
@@ -145,8 +144,8 @@ void lis2ds12_read_step_c(struct lis2ds12_data *cdata)
 	char buffer[LIS2DS12_STEP_C_BUFFER_SIZE];
 	struct iio_dev *indio_dev = cdata->iio_sensors_dev[LIS2DS12_STEP_C];
 
-	err = lis2ds12_read_register(cdata, (u8)indio_dev->channels[0].address,
-				     2, buffer, true);
+	err = lis2ds12_read(cdata, (u8)indio_dev->channels[0].address,
+			    2, buffer, true);
 	if (err < 0)
 		goto lis2ds12_step_counter_done;
 

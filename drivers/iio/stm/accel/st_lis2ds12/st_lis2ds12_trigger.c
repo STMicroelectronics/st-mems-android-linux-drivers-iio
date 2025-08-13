@@ -103,17 +103,17 @@ static irqreturn_t lis2ds12_irq_thread(int irq, void *private)
 		lis2ds12_read_fifo(cdata, true);
 		mutex_unlock(&cdata->fifo_lock);
 	} else {
-		cdata->tf->read(cdata, LIS2DS12_STATUS_DUP_ADDR, 1,
-				&status, true);
+		lis2ds12_read(cdata, LIS2DS12_STATUS_DUP_ADDR, 1,
+			      &status, true);
 		if (status & (LIS2DS12_DRDY_MASK))
 			lis2ds12_read_xyz(cdata);
 	}
 
 	if (cdata->enabled_sensor & ~(1 << LIS2DS12_ACCEL)) {
-		cdata->tf->read(cdata, LIS2DS12_FUNC_CK_GATE_ADDR, 1,
-				&func, true);
-		cdata->tf->read(cdata, LIS2DS12_STATUS_DUP_ADDR, 1,
-				&status, true);
+		lis2ds12_read(cdata, LIS2DS12_FUNC_CK_GATE_ADDR, 1,
+			      &func, true);
+		lis2ds12_read(cdata, LIS2DS12_STATUS_DUP_ADDR, 1,
+			      &status, true);
 		if (status & (LIS2DS12_EVENT_MASK | LIS2DS12_FUNC_CK_GATE_MASK))
 			lis2ds12_event_management(cdata, status, func);
 	}
