@@ -53,9 +53,6 @@
 
 #define ST_H3LIS331DL_SAMPLE_SIZE		6
 
-/* enable reading address with auto increment */
-#define ST_H3LIS331DL_AUTO_INCREMENT(_addr)	(0x80 | _addr)
-
 #define ST_H3LIS331DL_DATA_CHANNEL(chan_type, addr, mod, ch2, scan_idx,	\
 				rb, sb, sg, ex_info)			\
 {									\

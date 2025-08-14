@@ -120,7 +120,7 @@ static irqreturn_t st_h3lis331dl_buffer_pollfunc(int irq, void *private)
 	int addr = indio_dev->channels[0].address;
 	int err;
 
-	err = regmap_bulk_read(hw->regmap, ST_H3LIS331DL_AUTO_INCREMENT(addr),
+	err = regmap_bulk_read(hw->regmap, addr,
 			       &iio_buf, ST_H3LIS331DL_SAMPLE_SIZE);
 	if (err < 0)
 		goto out;

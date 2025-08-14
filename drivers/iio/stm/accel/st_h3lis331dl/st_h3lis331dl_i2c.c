@@ -16,9 +16,13 @@
 
 #include "st_h3lis331dl.h"
 
+#define ST_H3LIS331DL_AUTO_INCREMENT		BIT(7)
+
 static const struct regmap_config st_h3lis331dl_i2c_regmap_config = {
 	.reg_bits = 8,
 	.val_bits = 8,
+	.write_flag_mask = ST_H3LIS331DL_AUTO_INCREMENT,
+	.read_flag_mask = ST_H3LIS331DL_AUTO_INCREMENT,
 };
 
 #if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
