@@ -2747,16 +2747,6 @@ static int __maybe_unused st_asm330lhhx_resume(struct device *dev)
 
 		disable_irq_wake(hw->irq_emb);
 
-		/* clean wake-up source */
-		err = regmap_read(hw->regmap,
-				  ST_ASM330LHHX_REG_WAKE_UP_SRC_ADDR,
-				  &hw->wakeup_status);
-		if (err < 0)
-			return err;
-
-		/* unmask only bits: WU_IA, X_WU, Y_WU and Z_WU */
-		hw->wakeup_status &= ST_ASM330LHHX_WAKE_UP_EVENT_MASK;
-
 		if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND)) {
 			/* flush fifo data to user space */
 			st_asm330lhhx_flush_fifo_during_resume(hw);
