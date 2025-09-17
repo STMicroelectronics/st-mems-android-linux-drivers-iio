@@ -48,11 +48,6 @@ static const struct iio_chan_spec st_asm330lhhx_mlc_fsm_x_ch[] = {
 	ST_ASM330LHHX_EVENT_CHANNEL(IIO_ACTIVITY, thr),
 };
 
-static const unsigned long
-st_asm330lhhx_fsm_mlc_available_scan_masks[] = {
-	BIT(0), 0x0
-};
-
 /* remove old mlc/fsm configuration */
 static int st_asm330lhhx_mlc_purge_config(struct st_asm330lhhx_hw *hw)
 {
@@ -737,8 +732,6 @@ st_asm330lhhx_mlc_alloc_iio_dev(struct st_asm330lhhx_hw *hw,
 
 	switch (id) {
 	case ST_ASM330LHHX_ID_MLC:
-		iio_dev->available_scan_masks =
-			st_asm330lhhx_fsm_mlc_available_scan_masks;
 		iio_dev->channels = st_asm330lhhx_mlc_fsm_x_ch;
 		iio_dev->num_channels = ARRAY_SIZE(st_asm330lhhx_mlc_fsm_x_ch);
 		iio_dev->info = &st_asm330lhhx_mlc_event_info;
@@ -753,8 +746,6 @@ st_asm330lhhx_mlc_alloc_iio_dev(struct st_asm330lhhx_hw *hw,
 	case ST_ASM330LHHX_ID_MLC_5:
 	case ST_ASM330LHHX_ID_MLC_6:
 	case ST_ASM330LHHX_ID_MLC_7:
-		iio_dev->available_scan_masks =
-			st_asm330lhhx_fsm_mlc_available_scan_masks;
 		iio_dev->channels = st_asm330lhhx_mlc_fsm_x_ch;
 		iio_dev->num_channels = ARRAY_SIZE(st_asm330lhhx_mlc_fsm_x_ch);
 		iio_dev->info = &st_asm330lhhx_mlc_x_event_info;
@@ -784,8 +775,6 @@ st_asm330lhhx_mlc_alloc_iio_dev(struct st_asm330lhhx_hw *hw,
 	case ST_ASM330LHHX_ID_FSM_13:
 	case ST_ASM330LHHX_ID_FSM_14:
 	case ST_ASM330LHHX_ID_FSM_15:
-		iio_dev->available_scan_masks =
-			st_asm330lhhx_fsm_mlc_available_scan_masks;
 		iio_dev->channels = st_asm330lhhx_mlc_fsm_x_ch;
 		iio_dev->num_channels = ARRAY_SIZE(st_asm330lhhx_mlc_fsm_x_ch);
 		iio_dev->info = &st_asm330lhhx_mlc_x_event_info;
