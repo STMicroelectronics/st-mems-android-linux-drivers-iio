@@ -769,6 +769,7 @@ struct st_asm330lhhx_sensor {
  * @irq: Device interrupt line (I2C or SPI).
  * @irq_emb: Embedded function interrupt line).
  * @regmap: Register map of the device.
+ * @i3c: Flag to report if I3C device (for IBI).
  * @int_pin: Save interrupt pin used by sensor.
  * @emb_pin: Embedded function interrupt pin used by sensor.
  * @irq_edge: Flag for irq edge triggered type (rising/falling).
@@ -830,6 +831,7 @@ struct st_asm330lhhx_hw {
 	int irq;
 	int irq_emb;
 	struct regmap *regmap;
+	bool i3c;
 	int int_pin;
 	int emb_pin;
 	bool irq_edge;
@@ -1190,8 +1192,14 @@ u16 st_asm330lhhx_get_odr(struct st_asm330lhhx_hw *hw,
 	return ret;
 }
 
+static inline bool st_asm330lhhx_has_buffers(struct st_asm330lhhx_hw *hw)
+{
+	return (hw->has_hw_fifo || hw->i3c);
+}
+
 int st_asm330lhhx_probe(struct device *dev, int irq,
-			enum st_asm330lhhx_hw_id hw_id, struct regmap *regmap);
+			enum st_asm330lhhx_hw_id hw_id,
+			struct regmap *regmap, bool i3c);
 void st_asm330lhhx_remove(struct device *dev);
 int st_asm330lhhx_sensor_set_enable(struct st_asm330lhhx_sensor *sensor,
 				    bool enable);

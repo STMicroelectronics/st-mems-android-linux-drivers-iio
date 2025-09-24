@@ -34,7 +34,7 @@ static int st_asm330lhhx_spi_probe(struct spi_device *spi)
 	}
 
 	return st_asm330lhhx_probe(&spi->dev, spi->irq,
-				   id->driver_data, regmap);
+				   id->driver_data, regmap, false);
 }
 
 #if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE

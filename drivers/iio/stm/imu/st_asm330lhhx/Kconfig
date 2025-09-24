@@ -8,6 +8,7 @@ config IIO_ST_ASM330LHHX
 	select IIO_TRIGGERED_BUFFER
 	select IIO_ST_ASM330LHHX_I2C if (I2C)
 	select IIO_ST_ASM330LHHX_SPI if (SPI_MASTER)
+	select IIO_ST_ASM330LHHX_I3C if (I3C)
 	help
 	  Say yes here to build support for STMicroelectronics ASM330LHH,
 	  ASM330LHHX, ASM330LHHXG1, ASM330LHB imu sensors.
@@ -24,6 +25,11 @@ config IIO_ST_ASM330LHHX_SPI
 	tristate
 	select REGMAP_SPI
 	depends on IIO_ST_ASM330LHHX
+
+config IIO_ST_ASM330LHHX_I3C
+	tristate
+	depends on IIO_ST_ASM330LHHX
+	select REGMAP_I3C
 
 config IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP
 	bool "Enable async hw timestamp read"

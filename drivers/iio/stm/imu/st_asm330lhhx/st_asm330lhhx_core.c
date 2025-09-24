@@ -2445,7 +2445,8 @@ static int st_asm330lhhx_power_enable(struct st_asm330lhhx_hw *hw)
 }
 
 int st_asm330lhhx_probe(struct device *dev, int irq,
-			enum st_asm330lhhx_hw_id hw_id, struct regmap *regmap)
+			enum st_asm330lhhx_hw_id hw_id,
+			struct regmap *regmap, bool i3c)
 {
 	struct st_asm330lhhx_hw *hw;
 	int i, err;
@@ -2464,6 +2465,7 @@ int st_asm330lhhx_probe(struct device *dev, int irq,
 	hw->dev = dev;
 	hw->odr_table_entry = st_asm330lhhx_odr_table;
 	hw->hw_timestamp_global = 0;
+	hw->i3c = i3c;
 
 	err = st_asm330lhhx_power_enable(hw);
 	if (err != 0)

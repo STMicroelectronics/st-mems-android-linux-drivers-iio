@@ -42,7 +42,7 @@ static int st_asm330lhhx_i2c_probe(struct i2c_client *client,
 	}
 
 	return st_asm330lhhx_probe(&client->dev, client->irq,
-				   id->driver_data, regmap);
+				   id->driver_data, regmap, false);
 }
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE

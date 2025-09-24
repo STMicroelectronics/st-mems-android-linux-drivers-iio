@@ -481,7 +481,7 @@ ssize_t st_asm330lhhx_set_watermark(struct device *dev,
 	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	if (!sensor->hw->has_hw_fifo) {
+	if (!st_asm330lhhx_has_buffers(sensor->hw)) {
 		err = -EINVAL;
 
 		return err;
@@ -537,7 +537,7 @@ ssize_t st_asm330lhhx_flush_fifo(struct device *dev,
 	s64 fts;
 	s64 ts;
 
-	if (!hw->has_hw_fifo)
+	if (!st_asm330lhhx_has_buffers(sensor->hw))
 		return -EINVAL;
 
 	mutex_lock(&hw->fifo_lock);
@@ -562,7 +562,7 @@ int st_asm330lhhx_suspend_fifo(struct st_asm330lhhx_hw *hw)
 {
 	int err;
 
-	if (!hw->has_hw_fifo)
+	if (!st_asm330lhhx_has_buffers(hw))
 		return 0;
 
 	mutex_lock(&hw->fifo_lock);
@@ -579,7 +579,7 @@ int st_asm330lhhx_update_batching(struct iio_dev *iio_dev, bool enable)
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	int err;
 
-	if (!hw->has_hw_fifo)
+	if (!st_asm330lhhx_has_buffers(sensor->hw))
 		return 0;
 
 	disable_irq(hw->irq);
@@ -670,7 +670,7 @@ static int st_asm330lhhx_buffer_enable(struct iio_dev *iio_dev, bool enable)
 {
 	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 
-	if (sensor->hw->has_hw_fifo)
+	if (st_asm330lhhx_has_buffers(sensor->hw))
 		return st_asm330lhhx_update_fifo(sensor, enable);
 
 	return st_asm330lhhx_update_enable(sensor, enable);
