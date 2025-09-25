@@ -103,10 +103,6 @@ static struct
 iio_dev *st_lis2duxs12_mlc_alloc_iio_dev(struct st_lis2duxs12_hw *hw,
 					 enum st_lis2duxs12_sensor_id id);
 
-static const unsigned long st_lis2duxs12_mlc_available_scan_masks[] = {
-	BIT(1), 0x0
-};
-
 static int
 st_lis2duxs12_mlc_enable_sensor(struct st_lis2duxs12_sensor *sensor,
 				bool enable)
@@ -651,8 +647,6 @@ iio_dev *st_lis2duxs12_mlc_alloc_iio_dev(struct st_lis2duxs12_hw *hw,
 		memcpy(channels, st_lis2duxs12_mlc_channels,
 		       sizeof(st_lis2duxs12_mlc_channels));
 
-		iio_dev->available_scan_masks =
-					 st_lis2duxs12_mlc_available_scan_masks;
 		iio_dev->channels = channels;
 		iio_dev->num_channels = ARRAY_SIZE(st_lis2duxs12_mlc_channels);
 		iio_dev->info = &st_lis2duxs12_mlc_event_info;
@@ -676,8 +670,6 @@ iio_dev *st_lis2duxs12_mlc_alloc_iio_dev(struct st_lis2duxs12_hw *hw,
 		memcpy(channels, st_lis2duxs12_mlc_x_ch,
 		       sizeof(st_lis2duxs12_mlc_x_ch));
 
-		iio_dev->available_scan_masks =
-					 st_lis2duxs12_mlc_available_scan_masks;
 		iio_dev->channels = channels;
 		iio_dev->num_channels = ARRAY_SIZE(st_lis2duxs12_mlc_x_ch);
 		iio_dev->info = &st_lis2duxs12_mlc_x_event_info;
@@ -711,8 +703,6 @@ iio_dev *st_lis2duxs12_mlc_alloc_iio_dev(struct st_lis2duxs12_hw *hw,
 		memcpy(channels, st_lis2duxs12_fsm_x_ch,
 		       sizeof(st_lis2duxs12_fsm_x_ch));
 
-		iio_dev->available_scan_masks =
-			st_lis2duxs12_mlc_available_scan_masks;
 		iio_dev->channels = channels;
 		iio_dev->num_channels = ARRAY_SIZE(st_lis2duxs12_fsm_x_ch);
 		iio_dev->info = &st_lis2duxs12_mlc_x_event_info;

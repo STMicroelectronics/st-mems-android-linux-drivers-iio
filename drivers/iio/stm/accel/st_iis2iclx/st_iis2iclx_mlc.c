@@ -47,11 +47,6 @@ static const struct iio_chan_spec st_iis2iclx_mlc_fsm_x_ch[] = {
 	ST_IIS2ICLX_EVENT_CHANNEL(IIO_ACTIVITY, thr),
 };
 
-static const unsigned long
-st_iis2iclx_fsm_mlc_available_scan_masks[] = {
-	BIT(0), 0x0
-};
-
 /* remove old mlc/fsm configuration */
 static int st_iis2iclx_mlc_purge_config(struct st_iis2iclx_hw *hw)
 {
@@ -720,8 +715,6 @@ st_iis2iclx_mlc_alloc_iio_dev(struct st_iis2iclx_hw *hw,
 
 	switch (id) {
 	case ST_IIS2ICLX_ID_MLC:
-		iio_dev->available_scan_masks =
-			st_iis2iclx_fsm_mlc_available_scan_masks;
 		iio_dev->channels = st_iis2iclx_mlc_fsm_x_ch;
 		iio_dev->num_channels = ARRAY_SIZE(st_iis2iclx_mlc_fsm_x_ch);
 		iio_dev->info = &st_iis2iclx_mlc_event_info;
@@ -736,8 +729,6 @@ st_iis2iclx_mlc_alloc_iio_dev(struct st_iis2iclx_hw *hw,
 	case ST_IIS2ICLX_ID_MLC_5:
 	case ST_IIS2ICLX_ID_MLC_6:
 	case ST_IIS2ICLX_ID_MLC_7:
-		iio_dev->available_scan_masks =
-			st_iis2iclx_fsm_mlc_available_scan_masks;
 		iio_dev->channels = st_iis2iclx_mlc_fsm_x_ch;
 		iio_dev->num_channels = ARRAY_SIZE(st_iis2iclx_mlc_fsm_x_ch);
 		iio_dev->info = &st_iis2iclx_mlc_x_event_info;
@@ -766,8 +757,6 @@ st_iis2iclx_mlc_alloc_iio_dev(struct st_iis2iclx_hw *hw,
 	case ST_IIS2ICLX_ID_FSM_13:
 	case ST_IIS2ICLX_ID_FSM_14:
 	case ST_IIS2ICLX_ID_FSM_15:
-		iio_dev->available_scan_masks =
-			st_iis2iclx_fsm_mlc_available_scan_masks;
 		iio_dev->channels = st_iis2iclx_mlc_fsm_x_ch;
 		iio_dev->num_channels = ARRAY_SIZE(st_iis2iclx_mlc_fsm_x_ch);
 		iio_dev->info = &st_iis2iclx_mlc_x_event_info;

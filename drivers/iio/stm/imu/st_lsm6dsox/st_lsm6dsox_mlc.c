@@ -127,10 +127,6 @@ static
 struct iio_dev *st_lsm6dsox_mlc_alloc_iio_dev(struct st_lsm6dsox_hw *hw,
 					      enum st_lsm6dsox_sensor_id id);
 
-static const unsigned long st_lsm6dsox_mlc_available_scan_masks[] = {
-	0x1, 0x0
-};
-
 static inline int
 st_lsm6dsox_read_page_locked(struct st_lsm6dsox_hw *hw, unsigned int addr,
 			     void *val, unsigned int len)
@@ -685,8 +681,6 @@ struct iio_dev *st_lsm6dsox_mlc_alloc_iio_dev(struct st_lsm6dsox_hw *hw,
 		memcpy(channels, st_lsm6dsox_mlc_channels,
 		       sizeof(st_lsm6dsox_mlc_channels));
 
-		iio_dev->available_scan_masks =
-			st_lsm6dsox_mlc_available_scan_masks;
 		iio_dev->channels = channels;
 		iio_dev->num_channels = ARRAY_SIZE(st_lsm6dsox_mlc_channels);
 		iio_dev->info = &st_lsm6dsox_mlc_event_info;
@@ -713,8 +707,6 @@ struct iio_dev *st_lsm6dsox_mlc_alloc_iio_dev(struct st_lsm6dsox_hw *hw,
 		memcpy(channels, st_lsm6dsox_mlc_x_ch,
 		       sizeof(st_lsm6dsox_mlc_x_ch));
 
-		iio_dev->available_scan_masks =
-			st_lsm6dsox_mlc_available_scan_masks;
 		iio_dev->channels = channels;
 		iio_dev->num_channels = ARRAY_SIZE(st_lsm6dsox_mlc_x_ch);
 		iio_dev->info = &st_lsm6dsox_mlc_x_event_info;
@@ -756,8 +748,6 @@ struct iio_dev *st_lsm6dsox_mlc_alloc_iio_dev(struct st_lsm6dsox_hw *hw,
 		memcpy(channels, st_lsm6dsox_fsm_x_ch,
 		       sizeof(st_lsm6dsox_fsm_x_ch));
 
-		iio_dev->available_scan_masks =
-			st_lsm6dsox_mlc_available_scan_masks;
 		iio_dev->channels = channels;
 		iio_dev->num_channels = ARRAY_SIZE(st_lsm6dsox_fsm_x_ch);
 		iio_dev->info = &st_lsm6dsox_mlc_x_event_info;
