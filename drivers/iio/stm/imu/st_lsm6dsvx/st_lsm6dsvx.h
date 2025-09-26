@@ -805,8 +805,6 @@ enum {
  * @status_reg: MLC/FSM IIO event sensor status register.
  * @outreg_addr: MLC/FSM IIO event sensor output register.
  * @status: MLC/FSM enabled IIO event sensor status.
- * @conf: Used in case of IIO sensor event to store configuration.
- * @scan: Scan buffer for triggered sensors event.
  */
 struct st_lsm6dsvx_sensor {
 	char name[32];
@@ -854,17 +852,6 @@ struct st_lsm6dsvx_sensor {
 			uint8_t status_reg;
 			uint8_t outreg_addr;
 			enum st_lsm6dsvx_fsm_mlc_enable_id status;
-		};
-
-		struct {
-			/* event sensor, data configuration */
-			u32 conf[6];
-
-			/* ensure natural alignment of timestamp */
-			struct {
-				u8 event;
-				s64 ts __aligned(8);
-			} scan;
 		};
 	};
 };

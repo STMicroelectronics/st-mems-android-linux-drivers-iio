@@ -723,8 +723,6 @@ struct st_asm330lhhx_settings {
  * @status_reg: Generic status register used by MLC/FSM.
  * @outreg_addr: MLC/FSM output data registers.
  * @status: MLC/FSM enable status.
- * @conf: Used in case of sensor event to manage configuration.
- * @scan: Scan buffer for triggered sensors event.
  */
 struct st_asm330lhhx_sensor {
 	char name[32];
