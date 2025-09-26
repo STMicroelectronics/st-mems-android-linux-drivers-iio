@@ -171,7 +171,8 @@ static int st_lsm6dsvxhg_get_default_xl_odr(struct st_lsm6dsvxhg_hw *hw,
  * @hw - ST IMU MEMS hw instance
  * @wake_up_threshold_mg - wake-up threshold in mg
  *
- * wake-up threshold register val = (th_mg * 2 ^ 6) / (1000 * FS_XL)
+ * NOTE: actually only 7.8125 mg/LSB (default) is supported
+ * wake-up threshold register val = (th_mg * 1000) / 7812
  */
 static int st_lsm6dsvxhg_set_wake_up_threshold(struct st_lsm6dsvxhg_hw *hw,
 					       int wake_up_threshold_mg)
@@ -184,7 +185,7 @@ static int st_lsm6dsvxhg_set_wake_up_threshold(struct st_lsm6dsvxhg_hw *hw,
 	if (err < 0)
 		return err;
 
-	tmp = (wake_up_threshold_mg * 64) / (fs_xl_g * 1000);
+	tmp = (wake_up_threshold_mg * 1000) / 7812;
 	wake_up_threshold = (u8)tmp;
 	max_th = ST_LSM6DSVXHG_WK_THS_MASK >>
 		  __ffs(ST_LSM6DSVXHG_WK_THS_MASK);
