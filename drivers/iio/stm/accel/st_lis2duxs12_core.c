@@ -1448,10 +1448,10 @@ static int __maybe_unused st_lis2duxs12_suspend(struct device *dev)
 	int i, err = 0;
 
 	for (i = 0; i < ST_LIS2DUXS12_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
@@ -1499,10 +1499,10 @@ static int __maybe_unused st_lis2duxs12_resume(struct device *dev)
 	}
 
 	for (i = 0; i < ST_LIS2DUXS12_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
