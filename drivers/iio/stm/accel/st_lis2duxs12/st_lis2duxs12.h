@@ -958,6 +958,27 @@ st_lis2duxs12_update_page_bits_locked(struct st_lis2duxs12_hw *hw,
 	return err;
 }
 
+static inline int
+st_lis2duxs12_check_power_mode(struct st_lis2duxs12_hw *hw,
+			       enum st_lis2duxs12_pm_t pm)
+{
+	struct st_lis2duxs12_sensor *acc_sensor;
+	struct iio_dev *acc_iio_dev;
+
+	acc_iio_dev = hw->iio_devs[ST_LIS2DUXS12_ID_ACC];
+	acc_sensor = iio_priv(acc_iio_dev);
+
+	if (acc_sensor->pm != pm) {
+		dev_warn(hw->dev,
+			 "invalid power mode(%d): requested %d\n",
+			 acc_sensor->pm, pm);
+
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int st_lis2duxs12_probe(struct device *dev, int irq,
 			enum st_lis2duxs12_hw_id hw_id, struct regmap *regmap);
 int st_lis2duxs12_set_odr(struct st_lis2duxs12_sensor *sensor,

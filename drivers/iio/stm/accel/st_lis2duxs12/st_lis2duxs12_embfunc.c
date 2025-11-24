@@ -653,6 +653,7 @@ iio_dev *st_lis2duxs12_alloc_step_iiodev(struct st_lis2duxs12_hw *hw,
 	/* request acc ODR to works properly */
 	sensor->odr = ST_LIS2DUXS12_MIN_ODR_IN_EMB_FUNC;
 	sensor->uodr = 0;
+	sensor->pm = ST_LIS2DUXS12_NO_MODE;
 
 	iio_dev->name = sensor->name;
 

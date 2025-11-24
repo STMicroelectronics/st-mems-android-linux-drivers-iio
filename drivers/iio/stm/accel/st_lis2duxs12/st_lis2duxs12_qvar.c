@@ -50,12 +50,18 @@ st_lis2duxs12_sysfs_qvar_sampling_freq_avail(struct device *dev,
 
 	/* qvar share the same XL odr table */
 	for (i = 0; i < hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].size; i++) {
+		int ret;
+
 		if (!hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].odr_avl[i].hz)
 			continue;
 
-		len += scnprintf(buf + len, PAGE_SIZE - len, "%d.%06d ",
+		ret = st_lis2duxs12_check_power_mode(hw,
+			hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].odr_avl[i].pm);
+		if (ret == 0) {
+			len += scnprintf(buf + len, PAGE_SIZE - len, "%d.%06d ",
 				 hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].odr_avl[i].hz,
 				 hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].odr_avl[i].uhz);
+		}
 	}
 
 	buf[len - 1] = '\n';
@@ -73,6 +79,13 @@ st_lis2duxs12_get_qvar_odr_val(struct st_lis2duxs12_hw *hw,
 	int i;
 
 	for (i = 0; i < hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].size; i++) {
+		int ret;
+
+		ret = st_lis2duxs12_check_power_mode(hw,
+			hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].odr_avl[i].pm);
+		if (ret)
+			continue;
+
 		sensor_odr = ST_LIS2DUXS12_ODR_EXPAND(
 				hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].odr_avl[i].hz,
 				hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].odr_avl[i].uhz);

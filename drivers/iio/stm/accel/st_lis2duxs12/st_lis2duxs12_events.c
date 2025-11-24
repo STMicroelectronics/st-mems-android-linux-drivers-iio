@@ -657,6 +657,16 @@ int st_lis2duxs12_write_event_config(struct iio_dev *iio_dev,
 		return -EINVAL;
 	}
 
+	if (enable) {
+		/*
+		 * all these algorithms require high ODR and are therefore not
+		 * compatible with low power mode
+		 */
+		err = st_lis2duxs12_check_power_mode(hw, ST_LIS2DUXS12_HP_MODE);
+		if (err)
+			return err;
+	}
+
 	err = st_lis2duxs12_read_locked(hw, int_reg, &int_val, 1);
 	if (err < 0)
 		return err;
