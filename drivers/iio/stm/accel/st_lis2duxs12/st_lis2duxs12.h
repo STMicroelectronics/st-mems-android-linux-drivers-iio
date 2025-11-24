@@ -512,11 +512,13 @@ enum st_lis2duxs12_page_sel_register {
  * @hz: Most significant part of the sensor ODR (Hz).
  * @uhz: Less significant part of the sensor ODR (micro Hz).
  * @val: ODR register value.
+ * @pm: Power mode.
  */
 struct st_lis2duxs12_odr {
 	u16 hz;
 	u32 uhz;
 	u8 val;
+	enum st_lis2duxs12_pm_t pm;
 };
 
 /**
@@ -531,7 +533,7 @@ struct st_lis2duxs12_odr_table_entry {
 	u8 size;
 	struct st_lis2duxs12_reg reg;
 	struct st_lis2duxs12_reg pm;
-	struct st_lis2duxs12_odr odr_avl[10];
+	struct st_lis2duxs12_odr odr_avl[11];
 };
 
 /**

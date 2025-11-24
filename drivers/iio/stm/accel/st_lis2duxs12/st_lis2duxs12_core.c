@@ -77,7 +77,7 @@ static struct st_lis2duxs12_power_mode_table {
 static const struct
 st_lis2duxs12_odr_table_entry st_lis2duxs12_odr_table[] = {
 	[ST_LIS2DUXS12_ID_ACC] = {
-		.size = 10,
+		.size = 11,
 		.reg = {
 			.addr = ST_LIS2DUXS12_CTRL5_ADDR,
 			.mask = ST_LIS2DUXS12_ODR_MASK,
@@ -86,33 +86,35 @@ st_lis2duxs12_odr_table_entry st_lis2duxs12_odr_table[] = {
 			.addr = ST_LIS2DUXS12_CTRL3_ADDR,
 			.mask = ST_LIS2DUXS12_HP_EN_MASK,
 		},
-		.odr_avl[0] = {   1, 600000,  0x01 },
-		.odr_avl[1] = {   3,      0,  0x02 },
-		.odr_avl[2] = {   6,      0,  0x04 },
-		.odr_avl[3] = {  12, 500000,  0x05 },
-		.odr_avl[4] = {  25,      0,  0x06 },
-		.odr_avl[5] = {  50,      0,  0x07 },
-		.odr_avl[6] = { 100,      0,  0x08 },
-		.odr_avl[7] = { 200,      0,  0x09 },
-		.odr_avl[8] = { 400,      0,  0x0a },
-		.odr_avl[9] = { 800,      0,  0x0b },
+		.odr_avl[0] =  {   1, 600000,  0x01, ST_LIS2DUXS12_LP_MODE },
+		.odr_avl[1] =  {   3,      0,  0x02, ST_LIS2DUXS12_LP_MODE },
+		.odr_avl[2] =  {  25,      0,  0x03, ST_LIS2DUXS12_LP_MODE },
+		.odr_avl[3] =  {   6,      0,  0x04, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[4] =  {  12, 500000,  0x05, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[5] =  {  25,      0,  0x06, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[6] =  {  50,      0,  0x07, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[7] =  { 100,      0,  0x08, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[8] =  { 200,      0,  0x09, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[9] =  { 400,      0,  0x0a, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[10] = { 800,      0,  0x0b, ST_LIS2DUXS12_HP_MODE },
 	},
 	[ST_LIS2DUXS12_ID_TEMP] = {
-		.size = 10,
+		.size = 11,
 		.reg = {
 			.addr = ST_LIS2DUXS12_CTRL5_ADDR,
 			.mask = ST_LIS2DUXS12_ODR_MASK,
 		},
-		.odr_avl[0] = {   1, 600000,  0x01 },
-		.odr_avl[1] = {   3,      0,  0x02 },
-		.odr_avl[2] = {   6,      0,  0x04 },
-		.odr_avl[3] = {  12, 500000,  0x05 },
-		.odr_avl[4] = {  25,      0,  0x06 },
-		.odr_avl[5] = {  50,      0,  0x07 },
-		.odr_avl[6] = { 100,      0,  0x08 },
-		.odr_avl[7] = { 200,      0,  0x09 },
-		.odr_avl[8] = { 400,      0,  0x0a },
-		.odr_avl[9] = { 800,      0,  0x0b },
+		.odr_avl[0] =  {   1, 600000,  0x01, ST_LIS2DUXS12_LP_MODE },
+		.odr_avl[1] =  {   3,      0,  0x02, ST_LIS2DUXS12_LP_MODE },
+		.odr_avl[2] =  {  25,      0,  0x03, ST_LIS2DUXS12_LP_MODE },
+		.odr_avl[3] =  {   6,      0,  0x04, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[4] =  {  12, 500000,  0x05, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[5] =  {  25,      0,  0x06, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[6] =  {  50,      0,  0x07, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[7] =  { 100,      0,  0x08, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[8] =  { 200,      0,  0x09, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[9] =  { 400,      0,  0x0a, ST_LIS2DUXS12_HP_MODE },
+		.odr_avl[10] = { 800,      0,  0x0b, ST_LIS2DUXS12_HP_MODE },
 	},
 };
 
@@ -383,24 +385,29 @@ st_lis2duxs12_set_full_scale(struct st_lis2duxs12_sensor *sensor,
 	return 0;
 }
 
-static int st_lis2duxs12_get_odr_val(enum st_lis2duxs12_sensor_id id,
+static int st_lis2duxs12_get_odr_val(struct st_lis2duxs12_hw *hw,
+				     enum st_lis2duxs12_sensor_id id,
 				     int odr, int uodr,
 				     struct st_lis2duxs12_odr *oe)
 {
 	int req_odr = ST_LIS2DUXS12_ODR_EXPAND(odr, uodr);
+	struct st_lis2duxs12_sensor *sensor;
 	int sensor_odr;
 	int i;
 
+	sensor = iio_priv(hw->iio_devs[id]);
 	for (i = 0; i < st_lis2duxs12_odr_table[id].size; i++) {
-		sensor_odr = ST_LIS2DUXS12_ODR_EXPAND(
-				st_lis2duxs12_odr_table[id].odr_avl[i].hz,
-				st_lis2duxs12_odr_table[id].odr_avl[i].uhz);
-		if (sensor_odr >= req_odr) {
-			oe->hz = st_lis2duxs12_odr_table[id].odr_avl[i].hz;
-			oe->uhz = st_lis2duxs12_odr_table[id].odr_avl[i].uhz;
-			oe->val = st_lis2duxs12_odr_table[id].odr_avl[i].val;
+		if (sensor->pm == st_lis2duxs12_odr_table[id].odr_avl[i].pm) {
+			sensor_odr = ST_LIS2DUXS12_ODR_EXPAND(
+				      st_lis2duxs12_odr_table[id].odr_avl[i].hz,
+				      st_lis2duxs12_odr_table[id].odr_avl[i].uhz);
+			if (sensor_odr >= req_odr) {
+				oe->hz = st_lis2duxs12_odr_table[id].odr_avl[i].hz;
+				oe->uhz = st_lis2duxs12_odr_table[id].odr_avl[i].uhz;
+				oe->val = st_lis2duxs12_odr_table[id].odr_avl[i].val;
 
-			return 0;
+				return 0;
+			}
 		}
 	}
 
@@ -478,8 +485,7 @@ int st_lis2duxs12_set_odr(struct st_lis2duxs12_sensor *sensor,
 	}
 
 	if (ST_LIS2DUXS12_ODR_EXPAND(req_odr, req_uodr) > 0) {
-		err = st_lis2duxs12_get_odr_val(id, req_odr, req_uodr,
-						&oe);
+		err = st_lis2duxs12_get_odr_val(hw, id, req_odr, req_uodr, &oe);
 		if (err)
 			return err;
 
@@ -652,7 +658,7 @@ static int st_lis2duxs12_write_raw(struct iio_dev *iio_dev,
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		struct st_lis2duxs12_odr oe = { 0 };
 
-		err = st_lis2duxs12_get_odr_val(sensor->id,
+		err = st_lis2duxs12_get_odr_val(sensor->hw, sensor->id,
 						val, val2, &oe);
 		if (!err) {
 			if (sensor->hw->enable_mask & BIT(sensor->id)) {
@@ -701,9 +707,12 @@ st_lis2duxs12_sysfs_sampling_frequency_avail(struct device *dev,
 	int i, len = 0;
 
 	for (i = 0; i < st_lis2duxs12_odr_table[id].size; i++) {
-		len += scnprintf(buf + len, PAGE_SIZE - len, "%d.%06d ",
-			    st_lis2duxs12_odr_table[id].odr_avl[i].hz,
-			    st_lis2duxs12_odr_table[id].odr_avl[i].uhz);
+		/* show only the odrs for the selected power mode */
+		if (sensor->pm == st_lis2duxs12_odr_table[id].odr_avl[i].pm) {
+			len += scnprintf(buf + len, PAGE_SIZE - len, "%d.%06d ",
+				    st_lis2duxs12_odr_table[id].odr_avl[i].hz,
+				    st_lis2duxs12_odr_table[id].odr_avl[i].uhz);
+		}
 	}
 
 	buf[len - 1] = '\n';
