@@ -1163,10 +1163,10 @@ static int __maybe_unused st_ism330is_suspend(struct device *dev)
 	int i, err = 0;
 
 	for (i = 0; i < ST_ISM330IS_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
@@ -1185,10 +1185,10 @@ static int __maybe_unused st_ism330is_resume(struct device *dev)
 	int i, err = 0;
 
 	for (i = 0; i < ST_ISM330IS_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 

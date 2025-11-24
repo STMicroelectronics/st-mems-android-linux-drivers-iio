@@ -2116,10 +2116,10 @@ static int __maybe_unused st_sths34pf80_suspend(struct device *dev)
 	for (i = 0; i < ST_STHS34PF80_ID_MAX; i++) {
 		int err;
 
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
@@ -2140,10 +2140,10 @@ static int __maybe_unused st_sths34pf80_resume(struct device *dev)
 	for (i = 0; i < ST_STHS34PF80_ID_MAX; i++) {
 		int err;
 
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
