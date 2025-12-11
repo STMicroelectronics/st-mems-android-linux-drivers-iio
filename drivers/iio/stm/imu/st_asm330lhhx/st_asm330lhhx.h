@@ -31,7 +31,7 @@
 
 #define ST_ASM330LHH_DEV_NAME			"asm330lhh"
 #define ST_ASM330LHHX_DEV_NAME			"asm330lhhx"
-#define ST_ASM330LHHXG1_DEV_NAME			"asm330lhhxg1"
+#define ST_ASM330LHHXG1_DEV_NAME		"asm330lhhxg1"
 #define ST_ASM330LHB_DEV_NAME			"asm330lhb"
 #define ST_ASM330LHHG1_DEV_NAME			"asm330lhhg1"
 #define ST_ASM330LHBG1_DEV_NAME			"asm330lhbg1"
@@ -157,12 +157,12 @@
 #define ST_ASM330LHHX_REG_OUTY_L_G_ADDR		0x24
 #define ST_ASM330LHHX_REG_OUTZ_L_G_ADDR		0x26
 
-#define ST_ASM330LHHX_FSM_STATUS_A_MAINPAGE		0x36
-#define ST_ASM330LHHX_FSM_STATUS_B_MAINPAGE		0x37
-#define ST_ASM330LHHX_MLC_STATUS_MAINPAGE		0x38
+#define ST_ASM330LHHX_FSM_STATUS_A_MAINPAGE	0x36
+#define ST_ASM330LHHX_FSM_STATUS_B_MAINPAGE	0x37
+#define ST_ASM330LHHX_MLC_STATUS_MAINPAGE	0x38
 
 #define ST_ASM330LHHX_REG_STATUS_MASTER_MAINPAGE_ADDR	0x39
-#define ST_ASM330LHHX_REG_SENS_HUB_ENDOP_MASK		BIT(0)
+#define ST_ASM330LHHX_REG_SENS_HUB_ENDOP_MASK	BIT(0)
 
 #define ST_ASM330LHHX_REG_TIMESTAMP0_ADDR	0x40
 
@@ -200,18 +200,18 @@
 
 /* shub registers */
 #define ST_ASM330LHHX_REG_MASTER_CONFIG_ADDR	0x14
-#define ST_ASM330LHHX_REG_WRITE_ONCE_MASK		BIT(6)
-#define ST_ASM330LHHX_REG_SHUB_PU_EN_MASK		BIT(3)
-#define ST_ASM330LHHX_REG_MASTER_ON_MASK		BIT(2)
+#define ST_ASM330LHHX_REG_WRITE_ONCE_MASK	BIT(6)
+#define ST_ASM330LHHX_REG_SHUB_PU_EN_MASK	BIT(3)
+#define ST_ASM330LHHX_REG_MASTER_ON_MASK	BIT(2)
 
-#define ST_ASM330LHHX_REG_SLV0_ADDR			0x15
-#define ST_ASM330LHHX_REG_SLV0_CFG			0x17
-#define ST_ASM330LHHX_REG_SLV1_ADDR			0x18
-#define ST_ASM330LHHX_REG_SLV2_ADDR			0x1b
-#define ST_ASM330LHHX_REG_SLV3_ADDR			0x1e
+#define ST_ASM330LHHX_REG_SLV0_ADDR		0x15
+#define ST_ASM330LHHX_REG_SLV0_CFG		0x17
+#define ST_ASM330LHHX_REG_SLV1_ADDR		0x18
+#define ST_ASM330LHHX_REG_SLV2_ADDR		0x1b
+#define ST_ASM330LHHX_REG_SLV3_ADDR		0x1e
 #define ST_ASM330LHHX_REG_DATAWRITE_SLV0_ADDR	0x21
 #define ST_ASM330LHHX_REG_BATCH_EXT_SENS_EN_MASK	BIT(3)
-#define ST_ASM330LHHX_REG_SLAVE_NUMOP_MASK		GENMASK(2, 0)
+#define ST_ASM330LHHX_REG_SLAVE_NUMOP_MASK	GENMASK(2, 0)
 
 #define ST_ASM330LHHX_REG_STATUS_MASTER_ADDR	0x22
 #define ST_ASM330LHHX_REG_SENS_HUB_ENDOP_MASK	BIT(0)
@@ -219,36 +219,36 @@
 #define ST_ASM330LHHX_REG_SLV0_OUT_ADDR		0x02
 
 /* embedded function registers */
-#define ST_ASM330LHHX_PAGE_SEL_ADDR			0x02
-#define ST_ASM330LHHX_PAGE_SEL_MASK			GENMASK(7, 4)
+#define ST_ASM330LHHX_PAGE_SEL_ADDR		0x02
+#define ST_ASM330LHHX_PAGE_SEL_MASK		GENMASK(7, 4)
 
-#define ST_ASM330LHHX_EMB_FUNC_EN_B_ADDR		0x05
-#define ST_ASM330LHHX_FSM_EN_MASK			BIT(0)
-#define ST_ASM330LHHX_MLC_EN_MASK			BIT(4)
+#define ST_ASM330LHHX_EMB_FUNC_EN_B_ADDR	0x05
+#define ST_ASM330LHHX_FSM_EN_MASK		BIT(0)
+#define ST_ASM330LHHX_MLC_EN_MASK		BIT(4)
 
 #define ST_ASM330LHHX_FSM_INT1_A_ADDR		0x0b
 #define ST_ASM330LHHX_FSM_INT1_B_ADDR		0x0c
-#define ST_ASM330LHHX_MLC_INT1_ADDR			0x0d
+#define ST_ASM330LHHX_MLC_INT1_ADDR		0x0d
 
 #define ST_ASM330LHHX_FSM_INT2_A_ADDR		0x0f
 #define ST_ASM330LHHX_FSM_INT2_B_ADDR		0x10
-#define ST_ASM330LHHX_MLC_INT2_ADDR			0x11
+#define ST_ASM330LHHX_MLC_INT2_ADDR		0x11
 
-#define ST_ASM330LHHX_REG_MLC_STATUS_ADDR		0x15
+#define ST_ASM330LHHX_REG_MLC_STATUS_ADDR	0x15
 
-#define ST_ASM330LHHX_REG_PAGE_RW			0x17
-#define ST_ASM330LHHX_REG_EMB_FUNC_LIR_MASK		BIT(7)
-#define ST_ASM330LHHX_REG_PAGE_WRITE_MASK		BIT(6)
-#define ST_ASM330LHHX_REG_PAGE_READ_MASK		BIT(5)
+#define ST_ASM330LHHX_REG_PAGE_RW		0x17
+#define ST_ASM330LHHX_REG_EMB_FUNC_LIR_MASK	BIT(7)
+#define ST_ASM330LHHX_REG_PAGE_WRITE_MASK	BIT(6)
+#define ST_ASM330LHHX_REG_PAGE_READ_MASK	BIT(5)
 
 #define ST_ASM330LHHX_FSM_ENABLE_A_ADDR		0x46
 #define ST_ASM330LHHX_FSM_ENABLE_B_ADDR		0x47
 
 #define ST_ASM330LHHX_FSM_OUTS1_ADDR		0x4c
 
-#define ST_ASM330LHHX_REG_EMB_FUNC_INIT_B_ADDR		0x67
-#define ST_ASM330LHHX_FSM_INIT_MASK			BIT(0)
-#define ST_ASM330LHHX_MLC_INIT_MASK			BIT(4)
+#define ST_ASM330LHHX_REG_EMB_FUNC_INIT_B_ADDR	0x67
+#define ST_ASM330LHHX_FSM_INIT_MASK		BIT(0)
+#define ST_ASM330LHHX_MLC_INIT_MASK		BIT(4)
 
 #define ST_ASM330LHHX_REG_MLC0_SRC_ADDR		0x70
 
@@ -257,7 +257,8 @@
 
 /* Temperature in uC */
 #define ST_ASM330LHHX_TEMP_GAIN			256
-#define ST_ASM330LHHX_TEMP_FS_GAIN		1000000 / ST_ASM330LHHX_TEMP_GAIN
+#define ST_ASM330LHHX_TEMP_FS_GAIN		(1000000 / \
+						 ST_ASM330LHHX_TEMP_GAIN)
 #define ST_ASM330LHHX_TEMP_OFFSET		6400
 
 /* FIFO simple size and depth */
@@ -274,7 +275,8 @@
 #define ST_ASM330LHHX_FAST_TO_DEFAULT		(32)
 
 #define ST_ASM330LHHX_ROLLOVER_COUNT		16
-#define ST_ASM330LHHX_RESET_COUNT		(32 + ST_ASM330LHHX_ROLLOVER_COUNT)
+#define ST_ASM330LHHX_RESET_COUNT		(32 + \
+						 ST_ASM330LHHX_ROLLOVER_COUNT)
 
 #define ST_ASM330LHHX_DATA_CHANNEL(chan_type, addr, mod, ch2, scan_idx,	\
 				rb, sb, sg, ex_info)			\
@@ -296,16 +298,16 @@
 	.ext_info = ex_info,						\
 }
 
-#define IIO_CHAN_HW_TIMESTAMP(si) {					\
-	.type = IIO_COUNT,						\
-	.address = ST_ASM330LHHX_REG_TIMESTAMP0_ADDR,			\
-	.scan_index = si,						\
-	.scan_type = {							\
-		.sign = 's',						\
-		.realbits = 64,						\
-		.storagebits = 64,					\
-		.endianness = IIO_LE,					\
-	},								\
+#define IIO_CHAN_HW_TIMESTAMP(si) {			\
+	.type = IIO_COUNT,				\
+	.address = ST_ASM330LHHX_REG_TIMESTAMP0_ADDR,	\
+	.scan_index = si,				\
+	.scan_type = {					\
+		.sign = 's',				\
+		.realbits = 64,				\
+		.storagebits = 64,			\
+		.endianness = IIO_LE,			\
+	},						\
 }
 
 static const struct iio_event_spec st_asm330lhhx_flush_event = {
@@ -355,7 +357,8 @@ enum st_asm330lhhx_event_id {
 	.num_event_specs = 1,				\
 }
 
-#define ST_ASM330LHHX_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
+#define ST_ASM330LHHX_SHIFT_VAL(val, mask)	(((val) << \
+						  __ffs(mask)) & (mask))
 
 enum st_asm330lhhx_fsm_mlc_enable_id {
 	ST_ASM330LHHX_MLC_FSM_DISABLED = 0,
@@ -364,18 +367,18 @@ enum st_asm330lhhx_fsm_mlc_enable_id {
 };
 
 /**
- * struct mlc_config_t -
- * @mlc_int_mask: interrupt register mask
- * @fsm_enabled_mask: enable fsm register mask
- * @fsm_int_mask: interrupt register mask
- * @mlc_configured: number of mlc configured
- * @fsm_configured: number of fsm configured
- * @bin_len: fw binary size
- * @mlc_int_pin: where route mlc int pin
- * @mlc_fsm_en: mlc and fsm enable bit reported by ucf file
- * @fsm_mlc_requested_odr, fsm_mlc_requested_uodr: Min required ODR by
- * MLC/FSM.
- * @status: mlc/fsm status
+ * struct mlc_config_t - MLC/FSM configuration status
+ *
+ * @mlc_int_mask: interrupt register mask.
+ * @fsm_enabled_mask: enable fsm register mask.
+ * @fsm_int_mask: interrupt register mask.
+ * @mlc_configured: number of mlc configured.
+ * @fsm_configured: number of fsm configured.
+ * @bin_len: fw binary size.
+ * @mlc_int_pin: where route mlc int pin.
+ * @mlc_fsm_en: mlc and fsm enable bit reported by ucf file.
+ * @fsm_mlc_requested_odr, fsm_mlc_requested_uodr: Min required ODR by MLC/FSM.
+ * @status: mlc/fsm status.
  */
 struct st_asm330lhhx_mlc_config_t {
 	u8 mlc_int_mask;
@@ -393,6 +396,7 @@ struct st_asm330lhhx_mlc_config_t {
 
 /**
  * struct st_asm330lhhx_reg - Generic sensor register description (addr + mask)
+ *
  * @addr: Address of register.
  * @mask: Bitmask register for proper usage.
  */
@@ -433,11 +437,11 @@ enum st_asm330lhhx_suspend_resume_register {
 /**
  * Define embedded functions register access
  *
- * FUNC_CFG_ACCESS_0 is default bank
+ * FUNC_CFG_ACCESS_0 is default bank.
  * FUNC_CFG_ACCESS_SHUB_REG Enable access to the sensor hub (I2C master)
- *                          registers.
+ * registers.
  * FUNC_CFG_ACCESS_FUNC_CFG Enable access to the embedded functions
- *                          configuration registers.
+ * configuration registers.
  */
 enum st_asm330lhh_page_sel_register {
 	FUNC_CFG_ACCESS_0 = 0,
@@ -446,8 +450,7 @@ enum st_asm330lhh_page_sel_register {
 };
 
 /**
- * struct st_asm330lhhx_suspend_resume_entry - Register value for
- * backup/restore
+ * struct st_asm330lhhx_suspend_resume_entry - Register value for backup/restore
  *
  * @page: Page bank reg map.
  * @addr: Address of register.
@@ -463,6 +466,7 @@ struct st_asm330lhhx_suspend_resume_entry {
 
 /**
  * struct st_asm330lhhx_odr - Single ODR entry
+ *
  * @hz: Most significant part of the sensor ODR (Hz).
  * @uhz: Less significant part of the sensor ODR (micro Hz).
  * @val: ODR register value.
@@ -477,6 +481,7 @@ struct st_asm330lhhx_odr {
 
 /**
  * struct st_asm330lhhx_odr_table_entry - Sensor ODR table
+ *
  * @size: Size of ODR table.
  * @reg: ODR register.
  * @pm: Power mode register.
@@ -493,6 +498,7 @@ struct st_asm330lhhx_odr_table_entry {
 
 /**
  * struct st_asm330lhhx_fs - Full Scale sensor table entry
+ *
  * @gain: Sensor sensitivity (mdps/LSB, mg/LSB and uC/LSB).
  * @val: FS register value.
  */
@@ -508,6 +514,7 @@ struct st_asm330lhhx_fs {
 
 /**
  * struct st_asm330lhhx_fs_table_entry - Full Scale sensor table
+ *
  * @reg: Register description for FS settings.
  * @size: Full Scale sensor table size.
  * @fs_avl: Full Scale list entries.
@@ -605,38 +612,36 @@ static const enum st_asm330lhhx_sensor_id st_asm330lhhx_fsm_sensor_list[] = {
 };
 
 #define ST_ASM330LHHX_ID_ALL_FSM_MLC (BIT_ULL(ST_ASM330LHHX_ID_MLC_0)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_MLC_1)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_MLC_2)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_MLC_3)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_MLC_4)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_MLC_5)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_MLC_6)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_MLC_7)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_0)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_1)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_2)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_3)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_4)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_5)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_6)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_7)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_8)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_9)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_10)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_11)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_12)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_13)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_14)	| \
-				  BIT_ULL(ST_ASM330LHHX_ID_FSM_15))
+				      BIT_ULL(ST_ASM330LHHX_ID_MLC_1)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_MLC_2)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_MLC_3)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_MLC_4)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_MLC_5)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_MLC_6)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_MLC_7)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_0)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_1)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_2)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_3)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_4)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_5)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_6)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_7)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_8)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_9)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_10)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_11)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_12)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_13)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_14)	| \
+				      BIT_ULL(ST_ASM330LHHX_ID_FSM_15))
 
-/*
- * HW devices that can wakeup the target
- */
+/* HW devices that can wakeup the target */
 #define ST_ASM330LHHX_WAKE_UP_SENSORS (BIT_ULL(ST_ASM330LHHX_ID_GYRO)	| \
 				       BIT_ULL(ST_ASM330LHHX_ID_ACC)	| \
 				       ST_ASM330LHHX_ID_ALL_FSM_MLC)
 
-/* this is the minimal ODR for wake-up sensors and dependencies */
+/* this is the minimal ODR for embedded sensors and dependencies */
 #define ST_ASM330LHHX_MIN_ODR_IN_WAKEUP		26
 #define ST_ASM330LHHX_MIN_ODR_IN_FREEFALL	26
 #define ST_ASM330LHHX_MIN_ODR_IN_6D		26
@@ -704,10 +709,11 @@ struct st_asm330lhhx_settings {
 
 /**
  * struct st_asm330lhhx_sensor - ST IMU sensor instance
+ *
  * @name: Sensor name.
  * @id: Sensor identifier.
  * @hw: Pointer to instance of struct st_asm330lhhx_hw.
- * @ext_dev_info: For sensor hub indicate device info struct.
+ * @ext_dev_info: For sensor hub indicates device info struct.
  * @trig: Trigger used by IIO event sensors.
  * @gain: Configured sensor sensitivity.
  * @offset: Sensor data offset.
@@ -716,14 +722,13 @@ struct st_asm330lhhx_settings {
  * @discard_samples: Sensor discard sample counter, used when LPF enabled.
  * @odr: Output data rate of the sensor [Hz].
  * @uodr: Output data rate of the sensor [uHz].
- * @discharged_samples: Report number of samples discharded by drdy mask
- * 			filters.
+ * @discarded_samples: Report number of samples discarded by drdy mask filters.
  * @max_watermark: Max supported watermark level.
  * @watermark: Sensor watermark level.
- * @pm: sensor power mode (HP, LP).
- * @last_fifo_timestamp: Store last sample timestamp in FIFO, used by flush
- * @selftest_status: Last status of self test output
- * @min_st, @max_st: Min/Max acc/gyro data values during self test procedure
+ * @pm: Sensor power mode (HP, LP).
+ * @last_fifo_timestamp: Store last sample timestamp in FIFO, used by flush.
+ * @selftest_status: Last status of self test output.
+ * @min_st, @max_st: Min/Max acc/gyro data values during self test procedure.
  * @status_reg: Generic status register used by MLC/FSM.
  * @outreg_addr: MLC/FSM output data registers.
  * @status: MLC/FSM enable status.
@@ -746,7 +751,7 @@ struct st_asm330lhhx_sensor {
 	int event_hw_odr;
 
 #ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
-	u32 discharged_samples;
+	u32 discarded_samples;
 #endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
 
 	u16 max_watermark;
@@ -767,9 +772,10 @@ struct st_asm330lhhx_sensor {
 
 /**
  * struct st_asm330lhhx_hw - ST IMU MEMS hw instance
+ *
  * @dev: Pointer to instance of struct device (I2C or SPI).
  * @irq: Device interrupt line (I2C or SPI).
- * @irq_emb: Embedded function interrupt line).
+ * @irq_emb: Embedded function interrupt line.
  * @regmap: Register map of the device.
  * @i3c: Flag to report if I3C device (for IBI).
  * @int_pin: Save interrupt pin used by sensor.
@@ -785,7 +791,7 @@ struct st_asm330lhhx_sensor {
  * @enable_ev_mask: Enabled event bitmask.
  * @ext_data_len: SHUB external sensor data len.
  * @hw_timestamp_global: hw timestamp value always monotonic where the most
- *                       significant 8byte are incremented at every disable/enable.
+ * significant 8byte are incremented at every disable/enable.
  * @timesync_workqueue: runs the async task in private workqueue.
  * @timesync_work: actual work to be done in the async task workqueue.
  * @timesync_timer: hrtimer used to schedule period read for the async task.
@@ -826,7 +832,7 @@ struct st_asm330lhhx_sensor {
  * @wakeup_source: Flag for wakeup source.
  * @wakeup_status: Last wake-up status.
  * @leave_gyro_on: Flag to leave gyro on even if in power down for turn-on time
- *                 reducing.
+ * reducing.
  */
 struct st_asm330lhhx_hw {
 	struct device *dev;
@@ -904,6 +910,7 @@ struct st_asm330lhhx_hw {
 
 /**
  * struct st_asm330lhhx_ff_th - Free Fall threshold table
+ *
  * @mg: Threshold in mg.
  * @val: Register value.
  */
@@ -914,6 +921,7 @@ struct st_asm330lhhx_ff_th {
 
 /**
  * struct st_asm330lhhx_6D_th - 6D threshold table
+ *
  * @deg: Threshold in degrees.
  * @val: Register value.
  */
@@ -937,7 +945,8 @@ struct st_asm330lhhx_xl_lpf_bw_t {
 
 /**
  * struct st_asm330lhhx_xl_lpf_bw_config_t - Accel Low Pass Filter bandwidth
- *                                           configuration
+ * configuration
+ *
  * @reg: Register address involved in Accel LPF configuration.
  * @mask: Register mask involved in Accel LPF configuration (HPCF_XL).
  * @size: st_asm330lhhx_xl_lpf_bw_t array size.
@@ -952,7 +961,8 @@ struct st_asm330lhhx_xl_lpf_bw_config_t {
 
 /**
  * struct st_asm330lhhx_g_lpf_bw_config_t - Gyro Low Pass Filter bandwidth
- *                                          configuration
+ * configuration
+ *
  * @reg: Register address involved in Gyro LPF configuration.
  * @mask: Register mask involved in Gyro LPF configuration.
  * @size: ftype array size.
@@ -980,9 +990,9 @@ static inline int st_asm330lhhx_manipulate_bit(int int_reg, int irq_mask,
 }
 
 static inline int __st_asm330lhhx_write_with_mask(struct st_asm330lhhx_hw *hw,
-					      unsigned int addr,
-					      unsigned int mask,
-					      unsigned int data)
+						  unsigned int addr,
+						  unsigned int mask,
+						  unsigned int data)
 {
 	int err;
 	unsigned int val = ST_ASM330LHHX_SHIFT_VAL(data, mask);
@@ -994,7 +1004,7 @@ static inline int __st_asm330lhhx_write_with_mask(struct st_asm330lhhx_hw *hw,
 
 static inline int
 st_asm330lhhx_update_bits_locked(struct st_asm330lhhx_hw *hw, unsigned int addr,
-			     unsigned int mask, unsigned int val)
+				 unsigned int mask, unsigned int val)
 {
 	int err;
 
@@ -1008,9 +1018,9 @@ st_asm330lhhx_update_bits_locked(struct st_asm330lhhx_hw *hw, unsigned int addr,
 /* use when mask is constant */
 static inline int
 st_asm330lhhx_write_with_mask_locked(struct st_asm330lhhx_hw *hw,
-				 unsigned int addr,
-				 unsigned int mask,
-				 unsigned int data)
+				     unsigned int addr,
+				     unsigned int mask,
+				     unsigned int data)
 {
 	int err;
 
@@ -1023,7 +1033,7 @@ st_asm330lhhx_write_with_mask_locked(struct st_asm330lhhx_hw *hw,
 
 static inline int
 st_asm330lhhx_read_locked(struct st_asm330lhhx_hw *hw, unsigned int addr,
-		      void *val, unsigned int len)
+			  void *val, unsigned int len)
 {
 	int err;
 
@@ -1056,7 +1066,7 @@ out:
 
 static inline int
 st_asm330lhhx_write_locked(struct st_asm330lhhx_hw *hw, unsigned int addr,
-		       unsigned int val)
+			   unsigned int val)
 {
 	int err;
 
@@ -1068,8 +1078,8 @@ st_asm330lhhx_write_locked(struct st_asm330lhhx_hw *hw, unsigned int addr,
 }
 
 static inline int st_asm330lhhx_set_page_access(struct st_asm330lhhx_hw *hw,
-					    unsigned int val,
-					    unsigned int mask)
+						unsigned int val,
+						unsigned int mask)
 {
 	return regmap_update_bits(hw->regmap,
 				  ST_ASM330LHHX_REG_FUNC_CFG_ACCESS_ADDR,
@@ -1077,8 +1087,7 @@ static inline int st_asm330lhhx_set_page_access(struct st_asm330lhhx_hw *hw,
 				  ST_ASM330LHHX_SHIFT_VAL(val, mask));
 }
 
-static inline bool
-st_asm330lhhx_is_fifo_enabled(struct st_asm330lhhx_hw *hw)
+static inline bool st_asm330lhhx_is_fifo_enabled(struct st_asm330lhhx_hw *hw)
 {
 	return hw->enable_mask & (BIT_ULL(ST_ASM330LHHX_ID_GYRO) |
 				  BIT_ULL(ST_ASM330LHHX_ID_ACC));
@@ -1089,10 +1098,9 @@ static inline s64 st_asm330lhhx_get_time_ns(struct iio_dev *iio_dev)
         return iio_get_time_ns(iio_dev);
 }
 
-static inline int
-st_asm330lhhx_read_page_locked(struct st_asm330lhhx_hw *hw,
-			       unsigned int addr,
-			       void *val, unsigned int len)
+static inline int st_asm330lhhx_read_page_locked(struct st_asm330lhhx_hw *hw,
+						 unsigned int addr,
+						 void *val, unsigned int len)
 {
 	int err;
 
@@ -1148,16 +1156,14 @@ static inline
 bool st_asm330lhhx_fsm_running(struct st_asm330lhhx_hw *hw)
 {
 	return hw->enable_mask &
-	       GENMASK_ULL(ST_ASM330LHHX_ID_FSM_15,
-			   ST_ASM330LHHX_ID_FSM_0);
+	       GENMASK_ULL(ST_ASM330LHHX_ID_FSM_15, ST_ASM330LHHX_ID_FSM_0);
 }
 
 static inline
 bool st_asm330lhhx_mlc_running(struct st_asm330lhhx_hw *hw)
 {
 	return hw->enable_mask &
-	       GENMASK_ULL(ST_ASM330LHHX_ID_MLC_7,
-			   ST_ASM330LHHX_ID_MLC_0);
+	       GENMASK_ULL(ST_ASM330LHHX_ID_MLC_7, ST_ASM330LHHX_ID_MLC_0);
 }
 
 static inline
@@ -1234,14 +1240,14 @@ ssize_t st_asm330lhhx_get_module_id(struct device *dev,
 
 int st_asm330lhhx_suspend_fifo(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_set_fifo_mode(struct st_asm330lhhx_hw *hw,
-			     enum st_asm330lhhx_fifo_mode fifo_mode);
+				enum st_asm330lhhx_fifo_mode fifo_mode);
 int __st_asm330lhhx_set_sensor_batching_odr(struct st_asm330lhhx_sensor *sensor,
 					    bool enable);
 int st_asm330lhhx_update_batching(struct iio_dev *iio_dev, bool enable);
 int st_asm330lhhx_reset_hwts(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw);
 int st_asm330lhhx_shub_set_enable(struct st_asm330lhhx_sensor *sensor,
-			      bool enable);
+				  bool enable);
 int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
 			    u8 addr, u8 *data, int len);
 int st_asm330lhhx_get_int_reg(struct st_asm330lhhx_hw *hw);

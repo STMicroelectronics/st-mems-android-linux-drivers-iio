@@ -42,7 +42,7 @@ static int st_asm330lhhx_i3c_probe(struct i3c_device *i3cdev)
 	}
 
 	return st_asm330lhhx_probe(&i3cdev->dev, 0, (uintptr_t)id->data,
-				 regmap, true);
+				   regmap, true);
 }
 
 #if KERNEL_VERSION(5, 12, 0) <= LINUX_VERSION_CODE

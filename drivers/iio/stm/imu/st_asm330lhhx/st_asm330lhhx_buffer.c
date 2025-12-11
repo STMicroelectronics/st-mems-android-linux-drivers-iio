@@ -95,7 +95,8 @@ st_asm330lhhx_init_timesync_counter(struct st_asm330lhhx_sensor *sensor,
 	spin_lock_irq(&hw->hwtimestamp_lock);
 	hw->timesync_ktime = ktime_set(0, ST_ASM330LHHX_FAST_KTIME);
 	if (sensor->id <= ST_ASM330LHHX_ID_EXT1)
-		hw->timesync_c[sensor->id] = enable ? ST_ASM330LHHX_FAST_TO_DEFAULT : 0;
+		hw->timesync_c[sensor->id] = enable ?
+					     ST_ASM330LHHX_FAST_TO_DEFAULT : 0;
 
 	spin_unlock_irq(&hw->hwtimestamp_lock);
 }
@@ -106,9 +107,9 @@ int st_asm330lhhx_set_fifo_mode(struct st_asm330lhhx_hw *hw,
 	int err;
 
 	err = st_asm330lhhx_write_with_mask_locked(hw,
-					  ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
-					  ST_ASM330LHHX_REG_FIFO_MODE_MASK,
-					  fifo_mode);
+					      ST_ASM330LHHX_REG_FIFO_CTRL4_ADDR,
+					      ST_ASM330LHHX_REG_FIFO_MODE_MASK,
+					      fifo_mode);
 	if (err < 0)
 		return err;
 
@@ -124,7 +125,7 @@ int st_asm330lhhx_set_fifo_mode(struct st_asm330lhhx_hw *hw,
 
 static inline int
 st_asm330lhhx_set_sensor_batching_odr(struct st_asm330lhhx_sensor *s,
-					    bool enable)
+				      bool enable)
 {
 	enum st_asm330lhhx_sensor_id id = s->id;
 	struct st_asm330lhhx_hw *hw = s->hw;
@@ -149,9 +150,9 @@ st_asm330lhhx_set_sensor_batching_odr(struct st_asm330lhhx_sensor *s,
 			}
 
 			err = st_asm330lhhx_update_bits_locked(hw,
-				hw->odr_table_entry[id].batching_reg.addr,
-				hw->odr_table_entry[id].batching_reg.mask,
-				data);
+				      hw->odr_table_entry[id].batching_reg.addr,
+				      hw->odr_table_entry[id].batching_reg.mask,
+				      data);
 			if (err < 0)
 				return err;
 		}
@@ -181,9 +182,9 @@ st_asm330lhhx_set_sensor_batching_odr(struct st_asm330lhhx_sensor *s,
 		return err;
 
 	return st_asm330lhhx_update_bits_locked(hw,
-				hw->odr_table_entry[id].batching_reg.addr,
-				hw->odr_table_entry[id].batching_reg.mask,
-				data);
+				      hw->odr_table_entry[id].batching_reg.addr,
+				      hw->odr_table_entry[id].batching_reg.mask,
+				      data);
 }
 
 int st_asm330lhhx_update_watermark(struct st_asm330lhhx_sensor *sensor,
@@ -232,8 +233,8 @@ out:
 	return err < 0 ? err : 0;
 }
 
-static struct iio_dev *st_asm330lhhx_get_iiodev_from_tag(struct st_asm330lhhx_hw *hw,
-							 u8 tag)
+static struct
+iio_dev *st_asm330lhhx_get_iiodev_from_tag(struct st_asm330lhhx_hw *hw, u8 tag)
 {
 	struct iio_dev *iio_dev;
 
@@ -269,7 +270,7 @@ static inline void st_asm330lhhx_sync_hw_ts(struct st_asm330lhhx_hw *hw, s64 ts)
 	s64 delta = ts - hw->hw_ts;
 
 	hw->ts_offset = st_asm330lhhx_ewma(hw->ts_offset, delta,
-					  ST_ASM330LHHX_EWMA_LEVEL);
+					   ST_ASM330LHHX_EWMA_LEVEL);
 }
 
 static int st_asm330lhhx_enable_irqline(struct st_asm330lhhx_hw *hw,
@@ -340,8 +341,8 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 	while (read_len < fifo_len) {
 		word_len = min_t(int, fifo_len - read_len, sizeof(buf));
 		err = st_asm330lhhx_read_locked(hw,
-				   ST_ASM330LHHX_REG_FIFO_DATA_OUT_TAG_ADDR,
-				   buf, word_len);
+				       ST_ASM330LHHX_REG_FIFO_DATA_OUT_TAG_ADDR,
+				       buf, word_len);
 		if (err < 0)
 			return err;
 
@@ -352,7 +353,10 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 			if (tag == ST_ASM330LHHX_TS_TAG) {
 				val = get_unaligned_le32(ptr);
 
-				/* check hw rollover, just once for batching cycle */
+				/*
+				 * check hw rollover, just once for batching
+				 * cycle
+				 */
 				if ((hw->val_ts_old > val) &&
 				    !already_updated) {
 					hw->hw_ts_high_fifo++;
@@ -377,8 +381,8 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 				hw->hw_ts = (val + ((s64)hw->hw_ts_high_fifo << 32)) *
 					    hw->ts_delta_ns;
 				hw->ts_offset = st_asm330lhhx_ewma(hw->ts_offset,
-						ts_irq - hw->hw_ts,
-						ST_ASM330LHHX_EWMA_LEVEL);
+						      ts_irq - hw->hw_ts,
+						      ST_ASM330LHHX_EWMA_LEVEL);
 
 				if (!test_bit(ST_ASM330LHHX_HW_FLUSH, &hw->state))
 					/* sync ap timestamp and sensor one */
@@ -403,7 +407,7 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 				drdymask = (s16)le16_to_cpu(get_unaligned_le16(ptr));
 				if (unlikely(drdymask >= ST_ASM330LHHX_SAMPLE_DISCHARD)) {
 #ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
-					sensor->discharged_samples++;
+					sensor->discarded_samples++;
 #endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
 					continue;
 				}
@@ -431,7 +435,7 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 					sensor->discard_samples--;
 
 #ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
-					sensor->discharged_samples++;
+					sensor->discarded_samples++;
 #endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
 
 					continue;
@@ -443,8 +447,8 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 				} else {
 					sensor->dec_counter = sensor->decimator;
 					iio_push_to_buffers_with_timestamp(iio_dev,
-								iio_buf,
-								hw->tsample);
+								   iio_buf,
+								   hw->tsample);
 					sensor->last_fifo_timestamp = hw_timestamp_push;
 				}
 			}
@@ -591,8 +595,7 @@ int st_asm330lhhx_update_batching(struct iio_dev *iio_dev, bool enable)
 }
 
 static int
-st_asm330lhhx_update_fifo(struct st_asm330lhhx_sensor *sensor,
-			  bool enable)
+st_asm330lhhx_update_fifo(struct st_asm330lhhx_sensor *sensor, bool enable)
 {
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	int err;
@@ -638,7 +641,8 @@ st_asm330lhhx_update_fifo(struct st_asm330lhhx_sensor *sensor,
 
 		err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_CONT);
 	} else if (!hw->enable_mask) {
-		err = st_asm330lhhx_set_fifo_mode(hw, ST_ASM330LHHX_FIFO_BYPASS);
+		err = st_asm330lhhx_set_fifo_mode(hw,
+						  ST_ASM330LHHX_FIFO_BYPASS);
 	}
 
 	if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
@@ -767,14 +771,13 @@ static irqreturn_t st_asm330lhhx_buffer_pollfunc(int irq, void *private)
 	}
 
 	iio_push_to_buffers_with_timestamp(indio_dev, iio_buf,
-				  st_asm330lhhx_get_time_ns(indio_dev));
+					  st_asm330lhhx_get_time_ns(indio_dev));
 	iio_trigger_notify_done(indio_dev->trig);
 
 	return IRQ_HANDLED;
 }
 
-static int st_asm330lhhx_trig_set_state(struct iio_trigger *trig,
-					bool state)
+static int st_asm330lhhx_trig_set_state(struct iio_trigger *trig, bool state)
 {
 	struct st_asm330lhhx_hw *hw = iio_trigger_get_drvdata(trig);
 
@@ -825,7 +828,7 @@ static int st_asm330lhhx_config_timestamp(struct st_asm330lhhx_hw *hw)
 				 ST_ASM330LHHX_REG_CTRL10_C_ADDR,
 				 ST_ASM330LHHX_REG_TIMESTAMP_EN_MASK,
 				 ST_ASM330LHHX_SHIFT_VAL(1,
-				  ST_ASM330LHHX_REG_TIMESTAMP_EN_MASK));
+					  ST_ASM330LHHX_REG_TIMESTAMP_EN_MASK));
 	if (err < 0)
 		return err;
 
@@ -850,9 +853,9 @@ int st_asm330lhhx_allocate_buffers(struct st_asm330lhhx_hw *hw)
 			continue;
 
 		err = devm_iio_triggered_buffer_setup(hw->dev,
-				hw->iio_devs[id], NULL,
-				st_asm330lhhx_buffer_pollfunc,
-				&st_asm330lhhx_buffer_setup_ops);
+					       hw->iio_devs[id], NULL,
+					       st_asm330lhhx_buffer_pollfunc,
+					       &st_asm330lhhx_buffer_setup_ops);
 		if (err)
 		return err;
 	}
@@ -903,10 +906,9 @@ int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw)
 
 	if (device_property_read_bool(hw->dev, "drive-open-drain")) {
 		err = regmap_update_bits(hw->regmap,
-					 ST_ASM330LHHX_REG_CTRL3_C_ADDR,
-					 ST_ASM330LHHX_REG_PP_OD_MASK,
-					 FIELD_PREP(ST_ASM330LHHX_REG_PP_OD_MASK,
-						    1));
+				 ST_ASM330LHHX_REG_CTRL3_C_ADDR,
+				 ST_ASM330LHHX_REG_PP_OD_MASK,
+				 FIELD_PREP(ST_ASM330LHHX_REG_PP_OD_MASK, 1));
 		if (err < 0)
 			return err;
 
@@ -919,8 +921,7 @@ int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw)
 					irq_type | IRQF_ONESHOT,
 					hw->settings->id.name, hw);
 	if (err) {
-		dev_err(hw->dev, "failed to request trigger irq %d\n",
-			hw->irq);
+		dev_err(hw->dev, "failed to request trigger irq %d\n", hw->irq);
 		return err;
 	}
 
@@ -937,9 +938,9 @@ int st_asm330lhhx_trigger_setup(struct st_asm330lhhx_hw *hw)
 
 		sensor = iio_priv(hw->iio_devs[id]);
 		sensor->trig = devm_iio_trigger_alloc(hw->dev,
-						"st_%s-trigger%d",
-						hw->iio_devs[id]->name,
-						hw->module_id);
+						      "st_%s-trigger%d",
+						      hw->iio_devs[id]->name,
+						      hw->module_id);
 		if (!sensor->trig) {
 			dev_err(hw->dev, "failed to allocate iio trigger.\n");
 

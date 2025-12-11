@@ -148,7 +148,8 @@ int st_asm330lhhx_hwtimesync_init(struct st_asm330lhhx_hw *hw)
 	spin_lock_init(&hw->hwtimestamp_lock);
 	hw->hw_timestamp_global = 0;
 
-	hw->timesync_workqueue = create_singlethread_workqueue("st_asm330_workqueue");
+	hw->timesync_workqueue =
+			   create_singlethread_workqueue("st_asm330_workqueue");
 	if (!hw->timesync_workqueue) {
 		return -ENOMEM;
 	}

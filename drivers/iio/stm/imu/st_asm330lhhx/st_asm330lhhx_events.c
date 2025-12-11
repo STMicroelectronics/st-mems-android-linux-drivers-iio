@@ -98,9 +98,9 @@ static int st_asm330lhhx_get_xl_odr(struct st_asm330lhhx_hw *hw, int *xl_odr)
 	u8 odr_xl;
 
 	err = st_asm330lhhx_read_with_mask(hw,
-		hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].reg.addr,
-		hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].reg.mask,
-		&odr_xl);
+			     hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].reg.addr,
+			     hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].reg.mask,
+			     &odr_xl);
 	if (err < 0)
 		return err;
 
@@ -185,16 +185,16 @@ static int st_asm330lhhx_set_wake_up_threshold(struct st_asm330lhhx_hw *hw,
 	}
 
 	err = st_asm330lhhx_write_with_mask_locked(hw,
-					   ST_ASM330LHHX_REG_WAKE_UP_DUR_ADDR,
-					   ST_ASM330LHHX_WAKE_UP_W_MASK,
-					   weight);
+					     ST_ASM330LHHX_REG_WAKE_UP_DUR_ADDR,
+					     ST_ASM330LHHX_WAKE_UP_W_MASK,
+					     weight);
 	if (err < 0)
 		return err;
 
 	err = st_asm330lhhx_write_with_mask_locked(hw,
-					   ST_ASM330LHHX_REG_WAKE_UP_THS_ADDR,
-					   ST_ASM330LHHX_WAKE_UP_THS_MASK,
-					   wake_up_threshold);
+					     ST_ASM330LHHX_REG_WAKE_UP_THS_ADDR,
+					     ST_ASM330LHHX_WAKE_UP_THS_MASK,
+					     wake_up_threshold);
 	if (err < 0)
 		return err;
 
@@ -229,9 +229,9 @@ static int st_asm330lhhx_set_wake_up_duration(struct st_asm330lhhx_hw *hw,
 		wake_up_duration = max_dur;
 
 	err = st_asm330lhhx_write_with_mask_locked(hw,
-					    ST_ASM330LHHX_REG_WAKE_UP_DUR_ADDR,
-					    ST_ASM330LHHX_WAKE_UP_DUR_MASK,
-					    wake_up_duration);
+					     ST_ASM330LHHX_REG_WAKE_UP_DUR_ADDR,
+					     ST_ASM330LHHX_WAKE_UP_DUR_MASK,
+					     wake_up_duration);
 	if (err < 0)
 		return err;
 
@@ -290,9 +290,9 @@ static int st_asm330lhhx_set_6D_threshold(struct st_asm330lhhx_hw *hw,
 		return -EINVAL;
 
 	err = st_asm330lhhx_write_with_mask_locked(hw,
-					    ST_ASM330LHHX_REG_THS_6D_ADDR,
-					    ST_ASM330LHHX_SIXD_THS_MASK,
-					    st_asm330lhhx_6D_threshold[i].val);
+					     ST_ASM330LHHX_REG_THS_6D_ADDR,
+					     ST_ASM330LHHX_SIXD_THS_MASK,
+					     st_asm330lhhx_6D_threshold[i].val);
 	if (err < 0)
 		return err;
 
@@ -669,28 +669,28 @@ int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw)
 		if (reg_src[0] & ST_ASM330LHHX_Z_WU_MASK) {
 			iio_push_event(iio_dev,
 				       IIO_MOD_EVENT_CODE(IIO_ACCEL, 0,
-							  IIO_MOD_Z,
-							  IIO_EV_TYPE_THRESH,
-							  IIO_EV_DIR_RISING),
-							  iio_get_time_ns(iio_dev));
+						      IIO_MOD_Z,
+						      IIO_EV_TYPE_THRESH,
+						      IIO_EV_DIR_RISING),
+						      iio_get_time_ns(iio_dev));
 		}
 
 		if (reg_src[0] & ST_ASM330LHHX_Y_WU_MASK) {
 			iio_push_event(iio_dev,
 				       IIO_MOD_EVENT_CODE(IIO_ACCEL, 0,
-							  IIO_MOD_Y,
-							  IIO_EV_TYPE_THRESH,
-							  IIO_EV_DIR_RISING),
-							  iio_get_time_ns(iio_dev));
+						      IIO_MOD_Y,
+						      IIO_EV_TYPE_THRESH,
+						      IIO_EV_DIR_RISING),
+						      iio_get_time_ns(iio_dev));
 		}
 
 		if (reg_src[0] & ST_ASM330LHHX_X_WU_MASK) {
 			iio_push_event(iio_dev,
 				       IIO_MOD_EVENT_CODE(IIO_ACCEL, 0,
-							  IIO_MOD_X,
-							  IIO_EV_TYPE_THRESH,
-							  IIO_EV_DIR_RISING),
-							  iio_get_time_ns(iio_dev));
+						      IIO_MOD_X,
+						      IIO_EV_TYPE_THRESH,
+						      IIO_EV_DIR_RISING),
+						      iio_get_time_ns(iio_dev));
 		}
 	}
 
@@ -699,7 +699,8 @@ int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw)
 		u8 dir;
 
 		iio_dev = hw->iio_devs[ST_ASM330LHHX_ID_ACC];
-		if (reg_src[2] & (ST_ASM330LHHX_ZH_MASK | ST_ASM330LHHX_ZL_MASK)) {
+		if (reg_src[2] &
+		    (ST_ASM330LHHX_ZH_MASK | ST_ASM330LHHX_ZL_MASK)) {
 			dir = (reg_src[2] & ST_ASM330LHHX_ZH_MASK) ?
 			      IIO_EV_DIR_RISING : IIO_EV_DIR_FALLING;
 			iio_push_event(iio_dev,
@@ -710,7 +711,8 @@ int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw)
 				       iio_get_time_ns(iio_dev));
 		}
 
-		if (reg_src[2] & (ST_ASM330LHHX_YH_MASK | ST_ASM330LHHX_YL_MASK)) {
+		if (reg_src[2] &
+		    (ST_ASM330LHHX_YH_MASK | ST_ASM330LHHX_YL_MASK)) {
 			dir = (reg_src[2] & ST_ASM330LHHX_YH_MASK) ?
 			      IIO_EV_DIR_RISING : IIO_EV_DIR_FALLING;
 			iio_push_event(iio_dev,
@@ -721,7 +723,8 @@ int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw)
 				       iio_get_time_ns(iio_dev));
 		}
 
-		if (reg_src[2] & (ST_ASM330LHHX_XH_MASK | ST_ASM330LHHX_XL_MASK)) {
+		if (reg_src[2] &
+		    (ST_ASM330LHHX_XH_MASK | ST_ASM330LHHX_XL_MASK)) {
 			dir = (reg_src[2] & ST_ASM330LHHX_XH_MASK) ?
 			      IIO_EV_DIR_RISING : IIO_EV_DIR_FALLING;
 			iio_push_event(iio_dev,

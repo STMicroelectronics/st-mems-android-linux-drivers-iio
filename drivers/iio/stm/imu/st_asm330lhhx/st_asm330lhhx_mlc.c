@@ -40,8 +40,9 @@
 /* specific events for MLC */
 #define ST_ASM330LHHX_MLC_FSM_TRSD_UPDATE	1
 
-static struct iio_dev *st_asm330lhhx_mlc_alloc_iio_dev(struct st_asm330lhhx_hw *hw,
-						       enum st_asm330lhhx_sensor_id id);
+static struct
+iio_dev *st_asm330lhhx_mlc_alloc_iio_dev(struct st_asm330lhhx_hw *hw,
+					 enum st_asm330lhhx_sensor_id id);
 
 /* FSM / MLC IIO event channel definition */
 static const struct iio_chan_spec st_asm330lhhx_mlc_fsm_x_ch[] = {
@@ -113,10 +114,10 @@ st_asm330lhhx_mlc_enable_sensor(struct st_asm330lhhx_sensor *sensor,
 		    (mlc_running && !st_asm330lhhx_mlc_running(hw))) {
 			dev_info(sensor->hw->dev, "Reset MLC Algos\n");
 			err = st_asm330lhhx_update_page_bits_locked(hw,
-				   ST_ASM330LHHX_REG_EMB_FUNC_INIT_B_ADDR,
-				   ST_ASM330LHHX_MLC_INIT_MASK,
-				   ST_ASM330LHHX_SHIFT_VAL(1,
-						ST_ASM330LHHX_MLC_INIT_MASK));
+					 ST_ASM330LHHX_REG_EMB_FUNC_INIT_B_ADDR,
+					 ST_ASM330LHHX_MLC_INIT_MASK,
+					 ST_ASM330LHHX_SHIFT_VAL(1,
+						  ST_ASM330LHHX_MLC_INIT_MASK));
 			if (err < 0)
 				return err;
 		}
@@ -144,10 +145,10 @@ st_asm330lhhx_fsm_enable_sensor(struct st_asm330lhhx_sensor *sensor,
 	    id < ST_ASM330LHHX_ID_FSM_8) {
 		mask = BIT(id - ST_ASM330LHHX_ID_FSM_0);
 		err = st_asm330lhhx_update_page_bits_locked(hw,
-				ST_ASM330LHHX_FSM_ENABLE_A_ADDR,
-				mask,
-				ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0,
-						mask));
+					 ST_ASM330LHHX_FSM_ENABLE_A_ADDR,
+					 mask,
+					 ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0,
+								 mask));
 		if (err < 0)
 			return err;
 
@@ -156,18 +157,20 @@ st_asm330lhhx_fsm_enable_sensor(struct st_asm330lhhx_sensor *sensor,
 		if (bitmask) {
 			if (hw->mlc_config->mlc_int_pin  & BIT(0)) {
 				err = st_asm330lhhx_update_page_bits_locked(hw,
-						ST_ASM330LHHX_FSM_INT1_A_ADDR,
-						bitmask,
-						ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0, bitmask));
+					 ST_ASM330LHHX_FSM_INT1_A_ADDR,
+					 bitmask,
+					 ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0,
+								 bitmask));
 				if (err < 0)
 					return err;
 			}
 
 			if (hw->mlc_config->mlc_int_pin  & BIT(1)) {
 				err = st_asm330lhhx_update_page_bits_locked(hw,
-						ST_ASM330LHHX_FSM_INT2_A_ADDR,
-						bitmask,
-						ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0, bitmask));
+					 ST_ASM330LHHX_FSM_INT2_A_ADDR,
+					 bitmask,
+					 ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0,
+								 bitmask));
 				if (err < 0)
 					return err;
 			}
@@ -181,10 +184,10 @@ st_asm330lhhx_fsm_enable_sensor(struct st_asm330lhhx_sensor *sensor,
 		   id < ST_ASM330LHHX_ID_FSM_15) {
 		mask = BIT(id - ST_ASM330LHHX_ID_FSM_8);
 		err = st_asm330lhhx_update_page_bits_locked(hw,
-				ST_ASM330LHHX_FSM_ENABLE_B_ADDR,
-				mask,
-				ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0,
-						mask));
+					 ST_ASM330LHHX_FSM_ENABLE_B_ADDR,
+					 mask,
+					 ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0,
+								 mask));
 		if (err < 0)
 			return err;
 
@@ -192,18 +195,20 @@ st_asm330lhhx_fsm_enable_sensor(struct st_asm330lhhx_sensor *sensor,
 		if (bitmask) {
 			if (hw->mlc_config->mlc_int_pin  & BIT(0)) {
 				err = st_asm330lhhx_update_page_bits_locked(hw,
-						ST_ASM330LHHX_FSM_INT1_B_ADDR,
-						bitmask,
-						ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0, bitmask));
+					 ST_ASM330LHHX_FSM_INT1_B_ADDR,
+					 bitmask,
+					 ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0,
+								 bitmask));
 				if (err < 0)
 					return err;
 			}
 
 			if (hw->mlc_config->mlc_int_pin  & BIT(1)) {
 				err = st_asm330lhhx_update_page_bits_locked(hw,
-						ST_ASM330LHHX_FSM_INT2_B_ADDR,
-						bitmask,
-						ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0, bitmask));
+					 ST_ASM330LHHX_FSM_INT2_B_ADDR,
+					 bitmask,
+					 ST_ASM330LHHX_SHIFT_VAL(enable ? 1 : 0,
+								 bitmask));
 				if (err < 0)
 					return err;
 			}
@@ -228,18 +233,18 @@ st_asm330lhhx_fsm_enable_sensor(struct st_asm330lhhx_sensor *sensor,
 	    (fsm_running && !st_asm330lhhx_fsm_running(hw))) {
 		dev_info(sensor->hw->dev, "Reset FSM Algos\n");
 		err = st_asm330lhhx_update_page_bits_locked(hw,
-			   ST_ASM330LHHX_REG_EMB_FUNC_INIT_B_ADDR,
-			   ST_ASM330LHHX_FSM_INIT_MASK,
-			   ST_ASM330LHHX_SHIFT_VAL(1,
-					ST_ASM330LHHX_FSM_INIT_MASK));
+					ST_ASM330LHHX_REG_EMB_FUNC_INIT_B_ADDR,
+					ST_ASM330LHHX_FSM_INIT_MASK,
+					ST_ASM330LHHX_SHIFT_VAL(1,
+						  ST_ASM330LHHX_FSM_INIT_MASK));
 		if (err < 0)
 			return err;
 
 		err = st_asm330lhhx_update_page_bits_locked(hw,
-				ST_ASM330LHHX_EMB_FUNC_EN_B_ADDR,
-				ST_ASM330LHHX_FSM_EN_MASK,
-				ST_ASM330LHHX_SHIFT_VAL(enable,
-					ST_ASM330LHHX_FSM_EN_MASK));
+					       ST_ASM330LHHX_EMB_FUNC_EN_B_ADDR,
+					       ST_ASM330LHHX_FSM_EN_MASK,
+					       ST_ASM330LHHX_SHIFT_VAL(enable,
+						    ST_ASM330LHHX_FSM_EN_MASK));
 		if (err < 0)
 			return err;
 	}
@@ -271,10 +276,10 @@ st_asm330lhhx_mlc_fsm_enable_sensor(struct st_asm330lhhx_sensor *sensor,
 }
 
 static int st_asm330lhhx_mlc_write_event_config(struct iio_dev *iio_dev,
-				const struct iio_chan_spec *chan,
-				enum iio_event_type type,
-				enum iio_event_direction dir,
-				int state)
+					       const struct iio_chan_spec *chan,
+					       enum iio_event_type type,
+					       enum iio_event_direction dir,
+					       int state)
 {
 	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 
@@ -282,9 +287,9 @@ static int st_asm330lhhx_mlc_write_event_config(struct iio_dev *iio_dev,
 }
 
 static int st_asm330lhhx_mlc_read_event_config(struct iio_dev *iio_dev,
-				const struct iio_chan_spec *chan,
-				enum iio_event_type type,
-				enum iio_event_direction dir)
+					       const struct iio_chan_spec *chan,
+					       enum iio_event_type type,
+					       enum iio_event_direction dir)
 {
 	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 	struct st_asm330lhhx_hw *hw = sensor->hw;
@@ -479,7 +484,7 @@ static void st_asm330lhhx_mlc_update(const struct firmware *fw,
 		if (mlc_mask & BIT(i)) {
 			id = st_asm330lhhx_mlc_sensor_list[i];
 			hw->iio_devs[id] =
-				st_asm330lhhx_mlc_alloc_iio_dev(hw, id);
+					st_asm330lhhx_mlc_alloc_iio_dev(hw, id);
 			if (!hw->iio_devs[id])
 				goto release;
 
@@ -495,7 +500,7 @@ static void st_asm330lhhx_mlc_update(const struct firmware *fw,
 		if (fsm_mask & BIT(i)) {
 			id = st_asm330lhhx_fsm_sensor_list[i];
 			hw->iio_devs[id] =
-				st_asm330lhhx_mlc_alloc_iio_dev(hw, id);
+					st_asm330lhhx_mlc_alloc_iio_dev(hw, id);
 			if (!hw->iio_devs[id])
 				goto release;
 
@@ -520,20 +525,20 @@ static void st_asm330lhhx_mlc_update(const struct firmware *fw,
 
 	if (force_mlc_enabled) {
 		ret = st_asm330lhhx_update_page_bits_locked(hw,
-				ST_ASM330LHHX_EMB_FUNC_EN_B_ADDR,
-				ST_ASM330LHHX_MLC_EN_MASK,
-				ST_ASM330LHHX_SHIFT_VAL(true,
-					    ST_ASM330LHHX_MLC_EN_MASK));
+					       ST_ASM330LHHX_EMB_FUNC_EN_B_ADDR,
+					       ST_ASM330LHHX_MLC_EN_MASK,
+					       ST_ASM330LHHX_SHIFT_VAL(true,
+						    ST_ASM330LHHX_MLC_EN_MASK));
 		if (ret < 0)
 			goto release;
 	}
 
 	if (force_fsm_enabled) {
 		ret = st_asm330lhhx_update_page_bits_locked(hw,
-				ST_ASM330LHHX_EMB_FUNC_EN_B_ADDR,
-				ST_ASM330LHHX_FSM_EN_MASK,
-				ST_ASM330LHHX_SHIFT_VAL(true,
-					ST_ASM330LHHX_FSM_EN_MASK));
+					       ST_ASM330LHHX_EMB_FUNC_EN_B_ADDR,
+					       ST_ASM330LHHX_FSM_EN_MASK,
+					       ST_ASM330LHHX_SHIFT_VAL(true,
+						    ST_ASM330LHHX_FSM_EN_MASK));
 		if (ret < 0)
 			goto release;
 	}
@@ -611,10 +616,9 @@ static ssize_t st_asm330lhhx_mlc_info(struct device *dev,
 			  hw->mlc_config->fsm_configured);
 }
 
-static ssize_t
-st_asm330lhhx_mlc_get_version(struct device *dev,
-			      struct device_attribute *attr,
-			      char *buf)
+static ssize_t st_asm330lhhx_mlc_get_version(struct device *dev,
+					     struct device_attribute *attr,
+					     char *buf)
 {
 	return sysfs_emit(buf, "mlc loader Version %s\n",
 			  ST_ASM330LHHX_MLC_LOADER_VERSION);
@@ -753,7 +757,7 @@ st_asm330lhhx_mlc_alloc_iio_dev(struct st_asm330lhhx_hw *hw,
 			  "%s_mlc_%d", hw->settings->id.name,
 			  id - ST_ASM330LHHX_ID_MLC_0);
 		sensor->outreg_addr = ST_ASM330LHHX_REG_MLC0_SRC_ADDR +
-				id - ST_ASM330LHHX_ID_MLC_0;
+				      id - ST_ASM330LHHX_ID_MLC_0;
 		sensor->status = ST_ASM330LHHX_MLC_ENABLED;
 		sensor->pm = ST_ASM330LHHX_NO_MODE;
 		sensor->odr = hw->mlc_config->fsm_mlc_requested_odr;
@@ -782,7 +786,7 @@ st_asm330lhhx_mlc_alloc_iio_dev(struct st_asm330lhhx_hw *hw,
 			  "%s_fsm_%d", hw->settings->id.name,
 			  id - ST_ASM330LHHX_ID_FSM_0);
 		sensor->outreg_addr = ST_ASM330LHHX_FSM_OUTS1_ADDR +
-				id - ST_ASM330LHHX_ID_FSM_0;
+				      id - ST_ASM330LHHX_ID_FSM_0;
 		sensor->status = ST_ASM330LHHX_FSM_ENABLED;
 		sensor->pm = ST_ASM330LHHX_NO_MODE;
 		sensor->odr = hw->mlc_config->fsm_mlc_requested_odr;
@@ -816,8 +820,8 @@ int st_asm330lhhx_mlc_check_status(struct st_asm330lhhx_hw *hw)
 
 	if (hw->mlc_config->status & ST_ASM330LHHX_MLC_ENABLED) {
 		ret = st_asm330lhhx_read_locked(hw,
-					ST_ASM330LHHX_MLC_STATUS_MAINPAGE,
-					(void *)&mlc_status, 1);
+					      ST_ASM330LHHX_MLC_STATUS_MAINPAGE,
+					      (void *)&mlc_status, 1);
 		if (ret)
 			return ret;
 
@@ -839,8 +843,8 @@ int st_asm330lhhx_mlc_check_status(struct st_asm330lhhx_hw *hw)
 
 					sensor = iio_priv(iio_dev);
 					ret = st_asm330lhhx_read_page_locked(hw,
-						sensor->outreg_addr,
-						(void *)&mlc_event[i], 1);
+						      sensor->outreg_addr,
+						      (void *)&mlc_event[i], 1);
 					if (ret)
 						return ret;
 
@@ -860,8 +864,8 @@ int st_asm330lhhx_mlc_check_status(struct st_asm330lhhx_hw *hw)
 
 	if (hw->mlc_config->status & ST_ASM330LHHX_FSM_ENABLED) {
 		ret = st_asm330lhhx_read_locked(hw,
-					ST_ASM330LHHX_FSM_STATUS_A_MAINPAGE,
-					(void *)&__fsm_status, 2);
+					    ST_ASM330LHHX_FSM_STATUS_A_MAINPAGE,
+					    (void *)&__fsm_status, 2);
 		if (ret)
 			return ret;
 
@@ -884,13 +888,14 @@ int st_asm330lhhx_mlc_check_status(struct st_asm330lhhx_hw *hw)
 
 					sensor = iio_priv(iio_dev);
 					ret = st_asm330lhhx_read_page_locked(hw,
-						sensor->outreg_addr,
-						(void *)&fsm_event[i], 1);
+						      sensor->outreg_addr,
+						      (void *)&fsm_event[i], 1);
 					if (ret)
 						return ret;
 
-					iio_push_event(iio_dev, (u64)fsm_event[i],
-						       iio_get_time_ns(iio_dev));
+					iio_push_event(iio_dev,
+						      (u64)fsm_event[i],
+						      iio_get_time_ns(iio_dev));
 
 					dev_info(hw->dev,
 						 "FSM %d Status %x FSM EVENT %llx\n",
@@ -958,8 +963,7 @@ int st_asm330lhhx_mlc_probe(struct st_asm330lhhx_hw *hw)
 		return -EINVAL;
 
 	hw->iio_devs[ST_ASM330LHHX_ID_MLC] =
-		st_asm330lhhx_mlc_alloc_iio_dev(hw,
-						ST_ASM330LHHX_ID_MLC);
+		      st_asm330lhhx_mlc_alloc_iio_dev(hw, ST_ASM330LHHX_ID_MLC);
 	if (!hw->iio_devs[ST_ASM330LHHX_ID_MLC])
 		return -ENOMEM;
 

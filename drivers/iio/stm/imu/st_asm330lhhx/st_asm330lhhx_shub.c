@@ -26,11 +26,11 @@
 #define ST_ASM330LHHX_MAX_SLV_NUM			2
 
 /**
- * @struct  st_asm330lhhx_ext_pwr
- * @brief  External device Power Management description
- * reg: Generic sensor register description.
- * off_val: Value to write into register to power off external sensor.
- * on_val: Value to write into register for power on external sensor.
+ * struct  st_asm330lhhx_ext_pwr - External device Power Management description
+ *
+ * @reg: Generic sensor register description.
+ * @off_val: Value to write into register to power off external sensor.
+ * @on_val: Value to write into register for power on external sensor.
  */
 struct st_asm330lhhx_ext_pwr {
 	struct st_asm330lhhx_reg reg;
@@ -39,21 +39,21 @@ struct st_asm330lhhx_ext_pwr {
 };
 
 /**
- * @struct  st_asm330lhhx_ext_dev_settings
- * @brief  External sensor descritor entry
- * i2c_addr: External I2C device address (max two).
- * wai_addr: Device ID address.
- * wai_val: Device ID value.
- * odr_table: ODR sensor table.
- * fs_table: Full scale table.
- * temp_comp_reg: Temperature compensation registers.
- * pwr_table: External device Power Management description.
- * off_canc_reg: Offset cancellation registers.
- * bdu_reg: Block Data Update registers.
- * ext_available_scan_masks: IIO device scan mask.
- * ext_channels:IIO device channel specifications.
- * ext_chan_depth: Max number of IIO device channel specifications.
- * data_len: Sensor output data len.
+ * struct  st_asm330lhhx_ext_dev_settings - External sensor descritor entry
+ *
+ * @i2c_addr: External I2C device address (max two).
+ * @wai_addr: Device ID address.
+ * @wai_val: Device ID value.
+ * @odr_table: ODR sensor table.
+ * @fs_table: Full scale table.
+ * @temp_comp_reg: Temperature compensation registers.
+ * @pwr_table: External device Power Management description.
+ * @off_canc_reg: Offset cancellation registers.
+ * @bdu_reg: Block Data Update registers.
+ * @ext_available_scan_masks: IIO device scan mask.
+ * @ext_channels:IIO device channel specifications.
+ * @ext_chan_depth: Max number of IIO device channel specifications.
+ * @data_len: Sensor output data len.
  */
 static const struct st_asm330lhhx_ext_dev_settings {
 	u8 i2c_addr[2];
@@ -233,9 +233,12 @@ static const struct st_asm330lhhx_ext_dev_settings {
 			.addr = 0x10,
 			.mask = BIT(1),
 		},
-		.ext_channels[0] = ST_ASM330LHHX_DATA_CHANNEL(IIO_PRESSURE, 0x28,
-					0, IIO_NO_MOD, 0, 24, 32, 'u', NULL),
-		.ext_channels[1] = ST_ASM330LHHX_EVENT_CHANNEL(IIO_PRESSURE, flush),
+		.ext_channels[0] = ST_ASM330LHHX_DATA_CHANNEL(IIO_PRESSURE,
+							      0x28, 0,
+							      IIO_NO_MOD, 0, 24,
+							      32, 'u', NULL),
+		.ext_channels[1] = ST_ASM330LHHX_EVENT_CHANNEL(IIO_PRESSURE,
+							       flush),
 
 #if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 		.ext_available_scan_masks = { 0x3, 0x0 },
@@ -276,10 +279,12 @@ static const struct st_asm330lhhx_ext_dev_settings {
 			.addr = 0x10,
 			.mask = BIT(1),
 		},
-		.ext_channels[0] = ST_ASM330LHHX_DATA_CHANNEL(IIO_PRESSURE, 0x28,
-					0, IIO_NO_MOD, 0, 24, 32, 'u', NULL),
+		.ext_channels[0] = ST_ASM330LHHX_DATA_CHANNEL(IIO_PRESSURE,
+							      0x28, 0,
+							      IIO_NO_MOD, 0, 24,
+							      32, 'u', NULL),
 		.ext_channels[1] = ST_ASM330LHHX_EVENT_CHANNEL(IIO_PRESSURE,
-							     flush),
+							       flush),
 
 #if defined(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)
 		.ext_available_scan_masks = { 0x3, 0x0 },
@@ -351,7 +356,7 @@ static const struct st_asm330lhhx_ext_dev_settings {
  * plus i2c time
  * NOTE: Be sure to enable Acc or Gyro before this operation
  *
- * @param  hw: ST IMU MEMS hw instance.
+ * @hw: ST IMU MEMS hw instance.
  */
 static inline void
 st_asm330lhhx_shub_wait_complete(struct st_asm330lhhx_hw *hw,
@@ -397,11 +402,12 @@ st_asm330lhhx_shub_wait_complete(struct st_asm330lhhx_hw *hw,
  *
  * NOTE: uses page_lock
  *
- * @param  hw: ST IMU MEMS hw instance.
- * @param  addr: Remote address register.
- * @param  data: Data buffer.
- * @param  len: Data read len.
- * @return  0 if OK, < 0 if ERROR
+ * @hw: ST IMU MEMS hw instance.
+ * @addr: Remote address register.
+ * @data: Data buffer.
+ * @len: Data read len.
+ *
+ *  return  0 if OK, < 0 if ERROR
  */
 static int st_asm330lhhx_shub_read_reg(struct st_asm330lhhx_hw *hw,
 				       u8 addr, u8 *data, int len)
@@ -429,11 +435,12 @@ out:
  *
  * NOTE: uses page_lock
  *
- * @param  hw: ST IMU MEMS hw instance.
- * @param  addr: Remote address register.
- * @param  data: Data buffer.
- * @param  len: Data read len.
- * @return  0 if OK, < 0 if ERROR
+ * @hw: ST IMU MEMS hw instance.
+ * @addr: Remote address register.
+ * @data: Data buffer.
+ * @len: Data read len.
+ *
+ * return  0 if OK, < 0 if ERROR
  */
 static int st_asm330lhhx_shub_write_reg(struct st_asm330lhhx_hw *hw,
 					u8 addr, u8 *data, int len)
@@ -442,7 +449,7 @@ static int st_asm330lhhx_shub_write_reg(struct st_asm330lhhx_hw *hw,
 
 	mutex_lock(&hw->page_lock);
 	err = st_asm330lhhx_set_page_access(hw, true,
-					ST_ASM330LHHX_REG_SHUB_REG_MASK);
+					    ST_ASM330LHHX_REG_SHUB_REG_MASK);
 	if (err < 0)
 		goto out;
 
@@ -461,12 +468,13 @@ out:
  *
  * NOTE: uses page_lock
  *
- * @param  sensor: ST IMU sensor instance
- * @param  enable: Master Enable/Disable.
- * @return  0 if OK, < 0 if ERROR
+ * @sensor: ST IMU sensor instance
+ * @enable: Master Enable/Disable.
+ *
+ * return  0 if OK, < 0 if ERROR
  */
 static int st_asm330lhhx_shub_master_enable(struct st_asm330lhhx_sensor *sensor,
-					bool enable)
+					    bool enable)
 {
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	int err;
@@ -478,17 +486,17 @@ static int st_asm330lhhx_shub_master_enable(struct st_asm330lhhx_sensor *sensor,
 
 	mutex_lock(&hw->page_lock);
 	err = st_asm330lhhx_set_page_access(hw, true,
-					ST_ASM330LHHX_REG_SHUB_REG_MASK);
+					    ST_ASM330LHHX_REG_SHUB_REG_MASK);
 	if (err < 0)
 		goto out;
 
 	err = __st_asm330lhhx_write_with_mask(hw,
-					  ST_ASM330LHHX_REG_MASTER_CONFIG_ADDR,
-					  ST_ASM330LHHX_REG_MASTER_ON_MASK,
-					  enable);
+					   ST_ASM330LHHX_REG_MASTER_CONFIG_ADDR,
+					   ST_ASM330LHHX_REG_MASTER_ON_MASK,
+					   enable);
 
 	st_asm330lhhx_set_page_access(hw, false,
-				  ST_ASM330LHHX_REG_SHUB_REG_MASK);
+				      ST_ASM330LHHX_REG_SHUB_REG_MASK);
 
 out:
 	mutex_unlock(&hw->page_lock);
@@ -501,11 +509,12 @@ out:
  *
  * NOTE: use SLV3 i2c slave for one-shot read operation
  *
- * @param  sensor: ST IMU sensor instance
- * @param  addr: Remote address register.
- * @param  data: Data buffer.
- * @param  len: Data read len.
- * @return  0 if OK, < 0 if ERROR
+ * @sensor: ST IMU sensor instance
+ * @addr: Remote address register.
+ * @data: Data buffer.
+ * @len: Data read len.
+ *
+ * return  0 if OK, < 0 if ERROR
  */
 int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
 			    u8 addr, u8 *data, int len)
@@ -521,7 +530,7 @@ int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
 	config[2] = len & 0x7;
 
 	err = st_asm330lhhx_shub_write_reg(hw, ST_ASM330LHHX_REG_SLV3_ADDR,
-				       config, sizeof(config));
+					   config, sizeof(config));
 	if (err < 0)
 		return err;
 
@@ -537,8 +546,7 @@ int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
 
 	memset(config, 0, sizeof(config));
 
-	return st_asm330lhhx_shub_write_reg(hw,
-					    ST_ASM330LHHX_REG_SLV3_ADDR,
+	return st_asm330lhhx_shub_write_reg(hw, ST_ASM330LHHX_REG_SLV3_ADDR,
 					    config, sizeof(config));
 }
 
@@ -547,11 +555,12 @@ int st_asm330lhhx_shub_read(struct st_asm330lhhx_sensor *sensor,
  *
  * NOTE: use SLV0 i2c slave for write operation
  *
- * @param  sensor: ST IMU sensor instance
- * @param  addr: Remote address register.
- * @param  data: Data buffer.
- * @param  len: Data read len.
- * @return  0 if OK, < 0 if ERROR
+ * @sensor: ST IMU sensor instance
+ * @addr: Remote address register.
+ * @data: Data buffer.
+ * @len: Data read len.
+ *
+ * return  0 if OK, < 0 if ERROR
  */
 static int st_asm330lhhx_shub_write(struct st_asm330lhhx_sensor *sensor,
 				    u8 addr, u8 *data, int len)
@@ -580,8 +589,8 @@ static int st_asm330lhhx_shub_write(struct st_asm330lhhx_sensor *sensor,
 			return err;
 
 		err = st_asm330lhhx_shub_write_reg(hw,
-						   ST_ASM330LHHX_REG_DATAWRITE_SLV0_ADDR,
-						   &data[i], 1);
+					  ST_ASM330LHHX_REG_DATAWRITE_SLV0_ADDR,
+					  &data[i], 1);
 		if (err < 0)
 			return err;
 
@@ -595,19 +604,19 @@ static int st_asm330lhhx_shub_write(struct st_asm330lhhx_sensor *sensor,
 	}
 
 	memset(config, 0, sizeof(config));
-	return st_asm330lhhx_shub_write_reg(hw,
-					    ST_ASM330LHHX_REG_SLV0_ADDR,
+	return st_asm330lhhx_shub_write_reg(hw, ST_ASM330LHHX_REG_SLV0_ADDR,
 					    config, sizeof(config));
 }
 
 /**
  * Write sensor data register from shub interface using register bitmask
  *
- * @param  sensor: ST IMU sensor instance
- * @param  addr: Remote address register.
- * @param  mask: Register bitmask.
- * @param  val: Data buffer.
- * @return  0 if OK, < 0 if ERROR
+ * @sensor: ST IMU sensor instance
+ * @addr: Remote address register.
+ * @mask: Register bitmask.
+ * @val: Data buffer.
+ *
+ * return  0 if OK, < 0 if ERROR
  */
 static int
 st_asm330lhhx_shub_write_with_mask(struct st_asm330lhhx_sensor *sensor,
@@ -616,15 +625,13 @@ st_asm330lhhx_shub_write_with_mask(struct st_asm330lhhx_sensor *sensor,
 	int err;
 	u8 data;
 
-	err = st_asm330lhhx_shub_read(sensor, addr,
-				      &data, sizeof(data));
+	err = st_asm330lhhx_shub_read(sensor, addr, &data, sizeof(data));
 	if (err < 0)
 		return err;
 
 	data = (data & ~mask) | ST_ASM330LHHX_SHIFT_VAL(val, mask);
 
-	return st_asm330lhhx_shub_write(sensor, addr,
-					&data, sizeof(data));
+	return st_asm330lhhx_shub_write(sensor, addr, &data, sizeof(data));
 }
 
 /**
@@ -632,9 +639,10 @@ st_asm330lhhx_shub_write_with_mask(struct st_asm330lhhx_sensor *sensor,
  *
  * NOTE: use SLV1/SLV2 i2c slave for FIFO read operation
  *
- * @param  sensor: ST IMU sensor instance
- * @param  enable: Enable/Disable sensor.
- * @return  0 if OK, < 0 if ERROR
+ * @sensor: ST IMU sensor instance
+ * @enable: Enable/Disable sensor.
+ *
+ * return  0 if OK, < 0 if ERROR
  */
 static int
 st_asm330lhhx_shub_config_channels(struct st_asm330lhhx_sensor *sensor,
@@ -667,8 +675,7 @@ st_asm330lhhx_shub_config_channels(struct st_asm330lhhx_sensor *sensor,
 		j += 3;
 	}
 
-	return st_asm330lhhx_shub_write_reg(hw,
-					    ST_ASM330LHHX_REG_SLV1_ADDR,
+	return st_asm330lhhx_shub_write_reg(hw, ST_ASM330LHHX_REG_SLV1_ADDR,
 					    config, sizeof(config));
 }
 
@@ -677,10 +684,11 @@ st_asm330lhhx_shub_config_channels(struct st_asm330lhhx_sensor *sensor,
  *
  * Check a valid ODR closest to the passed value
  *
- * @param  sensor: SST IMU sensor instance.
- * @param  odr: ODR value (in Hz).
- * @param  val: ODR register value data pointer.
- * @return  0 if OK, negative value for ERROR
+ * @sensor: SST IMU sensor instance.
+ * @odr: ODR value (in Hz).
+ * @val: ODR register value data pointer.
+ *
+ * return  0 if OK, negative value for ERROR
  */
 static int
 st_asm330lhhx_shub_get_odr_val(struct st_asm330lhhx_sensor *sensor,
@@ -711,9 +719,10 @@ st_asm330lhhx_shub_get_odr_val(struct st_asm330lhhx_sensor *sensor,
  *
  * Set a valid ODR closest to the passed value
  *
- * @param  sensor: ST IMU sensor instance
- * @param  odr: ODR value (in Hz).
- * @return  0 if OK, negative value for ERROR
+ * @sensor: ST IMU sensor instance
+ * @odr: ODR value (in Hz).
+ *
+ * return  0 if OK, negative value for ERROR
  */
 static int
 st_asm330lhhx_shub_set_odr(struct st_asm330lhhx_sensor *sensor, u16 odr)
@@ -731,21 +740,21 @@ st_asm330lhhx_shub_set_odr(struct st_asm330lhhx_sensor *sensor, u16 odr)
 		return 0;
 
 	return st_asm330lhhx_shub_write_with_mask(sensor,
-			 ext_info->ext_dev_settings->odr_table.reg.addr,
-			 ext_info->ext_dev_settings->odr_table.reg.mask,
-			 odr_val);
+				 ext_info->ext_dev_settings->odr_table.reg.addr,
+				 ext_info->ext_dev_settings->odr_table.reg.mask,
+				 odr_val);
 }
 
 /**
  * Enable or Disable sensor [SHUB]
  *
- * @param  sensor: ST IMU sensor instance
- * @param  enable: Enable or disable the sensor [true,false].
- * @return  0 if OK, negative value for ERROR
+ * @sensor: ST IMU sensor instance
+ * @enable: Enable or disable the sensor [true,false].
+ *
+ * return  0 if OK, negative value for ERROR
  */
 int
-st_asm330lhhx_shub_set_enable(struct st_asm330lhhx_sensor *sensor,
-			      bool enable)
+st_asm330lhhx_shub_set_enable(struct st_asm330lhhx_sensor *sensor, bool enable)
 {
 	struct st_asm330lhhx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	int err;
@@ -763,9 +772,9 @@ st_asm330lhhx_shub_set_enable(struct st_asm330lhhx_sensor *sensor,
 			return err;
 	} else {
 		err = st_asm330lhhx_shub_write_with_mask(sensor,
-			 ext_info->ext_dev_settings->odr_table.reg.addr,
-			 ext_info->ext_dev_settings->odr_table.reg.mask,
-			 0);
+				 ext_info->ext_dev_settings->odr_table.reg.addr,
+				 ext_info->ext_dev_settings->odr_table.reg.mask,
+				 0);
 		if (err < 0)
 			return err;
 	}
@@ -774,12 +783,12 @@ st_asm330lhhx_shub_set_enable(struct st_asm330lhhx_sensor *sensor,
 		u8 val;
 
 		val = enable ?
-			ext_info->ext_dev_settings->pwr_table.on_val :
-			ext_info->ext_dev_settings->pwr_table.off_val;
+		      ext_info->ext_dev_settings->pwr_table.on_val :
+		      ext_info->ext_dev_settings->pwr_table.off_val;
 		err = st_asm330lhhx_shub_write_with_mask(sensor,
-			 ext_info->ext_dev_settings->pwr_table.reg.addr,
-			 ext_info->ext_dev_settings->pwr_table.reg.mask,
-			 val);
+				 ext_info->ext_dev_settings->pwr_table.reg.addr,
+				 ext_info->ext_dev_settings->pwr_table.reg.mask,
+				 val);
 		if (err < 0)
 			return err;
 	}
@@ -795,10 +804,11 @@ static inline u32 st_asm330lhhx_get_unaligned_le24(const u8 *p)
 /**
  * Single sensor read operation [SHUB]
  *
- * @param  sensor: ST IMU sensor instance
- * @param  ch: IIO Channel.
- * @param  val: Output data register value.
- * @return  IIO_VAL_INT if OK, negative value for ERROR
+ * @sensor: ST IMU sensor instance
+ * @ch: IIO Channel.
+ * @val: Output data register value.
+ *
+ * return  IIO_VAL_INT if OK, negative value for ERROR
  */
 static int
 st_asm330lhhx_shub_read_oneshot(struct st_asm330lhhx_sensor *sensor,
@@ -841,12 +851,13 @@ st_asm330lhhx_shub_read_oneshot(struct st_asm330lhhx_sensor *sensor,
 /**
  * Read Sensor data configuration [SHUB]
  *
- * @param  iio_dev: IIO Device.
- * @param  ch: IIO Channel.
- * @param  val: Data Buffer (MSB).
- * @param  val2: Data Buffer (LSB).
- * @param  mask: Data Mask.
- * @return  0 if OK, -EINVAL value for ERROR
+ * @iio_dev: IIO Device.
+ * @ch: IIO Channel.
+ * @val: Data Buffer (MSB).
+ * @val2: Data Buffer (LSB).
+ * @mask: Data Mask.
+ *
+ * return  0 if OK, -EINVAL value for ERROR
  */
 static int st_asm330lhhx_shub_read_raw(struct iio_dev *iio_dev,
 				       struct iio_chan_spec const *ch,
@@ -884,12 +895,13 @@ static int st_asm330lhhx_shub_read_raw(struct iio_dev *iio_dev,
 /**
  * Write Sensor data configuration [SHUB]
  *
- * @param  iio_dev: IIO Device.
- * @param  chan: IIO Channel.
- * @param  val: Data Buffer (MSB).
- * @param  val2: Data Buffer (LSB).
- * @param  mask: Data Mask.
- * @return  0 if OK, -EINVAL value for ERROR
+ * @iio_dev: IIO Device.
+ * @chan: IIO Channel.
+ * @val: Data Buffer (MSB).
+ * @val2: Data Buffer (LSB).
+ * @mask: Data Mask.
+ *
+ * return  0 if OK, -EINVAL value for ERROR
  */
 static int
 st_asm330lhhx_shub_write_raw(struct iio_dev *iio_dev,
@@ -907,8 +919,7 @@ st_asm330lhhx_shub_write_raw(struct iio_dev *iio_dev,
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		u8 data;
 
-		err = st_asm330lhhx_shub_get_odr_val(sensor, val,
-						     &data);
+		err = st_asm330lhhx_shub_get_odr_val(sensor, val, &data);
 		if (!err)
 			sensor->odr = val;
 		break;
@@ -931,10 +942,11 @@ st_asm330lhhx_shub_write_raw(struct iio_dev *iio_dev,
  *
  * List of available ODR returned separated by commas
  *
- * @param  dev: IIO Device.
- * @param  attr: IIO Channel attribute.
- * @param  buf: User buffer.
- * @return  buffer len
+ * @dev: IIO Device.
+ * @attr: IIO Channel attribute.
+ * @buf: User buffer.
+ *
+ * return  buffer len
  */
 static ssize_t
 st_asm330lhhx_sysfs_shub_sampling_freq_avail(struct device *dev,
@@ -962,18 +974,18 @@ st_asm330lhhx_sysfs_shub_sampling_freq_avail(struct device *dev,
  *
  * List of available Full Scale returned separated by commas
  *
- * @param  dev: IIO Device.
- * @param  attr: IIO Channel attribute.
- * @param  buf: User buffer.
- * @return  buffer len
+ * @dev: IIO Device.
+ * @attr: IIO Channel attribute.
+ * @buf: User buffer.
+ *
+ * return  buffer len
  */
 static ssize_t
 st_asm330lhhx_sysfs_shub_scale_avail(struct device *dev,
 				     struct device_attribute *attr,
 				     char *buf)
 {
-	struct st_asm330lhhx_sensor *sensor =
-					 iio_priv(dev_to_iio_dev(dev));
+	struct st_asm330lhhx_sensor *sensor = iio_priv(dev_to_iio_dev(dev));
 	struct st_asm330lhhx_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	int i, len = 0;
 
@@ -1024,16 +1036,17 @@ static const struct iio_info st_asm330lhhx_ext_info = {
 /**
  * Allocate IIO device [SHUB]
  *
- * @param  hw: ST IMU MEMS hw instance.
- * @param  ext_settings: xternal sensor descritor entry.
- * @param  id: Sensor Identifier.
- * @param  i2c_addr: external I2C address on master bus.
- * @return  struct iio_dev *, NULL if ERROR
+ * @hw: ST IMU MEMS hw instance.
+ * @ext_settings: xternal sensor descritor entry.
+ * @id: Sensor Identifier.
+ * @i2c_addr: external I2C address on master bus.
+ *
+ * return  struct iio_dev *, NULL if ERROR
  */
 static struct iio_dev *
 st_asm330lhhx_shub_alloc_iio_dev(struct st_asm330lhhx_hw *hw,
-	      const struct st_asm330lhhx_ext_dev_settings *ext_settings,
-	      enum st_asm330lhhx_sensor_id id, u8 i2c_addr)
+		      const struct st_asm330lhhx_ext_dev_settings *ext_settings,
+		      enum st_asm330lhhx_sensor_id id, u8 i2c_addr)
 {
 	struct st_asm330lhhx_sensor *sensor;
 	struct iio_dev *iio_dev;
@@ -1044,8 +1057,7 @@ st_asm330lhhx_shub_alloc_iio_dev(struct st_asm330lhhx_hw *hw,
 
 	iio_dev->modes = INDIO_DIRECT_MODE;
 	iio_dev->dev.parent = hw->dev;
-	iio_dev->available_scan_masks =
-				 ext_settings->ext_available_scan_masks;
+	iio_dev->available_scan_masks = ext_settings->ext_available_scan_masks;
 	iio_dev->info = &st_asm330lhhx_ext_info;
 	iio_dev->channels = ext_settings->ext_channels;
 	iio_dev->num_channels = ext_settings->ext_chan_depth;
@@ -1091,21 +1103,21 @@ st_asm330lhhx_shub_init_remote_sensor(struct st_asm330lhhx_sensor *sensor)
 
 	if (ext_info->ext_dev_settings->bdu_reg.addr)
 		err = st_asm330lhhx_shub_write_with_mask(sensor,
-			       ext_info->ext_dev_settings->bdu_reg.addr,
-			       ext_info->ext_dev_settings->bdu_reg.mask,
-			       1);
+				       ext_info->ext_dev_settings->bdu_reg.addr,
+				       ext_info->ext_dev_settings->bdu_reg.mask,
+				       1);
 
 	if (ext_info->ext_dev_settings->temp_comp_reg.addr)
 		err = st_asm330lhhx_shub_write_with_mask(sensor,
-			ext_info->ext_dev_settings->temp_comp_reg.addr,
-			ext_info->ext_dev_settings->temp_comp_reg.mask,
-			1);
+				 ext_info->ext_dev_settings->temp_comp_reg.addr,
+				 ext_info->ext_dev_settings->temp_comp_reg.mask,
+				 1);
 
 	if (ext_info->ext_dev_settings->off_canc_reg.addr)
 		err = st_asm330lhhx_shub_write_with_mask(sensor,
-			ext_info->ext_dev_settings->off_canc_reg.addr,
-			ext_info->ext_dev_settings->off_canc_reg.mask,
-			1);
+				  ext_info->ext_dev_settings->off_canc_reg.addr,
+				  ext_info->ext_dev_settings->off_canc_reg.mask,
+				  1);
 
 	return err;
 }
@@ -1113,8 +1125,9 @@ st_asm330lhhx_shub_init_remote_sensor(struct st_asm330lhhx_sensor *sensor)
 /**
  * Probe device function [SHUB]
  *
- * @param  hw: ST IMU MEMS hw instance.
- * @return  0 if OK, negative for ERROR
+ * @hw: ST IMU MEMS hw instance.
+ *
+ * return  0 if OK, negative for ERROR
  */
 int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 {
@@ -1128,15 +1141,15 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 	if (np && of_property_read_bool(np, "drive-pullup-shub")) {
 		dev_info(hw->dev, "enabling pull up on i2c master\n");
 		err = st_asm330lhhx_shub_read_reg(hw,
-				   ST_ASM330LHHX_REG_MASTER_CONFIG_ADDR,
-				   &data, sizeof(data));
+					   ST_ASM330LHHX_REG_MASTER_CONFIG_ADDR,
+					   &data, sizeof(data));
 		if (err < 0)
 			return err;
 
 		data |= ST_ASM330LHHX_REG_SHUB_PU_EN_MASK;
 		err = st_asm330lhhx_shub_write_reg(hw,
-				   ST_ASM330LHHX_REG_MASTER_CONFIG_ADDR,
-				   &data, sizeof(data));
+					   ST_ASM330LHHX_REG_MASTER_CONFIG_ADDR,
+					   &data, sizeof(data));
 
 		if (err < 0)
 			return err;
@@ -1148,7 +1161,8 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 	odr_save = acc_sensor->odr;
 
 	/* speed up I2C master to max frequency */
-	acc_sensor->odr = hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].odr_avl[5].hz;
+	acc_sensor->odr =
+			hw->odr_table_entry[ST_ASM330LHHX_ID_ACC].odr_avl[5].hz;
 
 	while (i < ARRAY_SIZE(st_asm330lhhx_ext_dev_table) &&
 	       num_ext_dev < ST_ASM330LHHX_MAX_SLV_NUM) {
@@ -1164,8 +1178,8 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 			config[2] = 1;
 
 			err = st_asm330lhhx_shub_write_reg(hw,
-					    ST_ASM330LHHX_REG_SLV0_ADDR,
-					    config, sizeof(config));
+						    ST_ASM330LHHX_REG_SLV0_ADDR,
+						    config, sizeof(config));
 			if (err < 0)
 				return err;
 
@@ -1177,8 +1191,8 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 			st_asm330lhhx_shub_wait_complete(hw, acc_sensor);
 
 			err = st_asm330lhhx_shub_read_reg(hw,
-					ST_ASM330LHHX_REG_SLV0_OUT_ADDR,
-					&data, sizeof(data));
+						ST_ASM330LHHX_REG_SLV0_OUT_ADDR,
+						&data, sizeof(data));
 
 			st_asm330lhhx_shub_master_enable(acc_sensor, false);
 
@@ -1190,8 +1204,8 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 
 			id = ST_ASM330LHHX_ID_EXT0 + num_ext_dev;
 			hw->iio_devs[id] = st_asm330lhhx_shub_alloc_iio_dev(hw,
-						 settings, id,
-						 settings->i2c_addr[j]);
+							 settings, id,
+							 settings->i2c_addr[j]);
 			if (!hw->iio_devs[id])
 				return -ENOMEM;
 
@@ -1227,6 +1241,6 @@ int st_asm330lhhx_shub_probe(struct st_asm330lhhx_hw *hw)
 	/* AuxSens = 3 + wr once */
 	data = ST_ASM330LHHX_REG_WRITE_ONCE_MASK | 3 | hw->i2c_master_pu;
 	return st_asm330lhhx_shub_write_reg(hw,
-				   ST_ASM330LHHX_REG_MASTER_CONFIG_ADDR,
-				   &data, sizeof(data));
+					   ST_ASM330LHHX_REG_MASTER_CONFIG_ADDR,
+					   &data, sizeof(data));
 }
