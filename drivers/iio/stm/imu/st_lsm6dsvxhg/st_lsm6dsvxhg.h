@@ -28,6 +28,7 @@
 
 #define ST_LSM6DSV80X_DEV_NAME			"lsm6dsv80x"
 #define ST_LSM6DSV320X_DEV_NAME			"lsm6dsv320x"
+#define ST_ISM6HG256X_DEV_NAME			"ism6hg256x"
 
 #define ST_LSM6DSVXHG_SAMPLE_SIZE		6
 #define ST_LSM6DSVXHG_PT_SAMPLE_SIZE		2
@@ -567,6 +568,7 @@ struct st_lsm6dsvxhg_ext_dev_info {
 enum st_lsm6dsvxhg_hw_id {
 	ST_LSM6DSV80X_ID,
 	ST_LSM6DSV320X_ID,
+	ST_ISM6HG256X_ID,
 	ST_LSM6DSV80X_MAX_ID,
 };
 

@@ -148,6 +148,55 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 			},
 		},
 	},
+	{
+		.id = {
+			.hw_id = ST_ISM6HG256X_ID,
+			.name = ST_ISM6HG256X_DEV_NAME,
+		},
+		.st_fsm_probe = true,
+		.st_sflp_probe = true,
+
+		.fs_table = {
+			[ST_LSM6DSVXHG_ID_ACC] = {
+				.size = 4,
+				.reg = {
+					.addr = ST_LSM6DSVXHG_CTRL8_ADDR,
+					.mask = GENMASK(1, 0),
+				},
+				.fs_avl[0] = { IIO_G_TO_M_S_2(61000),  0x0 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(122000), 0x1 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(244000), 0x2 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(488000), 0x3 },
+			},
+			[ST_LSM6DSVXHG_ID_GYRO] = {
+				.size = 5,
+				.reg = {
+					.addr = ST_LSM6DSVXHG_CTRL6_ADDR,
+					.mask = GENMASK(3, 0),
+				},
+				.fs_avl[0] = { IIO_DEGREE_TO_RAD(8750000),   0x1 },
+				.fs_avl[1] = { IIO_DEGREE_TO_RAD(17500000),  0x2 },
+				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000),  0x3 },
+				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000),  0x4 },
+				.fs_avl[4] = { IIO_DEGREE_TO_RAD(140000000), 0x5 },
+			},
+			[ST_LSM6DSVXHG_ID_TEMP] = {
+				.size = 1,
+				.fs_avl[0] = { (1000000 / ST_LSM6DSVXHG_TEMP_GAIN), 0x0 },
+			},
+			[ST_LSM6DSVXHG_ID_HIG_ACC] = {
+				.size = 4,
+				.reg = {
+					.addr = ST_LSM6DSVXHG_CTRL1_XL_HG_ADDR,
+					.mask = ST_LSM6DSVXHG_FS_XL_HG_MASK,
+				},
+				.fs_avl[0] = { IIO_G_TO_M_S_2(976000),   0x0 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000),  0x1 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000),  0x2 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(10417000), 0x3 },
+			},
+		},
+	},
 };
 
 struct st_lsm6dsvxhg_hz_2_nsamples {
