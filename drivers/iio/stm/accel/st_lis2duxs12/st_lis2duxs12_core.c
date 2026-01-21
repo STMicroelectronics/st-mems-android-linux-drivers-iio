@@ -1171,8 +1171,8 @@ static int st_lis2duxs12_reset_device(struct st_lis2duxs12_hw *hw)
 				 ST_LIS2DUXS12_BOOT_MASK,
 				 FIELD_PREP(ST_LIS2DUXS12_BOOT_MASK, 1));
 
-	/* wait ~20 ms */
-	usleep_range(20000, 20100);
+	/* wait ~25 ms */
+	usleep_range(25000, 26000);
 
 	return ret;
 }
