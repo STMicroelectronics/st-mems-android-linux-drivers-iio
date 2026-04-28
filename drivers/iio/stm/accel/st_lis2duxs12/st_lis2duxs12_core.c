@@ -145,6 +145,7 @@ st_lis2duxs12_fs_table_entry st_lis2duxs12_fs_table[] = {
 	},
 	[ST_LIS2DUXS12_ID_TEMP] = {
 		.size = 1,
+		.reg = { 0 },
 		.fs_avl[0] = {
 			.gain = (1000000 / ST_LIS2DUXS12_TEMP_GAIN),
 			.val = 0x0
@@ -371,14 +372,20 @@ st_lis2duxs12_set_full_scale(struct st_lis2duxs12_sensor *sensor,
 	if (i == st_lis2duxs12_fs_table[id].size)
 		return -EINVAL;
 
-	val = st_lis2duxs12_fs_table[id].fs_avl[i].val;
-	err = regmap_update_bits(hw->regmap,
-			st_lis2duxs12_fs_table[id].reg.addr,
-			st_lis2duxs12_fs_table[id].reg.mask,
-			ST_LIS2DUXS12_SHIFT_VAL(val,
-			 st_lis2duxs12_fs_table[id].reg.mask));
-	if (err < 0)
-		return err;
+	/*
+	 * Sensors without a programmable FS register (e.g. TEMP)
+	 * have mask = 0 in fs_table, so we just skip the write.
+	 */
+	if (st_lis2duxs12_fs_table[id].reg.mask) {
+		val = st_lis2duxs12_fs_table[id].fs_avl[i].val;
+		err = regmap_update_bits(hw->regmap,
+					 st_lis2duxs12_fs_table[id].reg.addr,
+					 st_lis2duxs12_fs_table[id].reg.mask,
+					 ST_LIS2DUXS12_SHIFT_VAL(val,
+					 st_lis2duxs12_fs_table[id].reg.mask));
+		if (err < 0)
+			return err;
+	}
 
 	sensor->gain = gain;
 
