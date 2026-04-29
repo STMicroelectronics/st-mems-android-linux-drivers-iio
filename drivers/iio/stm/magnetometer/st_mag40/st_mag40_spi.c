@@ -100,7 +100,7 @@ static const struct of_device_id st_mag40_id_table[] = {
 	},
 	{
 		.compatible = "st,lis2mdl_magn",
-		.data = LSM303AGR_DEV_NAME,
+		.data = LIS2MDL_DEV_NAME,
 	},
 	{
 		.compatible = "st,ism303dac_magn",
