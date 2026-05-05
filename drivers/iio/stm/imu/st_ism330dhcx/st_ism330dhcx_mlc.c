@@ -835,9 +835,9 @@ int st_ism330dhcx_mlc_check_status(struct st_ism330dhcx_hw *hw)
 					}
 
 					sensor = iio_priv(iio_dev);
-					ret = st_ism330dhcx_read_atomic(hw,
+					ret = st_ism330dhcx_read_page_locked(hw,
 						sensor->outreg_addr,
-						1, (void *)&mlc_event[i]);
+						(void *)&mlc_event[i], 1);
 					if (ret)
 						return ret;
 
@@ -880,9 +880,9 @@ int st_ism330dhcx_mlc_check_status(struct st_ism330dhcx_hw *hw)
 					}
 
 					sensor = iio_priv(iio_dev);
-					ret = st_ism330dhcx_read_atomic(hw,
+					ret = st_ism330dhcx_read_page_locked(hw,
 						sensor->outreg_addr,
-						1, (void *)&fsm_event[i]);
+						(void *)&fsm_event[i], 1);
 					if (ret)
 						return ret;
 
