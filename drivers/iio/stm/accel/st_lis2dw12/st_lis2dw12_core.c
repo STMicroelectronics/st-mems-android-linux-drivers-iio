@@ -222,6 +222,13 @@ static const struct iio_chan_spec st_lis2dw12_temp_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(1)
 };
 
+static void st_lis2dw12_show_configuration(struct st_lis2dw12_hw *hw)
+{
+	dev_info(hw->dev, "- STORE SAMPLE FIFO SUSPEND: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_LIS2DW12_STORE_SAMPLE_FIFO_SUSPEND) ?
+		 "enabled" : "disabled");
+}
+
 static int st_lis2dw12_set_fs(struct st_lis2dw12_sensor *sensor, u16 gain)
 {
 	int i, err;
@@ -1161,6 +1168,8 @@ int st_lis2dw12_probe(struct device *dev, int irq, const char *name,
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev,
 						     "wakeup-source"));
+
+	st_lis2dw12_show_configuration(hw);
 
 	return 0;
 }

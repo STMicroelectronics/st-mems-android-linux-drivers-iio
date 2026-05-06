@@ -364,6 +364,52 @@ static const struct iio_chan_spec st_lsm6ds3_tilt_ch[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(0)
 };
 
+static void st_lsm6ds3_show_configuration(struct lsm6ds3_data *cdata)
+{
+	dev_info(cdata->dev, "- EN BASIC FEATURES: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES) ?
+		 "enabled" : "disabled");
+
+	dev_info(cdata->dev, "- COUNTER ON DURING SUSPEND: %s\n",
+		 IS_ENABLED(CONFIG_ST_LSM6DS3_STEP_COUNTER_ON_DURING_SUSPEND) ?
+		 "enabled" : "disabled");
+
+#if defined(CONFIG_ST_LSM6DS3_IIO_LIMIT_FIFO) && \
+	   (CONFIG_ST_LSM6DS3_IIO_LIMIT_FIFO > 0)
+	dev_info(cdata->dev, "- IIO LIMIT FIFO watermark: %d\n",
+		 CONFIG_ST_LSM6DS3_IIO_LIMIT_FIFO);
+#else
+	dev_info(cdata->dev, "- IIO LIMIT FIFO: disabled\n");
+#endif
+
+	if (IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT)) {
+		char *ext0_str = "unknown";
+
+		dev_info(cdata->dev, "- MASTER SUPPORT: enabled\n");
+		dev_info(cdata->dev, "- INTERNAL PULLUP: %s\n",
+			 IS_ENABLED(CONFIG_ST_LSM6DS3_ENABLE_INTERNAL_PULLUP) ?
+			 "enabled" : "disabled");
+		if (IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_EXT0_LIS3MDL))
+			ext0_str = "LIS3MDL";
+		else if (IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_EXT0_AKM09911))
+			ext0_str = "AKM09911";
+		else if (IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_EXT0_AKM09912))
+			ext0_str = "AKM09912";
+		else if (IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_EXT0_AKM09916))
+			ext0_str = "AKM09916";
+		else if (IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_EXT0_LPS22HB))
+			ext0_str = "LPS22HB";
+		else if (IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_EXT0_LIS2MDL))
+			ext0_str = "LIS2MDL";
+		dev_info(cdata->dev, "- EXT0: %s\n", ext0_str);
+	} else {
+		dev_info(cdata->dev, "- MASTER SUPPORT: disabled\n");
+	}
+
+	dev_info(cdata->dev, "- DATA INJECTION: %s\n",
+		 IS_ENABLED(CONFIG_ST_LSM6DS3_XL_DATA_INJECTION) ?
+		 "enabled" : "disabled");
+}
 
 int st_lsm6ds3_write_data_with_mask(struct lsm6ds3_data *cdata,
 				u8 reg_addr, u8 mask, u8 data, bool b_lock)
@@ -3146,6 +3192,8 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 		st_lsm6ds3_i2c_master_probe(cdata);
 
 	device_init_wakeup(cdata->dev, true);
+
+	st_lsm6ds3_show_configuration(cdata);
 
 	return 0;
 

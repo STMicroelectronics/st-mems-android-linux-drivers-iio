@@ -387,6 +387,16 @@ static __maybe_unused const struct iio_chan_spec st_iis2iclx_temp_channels[] = {
 
 };
 
+static void st_iis2iclx_show_configuration(struct st_iis2iclx_hw *hw)
+{
+	dev_info(hw->dev, "- MLC PRELOAD: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD) ?
+		 "enabled" : "disabled");
+	dev_info(hw->dev, "- ASYNC HW timestamp: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP) ?
+		 "enabled" : "disabled");
+}
+
 static inline int st_iis2iclx_get_odr_index(int odr)
 {
 	int i;
@@ -2044,7 +2054,7 @@ int st_iis2iclx_probe(struct device *dev, int irq, struct regmap *regmap)
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev, "wakeup-source"));
 
-	dev_info(dev, "Device probed\n");
+	st_iis2iclx_show_configuration(hw);
 
 	return 0;
 

@@ -413,6 +413,16 @@ static const struct iio_chan_spec st_ism330dhcx_temp_channels[] = {
 
 };
 
+static void st_ism330dhcx_show_configuration(struct st_ism330dhcx_hw *hw)
+{
+	dev_info(hw->dev, "- ASYNC HW timestamp: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP) ?
+		 "enabled" : "disabled");
+	dev_info(hw->dev, "- MLC PRELOAD: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_ISM330DHCX_MLC_PRELOAD) ?
+		 "enabled" : "disabled");
+}
+
 /**
  * Detect device ID
  *
@@ -1947,7 +1957,7 @@ int st_ism330dhcx_probe(struct device *dev, int irq, struct regmap *regmap)
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev, "wakeup-source"));
 
-	dev_info(dev, "Device probed\n");
+	st_ism330dhcx_show_configuration(hw);
 
 	return 0;
 }

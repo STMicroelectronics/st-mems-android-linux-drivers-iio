@@ -541,6 +541,16 @@ __maybe_unused const struct iio_chan_spec st_asm330lhhx_temp_channels[] = {
 
 };
 
+static void st_asm330lhhx_show_configuration(struct st_asm330lhhx_hw *hw)
+{
+	dev_info(hw->dev, "- ASYNC HW timestamp: %s\n",
+		IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP) ?
+		"enabled" : "disabled");
+	dev_info(hw->dev, "- STORE SAMPLE FIFO SUSPEND: %s\n",
+		IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND) ?
+		"enabled" : "disabled");
+}
+
 static inline int st_asm330lhhx_get_odr_index(int odr)
 {
 	int i;
@@ -2576,7 +2586,7 @@ int st_asm330lhhx_probe(struct device *dev, int irq,
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev, "wakeup-source"));
 
-	dev_info(dev, "Device probed\n");
+	st_asm330lhhx_show_configuration(hw);
 
 	return 0;
 }

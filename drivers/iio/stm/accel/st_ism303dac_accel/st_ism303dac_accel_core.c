@@ -265,6 +265,22 @@ static const struct {
 	},
 };
 
+static void st_ism303dac_show_configuration(struct ism303dac_data *cdata)
+{
+	dev_info(cdata->dev, "- EN BASIC FEATURES: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_ISM303DAC_ACCEL_EN_BASIC_FEATURES) ?
+		 "enabled" : "disabled");
+
+#if defined(CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO) && \
+	   (CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO > 0)
+	dev_info(cdata->dev, "- IIO LIMIT FIFO watermark: %d\n",
+		 CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO);
+#else
+	dev_info(cdata->dev, "- IIO LIMIT FIFO: disabled\n");
+#endif
+
+}
+
 int ism303dac_read_register(struct ism303dac_data *cdata, u8 reg_addr,
 			    int data_len, u8 *data, bool b_lock)
 {
@@ -1565,7 +1581,7 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 			return err;
 	}
 
-	dev_info(cdata->dev, "%s: probed\n", ISM303DAC_DEV_NAME);
+	st_ism303dac_show_configuration(cdata);
 
 	return 0;
 }

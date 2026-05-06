@@ -525,6 +525,16 @@ static const struct iio_chan_spec st_lsm6dsv16bx_sflp_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
+static void st_lsm6dsv16bx_show_configuration(struct st_lsm6dsv16bx_hw *hw)
+{
+	dev_info(hw->dev, "- ASYNC HW timestamp: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_LSM6DSV16BX_ASYNC_HW_TIMESTAMP) ?
+		 "enabled" : "disabled");
+	dev_info(hw->dev, "- MLC PRELOAD: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_LSM6DSV16BX_MLC_PRELOAD) ?
+		 "enabled" : "disabled");
+}
+
 static int st_lsm6dsv16bx_check_whoami(struct st_lsm6dsv16bx_hw *hw, int id)
 {
 	int data, err, i;
@@ -2401,6 +2411,8 @@ int st_lsm6dsv16bx_probe(struct device *dev, int irq,
 
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev, "wakeup-source"));
+
+	st_lsm6dsv16bx_show_configuration(hw);
 
 	return 0;
 }

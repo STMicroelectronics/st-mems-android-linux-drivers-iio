@@ -395,6 +395,16 @@ static const struct iio_chan_spec st_lsm6dsrx_temp_channels[] = {
 
 };
 
+static void st_lsm6dsrx_show_configuration(struct st_lsm6dsrx_hw *hw)
+{
+	dev_info(hw->dev, "- ASYNC HW timestamp: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP) ?
+		 "enabled" : "disabled");
+	dev_info(hw->dev, "- MLC PRELOAD: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_LSM6DSRX_MLC_PRELOAD) ?
+		 "enabled" : "disabled");
+}
+
 static __maybe_unused int st_lsm6dsrx_reg_access(struct iio_dev *iio_dev,
 				 unsigned int reg, unsigned int writeval,
 				 unsigned int *readval)
@@ -1917,7 +1927,7 @@ int st_lsm6dsrx_probe(struct device *dev, int irq, enum st_lsm6dsrx_hw_id hw_id,
 	device_init_wakeup(dev,
 			   device_property_read_bool(dev, "wakeup-source"));
 
-	dev_info(dev, "Device probed\n");
+	st_lsm6dsrx_show_configuration(hw);
 
 	return 0;
 }

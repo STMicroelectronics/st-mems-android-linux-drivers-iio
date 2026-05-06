@@ -321,6 +321,23 @@ static const struct {
 	},
 };
 
+static void lis2ds12_show_configuration(struct lis2ds12_data *cdata)
+{
+	dev_info(cdata->dev, "- EN BASIC FEATURES: %s\n",
+		 IS_ENABLED(CONFIG_IIO_ST_LIS2DS12_EN_BASIC_FEATURES) ?
+		 "enabled" : "disabled");
+
+#if defined(CONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO) && \
+	   (CONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO > 0)
+	dev_info(cdata->dev, "- IIO LIMIT FIFO watermark: %d\n",
+		 CONFIG_ST_LIS2DS12_IIO_LIMIT_FIFO);
+#else
+	dev_info(cdata->dev, "- IIO LIMIT FIFO: disabled\n");
+#endif
+
+}
+
+
 static int lis2ds12_write_advanced_cfg_regs(struct lis2ds12_data *cdata,
 					    unsigned int addr, u8 *data,
 					    int len)
@@ -1533,7 +1550,7 @@ int lis2ds12_common_probe(struct lis2ds12_data *cdata, int irq)
 			return err;
 	}
 
-	dev_info(cdata->dev, "%s: probed\n", LIS2DS12_DEV_NAME);
+	lis2ds12_show_configuration(cdata);
 
 	return 0;
 }
