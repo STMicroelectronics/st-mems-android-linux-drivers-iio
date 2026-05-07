@@ -20,10 +20,6 @@
 #include <linux/iio/triggered_buffer.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0)
-#include <linux/iio/buffer_impl.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_lsm6dsm.h"
 
 #define ST_LSM6DSM_FIFO_DIFF_L			0x3a
@@ -548,12 +544,7 @@ static int st_lsm6dsm_buffer_postenable(struct iio_dev *indio_dev)
 	mutex_unlock(&sdata->cdata->odr_lock);
 
 	if (sdata->sindex == ST_MASK_ID_STEP_COUNTER)
-
-#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
-		iio_trigger_poll_nested(sdata->cdata->trig[ST_MASK_ID_STEP_COUNTER]);
-#else /* LINUX_VERSION_CODE */
-		iio_trigger_poll_chained(sdata->cdata->trig[ST_MASK_ID_STEP_COUNTER]);
-#endif /* LINUX_VERSION_CODE */
+		st_iio_trigger_poll(sdata->cdata->trig[ST_MASK_ID_STEP_COUNTER]);
 
 	return 0;
 }

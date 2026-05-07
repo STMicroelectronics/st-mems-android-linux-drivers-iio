@@ -166,7 +166,7 @@ st_sths34pf80_reg_access(struct iio_dev *iio_dev,
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -175,7 +175,7 @@ st_sths34pf80_reg_access(struct iio_dev *iio_dev,
 	else
 		ret = regmap_read(sensor->hw->regmap, reg, readval);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return (ret < 0) ? ret : 0;
 }
@@ -753,12 +753,12 @@ static int st_sths34pf80_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_sths34pf80_read_oneshot(sensor, ch, val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_OFFSET:
 		switch (ch->type) {
@@ -855,7 +855,7 @@ static int st_sths34pf80_write_raw(struct iio_dev *iio_dev,
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -875,7 +875,7 @@ static int st_sths34pf80_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -952,12 +952,12 @@ st_sths34pf80_read_event_config(struct iio_dev *iio_dev,
 	struct st_sths34pf80_hw *hw = sensor->hw;
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
 	ret = !!(hw->event_mask & BIT(sensor->id));
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return ret;
 }
@@ -977,17 +977,17 @@ st_sths34pf80_write_event_config(struct iio_dev *iio_dev,
 				 const struct iio_chan_spec *chan,
 				 enum iio_event_type type,
 				 enum iio_event_direction dir,
-				 int state)
+				 ST_IIO_EVENT_EN_TYPE state)
 {
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
 	err = st_sths34pf80_event_sensor_enable(sensor, state);
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -1323,7 +1323,7 @@ static ssize_t st_sths34pf80_lpf_set(struct device *dev,
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -1334,7 +1334,7 @@ static ssize_t st_sths34pf80_lpf_set(struct device *dev,
 	err = st_sths34pf80_update_lpf(sensor, val);
 
 out:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -1402,7 +1402,7 @@ static ssize_t st_sths34pf80_threshold_set(struct device *dev,
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -1413,7 +1413,7 @@ static ssize_t st_sths34pf80_threshold_set(struct device *dev,
 	err = st_sths34pf80_update_threshold(sensor, val);
 
 out:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -1479,7 +1479,7 @@ static ssize_t st_sths34pf80_hysteresis_set(struct device *dev,
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -1490,7 +1490,7 @@ static ssize_t st_sths34pf80_hysteresis_set(struct device *dev,
 	err = st_sths34pf80_update_hysteresis(sensor, val);
 
 out:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -1518,7 +1518,7 @@ st_sths34pf80_tobject_tcomp_set(struct device *dev,
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -1531,7 +1531,7 @@ st_sths34pf80_tobject_tcomp_set(struct device *dev,
 		goto out;
 
 out:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -1597,7 +1597,7 @@ static ssize_t st_sths34pf80_sensitivity_set(struct device *dev,
 	struct st_sths34pf80_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -1608,7 +1608,7 @@ static ssize_t st_sths34pf80_sensitivity_set(struct device *dev,
 	err = st_sths34pf80_update_sensitivity(sensor, val);
 
 out:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -1648,14 +1648,14 @@ static ssize_t st_sths34pf80_algo_reset(struct device *dev,
 	struct st_sths34pf80_hw *hw = sensor->hw;
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
 	mutex_lock(&hw->page_lock);
 	err = st_sths34pf80_reset_algos(hw);
 	mutex_unlock(&hw->page_lock);
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err ? err : size;
 }
@@ -2045,36 +2045,15 @@ int st_sths34pf80_probe(struct device *dev, int irq,
 		return err;
 
 	for (i = 0; i < ST_STHS34PF80_ID_MAX; i++) {
-
-#if KERNEL_VERSION(5, 13, 0) > LINUX_VERSION_CODE
-		struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
-
 		hw->iio_devs[i] = st_sths34pf80_alloc_iiodev(hw, i);
 		if (!hw->iio_devs[i])
 			return -ENOMEM;
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-						  &st_sths34pf80_fifo_ops);
+		err = st_devm_iio_kfifo_buffer_setup(hw->dev,
+						     hw->iio_devs[i],
+						     &st_sths34pf80_fifo_ops);
 		if (err)
 			return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev,
-						  hw->iio_devs[i],
-						  INDIO_BUFFER_SOFTWARE,
-						  &st_sths34pf80_fifo_ops);
-		if (err)
-			return err;
-#else /* LINUX_VERSION_CODE */
-		buffer = devm_iio_kfifo_allocate(hw->dev);
-		if (!buffer)
-			return -ENOMEM;
-
-		iio_device_attach_buffer(hw->iio_devs[i], buffer);
-		hw->iio_devs[i]->modes |= INDIO_BUFFER_SOFTWARE;
-		hw->iio_devs[i]->setup_ops = &st_sths34pf80_fifo_ops;
-#endif /* LINUX_VERSION_CODE */
 
 		err = devm_iio_device_register(hw->dev,
 					       hw->iio_devs[i]);

@@ -35,17 +35,7 @@ static int st_lps22df_spi_probe(struct spi_device *spi)
 				id->driver_data, regmap);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_lps22df_spi_remove(struct spi_device *spi)
-{
-	st_lps22df_remove(&spi->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_lps22df_spi_remove(struct spi_device *spi)
-{
-	return st_lps22df_remove(&spi->dev);
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_lps22df_spi_remove, st_lps22df_remove)
 
 static const struct spi_device_id st_lps22df_ids[] = {
 	{ "lps22df", ST_LPS22DF_ID },

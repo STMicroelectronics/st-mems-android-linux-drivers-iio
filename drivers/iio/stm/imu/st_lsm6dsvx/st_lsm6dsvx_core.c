@@ -1037,12 +1037,12 @@ static int st_lsm6dsvx_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_lsm6dsvx_read_oneshot(sensor, ch->address, val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
 		*val = (int)sensor->odr;
@@ -1093,7 +1093,7 @@ static int st_lsm6dsvx_write_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
-		err = iio_device_claim_direct_mode(iio_dev);
+		err = st_iio_device_claim_direct(iio_dev);
 		if (err)
 			return err;
 
@@ -1102,7 +1102,7 @@ static int st_lsm6dsvx_write_raw(struct iio_dev *iio_dev,
 		/* some events depends on xl full scale */
 		if (chan->type == IIO_ACCEL)
 			err = st_lsm6dsvx_update_threshold_events(sensor->hw);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		int todr, tuodr;
@@ -1211,7 +1211,7 @@ static __maybe_unused int st_lsm6dsvx_reg_access(struct iio_dev *iio_dev,
 	struct st_lsm6dsvx_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -1220,7 +1220,7 @@ static __maybe_unused int st_lsm6dsvx_reg_access(struct iio_dev *iio_dev,
 	else
 		ret = regmap_read(sensor->hw->regmap, reg, readval);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return (ret < 0) ? ret : 0;
 }
@@ -1673,7 +1673,7 @@ static ssize_t st_lsm6dsvx_sysfs_start_selftest(struct device *dev,
 	if (test == ARRAY_SIZE(st_lsm6dsvx_selftest_table))
 		return -EINVAL;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -1723,7 +1723,7 @@ restore_regs:
 	st_lsm6dsvx_restore_regs(hw);
 
 out_claim:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return size;
 }
@@ -2125,14 +2125,7 @@ int st_lsm6dsvx_probe(struct device *dev, int irq, enum st_lsm6dsvx_hw_id hw_id,
 	if (err < 0)
 		return err;
 
-#if KERNEL_VERSION(5, 15, 0) <= LINUX_VERSION_CODE
-	err = iio_read_mount_matrix(dev, &hw->orientation);
-#elif KERNEL_VERSION(5, 2, 0) <= LINUX_VERSION_CODE
-	err = iio_read_mount_matrix(dev, "mount-matrix", &hw->orientation);
-#else /* LINUX_VERSION_CODE */
-	err = of_iio_read_mount_matrix(dev, "mount-matrix", &hw->orientation);
-#endif /* LINUX_VERSION_CODE */
-
+	err = st_iio_read_mount_matrix(dev, &hw->orientation);
 	if (err) {
 		dev_err(dev, "Failed to retrieve mounting matrix %d\n", err);
 		return err;

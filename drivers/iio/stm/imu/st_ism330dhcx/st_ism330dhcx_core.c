@@ -913,12 +913,12 @@ static int st_ism330dhcx_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_ism330dhcx_read_oneshot(sensor, ch->address, val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_OFFSET:
 		switch (ch->type) {
@@ -978,7 +978,7 @@ static int st_ism330dhcx_write_raw(struct iio_dev *iio_dev,
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -1035,7 +1035,7 @@ static int st_ism330dhcx_write_raw(struct iio_dev *iio_dev,
 	}
 
 release_iio:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -1049,7 +1049,7 @@ __maybe_unused st_ism330dhcx_reg_access(struct iio_dev *iio_dev,
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -1058,7 +1058,7 @@ __maybe_unused st_ism330dhcx_reg_access(struct iio_dev *iio_dev,
 	else
 		ret = regmap_read(sensor->hw->regmap, reg, readval);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return (ret < 0) ? ret : 0;
 }
@@ -1467,7 +1467,7 @@ st_ism330dhcx_sysfs_start_selftest(struct device *dev,
 	if (test == ARRAY_SIZE(st_ism330dhcx_selftest_table))
 		return -EINVAL;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -1523,7 +1523,7 @@ restore_regs:
 	st_ism330dhcx_restore_regs(hw);
 
 out_claim:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return size;
 }

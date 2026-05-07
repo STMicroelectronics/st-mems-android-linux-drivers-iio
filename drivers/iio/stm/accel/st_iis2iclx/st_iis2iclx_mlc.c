@@ -264,7 +264,7 @@ static int st_iis2iclx_mlc_write_event_config(struct iio_dev *iio_dev,
 					      const struct iio_chan_spec *chan,
 					      enum iio_event_type type,
 					      enum iio_event_direction dir,
-					      int state)
+					      ST_IIO_EVENT_EN_TYPE state)
 {
 	struct st_iis2iclx_sensor *sensor = iio_priv(iio_dev);
 
@@ -696,11 +696,7 @@ st_iis2iclx_mlc_alloc_iio_dev(struct st_iis2iclx_hw *hw,
 	if (id == ST_IIS2ICLX_ID_MLC) {
 		iio_dev = devm_iio_device_alloc(hw->dev, sizeof(*sensor));
 	} else {
-#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE
-		iio_dev = iio_device_alloc(NULL, sizeof(*sensor));
-#else /* LINUX_VERSION_CODE */
-		iio_dev = iio_device_alloc(sizeof(*sensor));
-#endif /* LINUX_VERSION_CODE */
+		iio_dev = st_iio_device_alloc(sizeof(*sensor));
 	}
 
 	if (!iio_dev)

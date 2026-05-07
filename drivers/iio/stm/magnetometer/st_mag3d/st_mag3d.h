@@ -14,6 +14,8 @@
 #include <linux/regmap.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
+
 #define LIS3MDL_DEV_NAME		"lis3mdl_magn"
 #define LSM9DS1_DEV_NAME		"lsm9ds1_magn"
 

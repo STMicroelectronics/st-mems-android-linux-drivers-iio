@@ -36,26 +36,15 @@ static int st_lsm6dsox_spi_probe(struct spi_device *spi)
 	return st_lsm6dsox_probe(&spi->dev, spi->irq, hw_id, regmap);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_lsm6dsox_spi_remove(struct spi_device *spi)
+static void st_lsm6dsox_spi_remove_dev(struct device *dev)
 {
-	struct st_lsm6dsox_hw *hw = dev_get_drvdata(&spi->dev);
+	struct st_lsm6dsox_hw *hw = dev_get_drvdata(dev);
 
 	if (hw->settings->st_mlc_probe)
-		st_lsm6dsox_mlc_remove(&spi->dev);
+		st_lsm6dsox_mlc_remove(dev);
 }
-#else /* LINUX_VERSION_CODE */
-static int st_lsm6dsox_spi_remove(struct spi_device *spi)
-{
-	struct st_lsm6dsox_hw *hw = dev_get_drvdata(&spi->dev);
-	int err = 0;
 
-	if (hw->settings->st_mlc_probe)
-		err = st_lsm6dsox_mlc_remove(&spi->dev);
-
-	return err;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_lsm6dsox_spi_remove, st_lsm6dsox_spi_remove_dev)
 
 static const struct of_device_id st_lsm6dsox_spi_of_match[] = {
 	{

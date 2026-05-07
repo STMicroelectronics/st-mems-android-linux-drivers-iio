@@ -24,10 +24,9 @@ static const struct regmap_config st_lis2dw12_i2c_regmap_config = {
 	.volatile_reg = st_lis2dw12_is_volatile_reg,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int st_lis2dw12_i2c_probe(struct i2c_client *client)
+ST_I2C_PROBE(st_lis2dw12_i2c_probe)
 {
-	const struct i2c_device_id *id = i2c_client_get_device_id(client);
+	ST_I2C_GET_PROBE_ID(client, match_id);
 	struct regmap *regmap;
 
 	regmap = devm_regmap_init_i2c(client, &st_lis2dw12_i2c_regmap_config);
@@ -40,40 +39,11 @@ static int st_lis2dw12_i2c_probe(struct i2c_client *client)
 	}
 
 	return st_lis2dw12_probe(&client->dev, client->irq,
-				 client->name, id->driver_data, regmap);
+				 client->name, match_id->driver_data,
+				 regmap);
 }
-#else /* LINUX_VERSION_CODE */
-static int st_lis2dw12_i2c_probe(struct i2c_client *client,
-				 const struct i2c_device_id *id)
-{
-	enum st_lis2dw12_hw_id hw_id = (enum st_lis2dw12_hw_id)id->driver_data;
-	struct regmap *regmap;
 
-	regmap = devm_regmap_init_i2c(client, &st_lis2dw12_i2c_regmap_config);
-	if (IS_ERR(regmap)) {
-		dev_err(&client->dev,
-			"Failed to register i2c regmap %d\n",
-			(int)PTR_ERR(regmap));
-
-		return PTR_ERR(regmap);
-	}
-
-	return st_lis2dw12_probe(&client->dev, client->irq,
-				 client->name, hw_id, regmap);
-}
-#endif /* LINUX_VERSION_CODE */
-
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void st_lis2dw12_i2c_remove(struct i2c_client *client)
-{
-	st_lis2dw12_remove(&client->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_lis2dw12_i2c_remove(struct i2c_client *client)
-{
-	return st_lis2dw12_remove(&client->dev);
-}
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_REMOVE(st_lis2dw12_i2c_remove, st_lis2dw12_remove)
 
 static const struct of_device_id st_lis2dw12_i2c_of_match[] = {
 	{

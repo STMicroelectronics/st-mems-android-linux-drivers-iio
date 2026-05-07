@@ -439,7 +439,7 @@ static int st_hts221_read_raw(struct iio_dev *iio_dev,
 	struct st_hts221_hw *hw = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -485,7 +485,7 @@ static int st_hts221_read_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return ret;
 }
@@ -497,7 +497,7 @@ static int st_hts221_write_raw(struct iio_dev *iio_dev,
 	struct st_hts221_hw *hw = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -523,7 +523,7 @@ static int st_hts221_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return ret;
 }

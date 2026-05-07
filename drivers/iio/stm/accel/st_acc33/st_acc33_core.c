@@ -19,12 +19,6 @@
 #include <linux/property.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_acc33.h"
 
 #define ST_ACC33_DATA_CHANNEL(addr, modx, scan_idx)			\
@@ -245,13 +239,13 @@ static int st_acc33_read_raw(struct iio_dev *iio_dev,
 		int err, delay;
 		u8 data[2];
 
-		err = iio_device_claim_direct_mode(iio_dev);
+		err = st_iio_device_claim_direct(iio_dev);
 		if (err)
 			return err;
 
 		err = st_acc33_set_enable(hw, true);
 		if (err < 0) {
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			return err;
 		}
 
@@ -262,20 +256,20 @@ static int st_acc33_read_raw(struct iio_dev *iio_dev,
 		ret = regmap_bulk_read(hw->regmap, ch->address,
 				       (void *)&data, 2);
 		if (err < 0) {
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			return err;
 		}
 
 		err = st_acc33_set_enable(hw, false);
 		if (err < 0) {
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			return err;
 		}
 
 		*val = (s16)get_unaligned_le16(data);
 		*val = *val >> ch->scan_type.shift;
 
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 
 		ret = IIO_VAL_INT;
 		break;
@@ -304,7 +298,7 @@ static int st_acc33_write_raw(struct iio_dev *iio_dev,
 	struct st_acc33_hw *hw = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -328,7 +322,7 @@ static int st_acc33_write_raw(struct iio_dev *iio_dev,
 		err = -EINVAL;
 		break;
 	}
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -380,7 +374,7 @@ static __maybe_unused int st_acc33_reg_access(struct iio_dev *iio_dev,
 	struct st_acc33_hw *hw = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -389,7 +383,7 @@ static __maybe_unused int st_acc33_reg_access(struct iio_dev *iio_dev,
 	else
 		ret = regmap_read(hw->regmap, reg, readval);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return (ret < 0) ? ret : 0;
 }
@@ -410,7 +404,7 @@ static int st_acc33_run_selftest(struct st_acc33_hw *hw)
 	int err;
 	int i;
 
-	err = iio_device_claim_direct_mode(hw->iio_dev);
+	err = st_iio_device_claim_direct(hw->iio_dev);
 	if (err)
 		return err;
 
@@ -617,7 +611,7 @@ selftest_restore:
 	regmap_write(hw->regmap, REG_CTRL3_ADDR, bkregs[2]);
 
 selftest_release:
-	iio_device_release_direct_mode(hw->iio_dev);
+	st_iio_device_release_direct(hw->iio_dev);
 
 	return err;
 }

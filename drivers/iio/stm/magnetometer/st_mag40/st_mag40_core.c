@@ -26,12 +26,6 @@
 #include <linux/property.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_mag40_core.h"
 
 struct st_mag40_odr_reg {
@@ -278,7 +272,7 @@ static int st_mag40_read_raw(struct iio_dev *iio_dev,
 	struct st_mag40_data *cdata = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -296,7 +290,7 @@ static int st_mag40_read_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return ret;
 }
@@ -358,7 +352,7 @@ static ssize_t st_mag40_perform_selftest(struct device *dev,
 	s16 avg_acc_x = 0, avg_acc_y = 0, avg_acc_z = 0;
 	s16 avg_st_acc_x = 0, avg_st_acc_y = 0, avg_st_acc_z = 0;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -513,7 +507,7 @@ restore_odr:
 	err = st_mag40_write_odr(cdata, previous_odr);
 
 unlock:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }

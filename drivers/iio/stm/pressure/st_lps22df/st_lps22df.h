@@ -18,6 +18,7 @@
 #include <linux/types.h>
 #include <linux/workqueue.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_LPS22DF_DEV_NAME			"lps22df"

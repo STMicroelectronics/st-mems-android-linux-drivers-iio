@@ -271,10 +271,10 @@ st_ism330dhcx_mlc_fsm_enable_sensor(struct st_ism330dhcx_sensor *sensor,
 }
 
 static int st_ism330dhcx_mlc_write_event_config(struct iio_dev *iio_dev,
-				const struct iio_chan_spec *chan,
-				enum iio_event_type type,
-				enum iio_event_direction dir,
-				int state)
+					const struct iio_chan_spec *chan,
+					enum iio_event_type type,
+					enum iio_event_direction dir,
+					ST_IIO_EVENT_EN_TYPE state)
 {
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 
@@ -713,13 +713,7 @@ st_ism330dhcx_mlc_alloc_iio_dev(struct st_ism330dhcx_hw *hw,
 	if (id == ST_ISM330DHCX_ID_MLC) {
 		iio_dev = devm_iio_device_alloc(hw->dev, sizeof(*sensor));
 	} else {
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
-		iio_dev = iio_device_alloc(NULL, sizeof(*sensor));
-#else /* LINUX_VERSION_CODE */
-		iio_dev = iio_device_alloc(sizeof(*sensor));
-#endif /* LINUX_VERSION_CODE */
-
+		iio_dev = st_iio_device_alloc(sizeof(*sensor));
 	}
 
 	if (!iio_dev)

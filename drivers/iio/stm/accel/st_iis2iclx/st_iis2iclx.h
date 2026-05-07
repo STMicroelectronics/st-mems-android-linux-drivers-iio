@@ -22,6 +22,7 @@
 #include <linux/spinlock.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_IIS2ICLX_DEBUG_DISCHARGE
@@ -1059,7 +1060,7 @@ int st_iis2iclx_write_event_config(struct iio_dev *iio_dev,
 				   const struct iio_chan_spec *chan,
 				   enum iio_event_type type,
 				   enum iio_event_direction dir,
-				   int enable);
+				   ST_IIO_EVENT_EN_TYPE enable);
 int st_iis2iclx_read_event_value(struct iio_dev *iio_dev,
 				 const struct iio_chan_spec *chan,
 				 enum iio_event_type type,

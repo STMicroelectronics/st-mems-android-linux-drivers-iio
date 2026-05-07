@@ -81,7 +81,9 @@ void ism303dac_read_fifo(struct ism303dac_data *cdata, bool check_fifo_len)
 	int err;
 	u8 fifo_src[2];
 	u16 read_len;
-#if (CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO > 0)
+
+#if defined(CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO) && \
+	   (CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO > 0)
 	u16 data_remaining, data_to_read, extra_bytes;
 #endif /* CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO */
 
@@ -97,7 +99,8 @@ void ism303dac_read_fifo(struct ism303dac_data *cdata, bool check_fifo_len)
 	if (read_len == 0)
 		return;
 
-#if (CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO == 0)
+#if !defined(CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO) || \
+	    (CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO == 0)
 	err = ism303dac_read_register(cdata, ISM303DAC_OUTX_L_ADDR, read_len,
 				      cdata->fifo_data, true);
 	if (err < 0)

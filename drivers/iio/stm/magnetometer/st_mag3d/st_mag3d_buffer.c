@@ -73,11 +73,7 @@ static irqreturn_t st_mag3d_trigger_handler_thread(int irq, void *p)
 	if (err < 0)
 		goto out;
 
-#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
-	iio_trigger_poll_nested(hw->trig);
-#else /* LINUX_VERSION_CODE */
-	iio_trigger_poll_chained(hw->trig);
-#endif /* LINUX_VERSION_CODE */
+	st_iio_trigger_poll(hw->trig);
 
 out:
 	return IRQ_HANDLED;
@@ -130,11 +126,8 @@ static int st_mag3d_buffer_postdisable(struct iio_dev *iio_dev)
 }
 
 static const struct iio_buffer_setup_ops st_mag3d_buffer_ops = {
+	ST_IIO_TRIGGERED_OLD_SETUP_OPS
 	.preenable = st_mag3d_buffer_preenable,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0)
-	.postenable = iio_triggered_buffer_postenable,
-	.predisable = iio_triggered_buffer_predisable,
-#endif /* LINUX_VERSION_CODE */
 	.postdisable = st_mag3d_buffer_postdisable,
 };
 

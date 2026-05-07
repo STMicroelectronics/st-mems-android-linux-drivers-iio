@@ -27,12 +27,6 @@
 #include <linux/platform_data/st_sensors_pdata.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_lis2hh12.h"
 
 #define ST_LIS2HH12_DEV_ATTR_SAMP_FREQ() \
@@ -470,12 +464,12 @@ static ssize_t lis2hh12_sysfs_set_sampling_frequency(struct device *dev,
 	if (i == LIS2HH12_ODR_LIST_NUM)
 		return -EINVAL;
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
 	sdata->odr = lis2hh12_odr_table.odr_avl[i].hz;
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	err = lis2hh12_write_max_odr(sdata);
 
@@ -520,14 +514,14 @@ static ssize_t lis2hh12_sysfs_flush_fifo(struct device *dev,
 	struct lis2hh12_sensor_data *sdata = iio_priv(indio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(indio_dev);
+	ret = st_iio_device_claim_direct(indio_dev);
 	if (ret)
 		return ret;
 
 	if (lis2hh12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
 		disable_irq(sdata->cdata->irq);
 	} else {
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 		return -EINVAL;
 	}
 
@@ -545,7 +539,7 @@ static ssize_t lis2hh12_sysfs_flush_fifo(struct device *dev,
 				sdata->cdata->sensor_timestamp);
 
 	enable_irq(sdata->cdata->irq);
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	return size;
 }
@@ -639,18 +633,18 @@ static int lis2hh12_read_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		err = iio_device_claim_direct_mode(indio_dev);
+		err = st_iio_device_claim_direct(indio_dev);
 		if (err)
 			return err;
 
 		if (lis2hh12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return -EBUSY;
 		}
 
 		err = lis2hh12_set_enable(sdata, true);
 		if (err < 0) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return -EBUSY;
 		}
 
@@ -660,7 +654,7 @@ static int lis2hh12_read_raw(struct iio_dev *indio_dev,
 
 		err = lis2hh12_read_register(sdata->cdata, ch->address, nbytes, outdata);
 		if (err < 0) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return err;
 		}
 
@@ -668,7 +662,7 @@ static int lis2hh12_read_raw(struct iio_dev *indio_dev,
 		*val = *val >> ch->scan_type.shift;
 
 		err = lis2hh12_set_enable(sdata, false);
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 
 		if (err < 0)
 			return err;
@@ -696,12 +690,12 @@ static int lis2hh12_write_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
-		err = iio_device_claim_direct_mode(indio_dev);
+		err = st_iio_device_claim_direct(indio_dev);
 		if (err)
 			return err;
 
 		if (lis2hh12_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return -EBUSY;
 		}
 
@@ -711,7 +705,7 @@ static int lis2hh12_write_raw(struct iio_dev *indio_dev,
 		}
 
 		err = lis2hh12_set_fs(sdata, lis2hh12_fs_table.fs_avl[i].gain);
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 
 		break;
 
@@ -766,7 +760,7 @@ static ssize_t lis2hh12_enable_selftest(struct device *dev,
 	u8 data[LIS2HH12_DATA_SIZE], stval, status;
 	int i, err, gain, odr, trycount;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -971,7 +965,7 @@ static ssize_t lis2hh12_enable_selftest(struct device *dev,
 	err = lis2hh12_set_enable(sdata, false);
 
 unlock:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }

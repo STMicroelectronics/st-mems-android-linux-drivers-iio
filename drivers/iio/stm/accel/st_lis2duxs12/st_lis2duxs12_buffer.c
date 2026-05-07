@@ -20,12 +20,6 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_lis2duxs12.h"
 
 /* Timestamp convergence filter parameters */
@@ -361,7 +355,7 @@ ssize_t st_lis2duxs12_set_watermark(struct device *dev,
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -376,7 +370,7 @@ ssize_t st_lis2duxs12_set_watermark(struct device *dev,
 	sensor->watermark = val;
 
 out:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -731,33 +725,14 @@ int st_lis2duxs12_buffers_setup(struct st_lis2duxs12_hw *hw)
 		enum st_lis2duxs12_sensor_id id =
 					  st_lis2duxs12_buffered_sensor_list[i];
 
-#if KERNEL_VERSION(5, 13, 0) > LINUX_VERSION_CODE
-		struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
-
 		if (!hw->iio_devs[id])
 			continue;
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-	err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[id],
-					  &st_lis2duxs12_fifo_ops);
-	if (err)
-		return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[id],
-						  INDIO_BUFFER_SOFTWARE,
-						  &st_lis2duxs12_fifo_ops);
-		if (err)
+		err = st_devm_iio_kfifo_buffer_setup(hw->dev,
+						     hw->iio_devs[id],
+						     &st_lis2duxs12_fifo_ops);
+		if (err < 0)
 			return err;
-#else /* LINUX_VERSION_CODE */
-		buffer = devm_iio_kfifo_allocate(hw->dev);
-		if (!buffer)
-			return -ENOMEM;
-
-		iio_device_attach_buffer(hw->iio_devs[id], buffer);
-		hw->iio_devs[id]->modes |= INDIO_BUFFER_SOFTWARE;
-		hw->iio_devs[id]->setup_ops = &st_lis2duxs12_fifo_ops;
-#endif /* LINUX_VERSION_CODE */
 	}
 
 	return st_lis2duxs12_fifo_init(hw);

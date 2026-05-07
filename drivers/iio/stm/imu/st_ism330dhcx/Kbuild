@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
+ccflags-$(CONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP) += -DCONFIG_IIO_ST_ISM330DHCX_ASYNC_HW_TIMESTAMP
+ccflags-$(CONFIG_IIO_ST_ISM330DHCX_MLC_PRELOAD) += -DCONFIG_IIO_ST_ISM330DHCX_MLC_PRELOAD
+
 st_ism330dhcx-y := st_ism330dhcx_core.o st_ism330dhcx_buffer.o \
 		   st_ism330dhcx_shub.o st_ism330dhcx_events.o \
 		   st_ism330dhcx_mlc.o \

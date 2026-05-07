@@ -19,12 +19,6 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_ism330dhcx.h"
 
 #define ST_ISM330DHCX_SAMPLE_DISCHARD			0x7ffd
@@ -532,7 +526,7 @@ ssize_t st_ism330dhcx_set_watermark(struct device *dev,
 	struct st_ism330dhcx_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -547,7 +541,7 @@ ssize_t st_ism330dhcx_set_watermark(struct device *dev,
 	sensor->watermark = val;
 
 out:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -883,13 +877,9 @@ static const struct iio_trigger_ops st_ism330dhcx_trigger_ops = {
 };
 
 static const struct iio_buffer_setup_ops st_ism330dhcx_buffer_setup_ops = {
+	ST_IIO_TRIGGERED_OLD_SETUP_OPS
 	.preenable = st_ism330dhcx_buffer_preenable,
 	.postdisable = st_ism330dhcx_buffer_postdisable,
-
-#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
-	.postenable = iio_triggered_buffer_postenable,
-	.predisable = iio_triggered_buffer_predisable,
-#endif /* LINUX_VERSION_CODE */
 };
 
 int st_ism330dhcx_allocate_buffers(struct st_ism330dhcx_hw *hw)

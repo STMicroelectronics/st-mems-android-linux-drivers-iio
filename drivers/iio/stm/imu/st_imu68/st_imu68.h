@@ -15,6 +15,7 @@
 #include <linux/regmap.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_LSM9DS1_DEV_NAME		"lsm9ds1"

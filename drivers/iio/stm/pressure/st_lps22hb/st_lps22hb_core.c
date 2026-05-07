@@ -17,12 +17,6 @@
 #include <linux/delay.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_lps22hb.h"
 
 #define ST_LPS22HB_WHO_AM_I_ADDR		0x0f
@@ -280,13 +274,13 @@ static int st_lps22hb_read_raw(struct iio_dev *indio_dev,
 		u8 len = ch->scan_type.realbits / 8;
 		u8 data[4] = {};
 
-		ret = iio_device_claim_direct_mode(indio_dev);
+		ret = st_iio_device_claim_direct(indio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_lps22hb_set_enable(sensor, true);
 		if (ret < 0) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			ret = -EBUSY;
 			break;
 		}
@@ -295,7 +289,7 @@ static int st_lps22hb_read_raw(struct iio_dev *indio_dev,
 		ret = regmap_bulk_read(hw->regmap, ch->address,
 				       (void *)data, len);
 		if (ret < 0) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return ret;
 		}
 
@@ -305,7 +299,7 @@ static int st_lps22hb_read_raw(struct iio_dev *indio_dev,
 			*val = (s16)get_unaligned_le16(data);
 
 		ret = st_lps22hb_set_enable(sensor, false);
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 
 		if (ret < 0)
 			return ret;

@@ -42,17 +42,8 @@ static int st_lis2dw12_spi_probe(struct spi_device *spi)
 				 hw_id, regmap);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_lis2dw12_spi_remove(struct spi_device *spi)
-{
-	st_lis2dw12_remove(&spi->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_lis2dw12_spi_remove(struct spi_device *spi)
-{
-	return st_lis2dw12_remove(&spi->dev);
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_lis2dw12_spi_remove, st_lis2dw12_remove)
+
 static const struct of_device_id st_lis2dw12_spi_of_match[] = {
 	{
 		.compatible = "st,lis2dw12",

@@ -191,7 +191,7 @@ int st_acc33_write_event_config(struct iio_dev *iio_dev,
 				const struct iio_chan_spec *chan,
 				enum iio_event_type type,
 				enum iio_event_direction dir,
-				int enable)
+				ST_IIO_EVENT_EN_TYPE enable)
 {
 	struct st_acc33_hw *hw = iio_priv(iio_dev);
 	unsigned int int_val;

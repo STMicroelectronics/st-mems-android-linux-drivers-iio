@@ -17,6 +17,7 @@
 #include <linux/regmap.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_LIS2DU12_DEV_NAME			"lis2du12"
@@ -574,7 +575,7 @@ int st_lis2du12_write_event_config(struct iio_dev *iio_dev,
 				   const struct iio_chan_spec *chan,
 				   enum iio_event_type type,
 				   enum iio_event_direction dir,
-				   int enable);
+				   ST_IIO_EVENT_EN_TYPE enable);
 int st_lis2du12_read_event_value(struct iio_dev *iio_dev,
 				 const struct iio_chan_spec *chan,
 				 enum iio_event_type type,

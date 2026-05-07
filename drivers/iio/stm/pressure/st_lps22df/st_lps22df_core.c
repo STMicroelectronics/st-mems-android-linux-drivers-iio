@@ -17,12 +17,6 @@
 #include <linux/delay.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_lps22df.h"
 
 struct st_lps22df_odr_table_t {
@@ -328,7 +322,7 @@ static int st_lps22df_read_raw(struct iio_dev *indio_dev,
 		u8 data[4] = {};
 		u8 len;
 
-		ret = iio_device_claim_direct_mode(indio_dev);
+		ret = st_iio_device_claim_direct(indio_dev);
 		if (ret)
 			return ret;
 
@@ -351,7 +345,7 @@ static int st_lps22df_read_raw(struct iio_dev *indio_dev,
 
 unlock:
 		ret = st_lps22df_set_enable(sensor, false);
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 
 		ret = ret < 0 ? ret : IIO_VAL_INT;
 		break;

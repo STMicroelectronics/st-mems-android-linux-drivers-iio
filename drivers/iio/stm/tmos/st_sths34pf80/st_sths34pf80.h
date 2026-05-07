@@ -16,6 +16,8 @@
 #include <linux/iio/iio.h>
 #include <linux/regmap.h>
 
+#include "../../common/st_linux_compat.h"
+
 #define ST_STHS34PF80_TCOMP
 
 #define ST_STHS34PF80_ODR_EXPAND(odr, uodr)	(((odr) * 1000000) + (uodr))

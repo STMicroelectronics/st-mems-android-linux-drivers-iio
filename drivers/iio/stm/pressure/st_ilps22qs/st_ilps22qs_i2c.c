@@ -21,12 +21,7 @@ static const struct regmap_config st_ilps22qs_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int st_ilps22qs_i2c_probe(struct i2c_client *client)
-#else /* LINUX_VERSION_CODE */
-static int st_ilps22qs_i2c_probe(struct i2c_client *client,
-				 const struct i2c_device_id *id)
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_PROBE(st_ilps22qs_i2c_probe)
 {
 	struct regmap *regmap;
 
@@ -42,17 +37,7 @@ static int st_ilps22qs_i2c_probe(struct i2c_client *client,
 	return st_ilps22qs_probe(&client->dev, regmap);
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void st_ilps22qs_i2c_remove(struct i2c_client *client)
-{
-	st_ilps22qs_remove(&client->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_ilps22qs_i2c_remove(struct i2c_client *client)
-{
-	return st_ilps22qs_remove(&client->dev);
-}
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_REMOVE(st_ilps22qs_i2c_remove, st_ilps22qs_remove)
 
 static const struct i2c_device_id st_ilps22qs_ids[] = {
 	{ ST_ILPS22QS_DEV_NAME },

@@ -583,7 +583,7 @@ int st_lsm6dsvx_write_event_config(struct iio_dev *iio_dev,
 				   const struct iio_chan_spec *chan,
 				   enum iio_event_type type,
 				   enum iio_event_direction dir,
-				   int enable)
+				   ST_IIO_EVENT_EN_TYPE enable)
 {
 	struct st_lsm6dsvx_sensor *sensor = iio_priv(iio_dev);
 	struct st_lsm6dsvx_hw *hw = sensor->hw;

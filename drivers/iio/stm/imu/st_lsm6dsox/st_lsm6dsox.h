@@ -21,6 +21,7 @@
 #include <linux/workqueue.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_LSM6DSOX_ODR_EXPAND(odr, uodr)	(((odr) * 1000000) + (uodr))
@@ -1092,7 +1093,7 @@ int st_lsm6dsox_write_event_config(struct iio_dev *iio_dev,
 				   const struct iio_chan_spec *chan,
 				   enum iio_event_type type,
 				   enum iio_event_direction dir,
-				   int enable);
+				   ST_IIO_EVENT_EN_TYPE enable);
 int st_lsm6dsox_read_event_value(struct iio_dev *iio_dev,
 				 const struct iio_chan_spec *chan,
 				 enum iio_event_type type,

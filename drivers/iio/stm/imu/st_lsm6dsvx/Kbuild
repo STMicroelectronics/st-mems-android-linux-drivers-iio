@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
+ccflags-$(CONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP) += -DCONFIG_IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP
+ccflags-$(CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD) += -DCONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD
+ccflags-$(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO) += -DCONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO
+
 st_lsm6dsvx-y := st_lsm6dsvx_core.o st_lsm6dsvx_buffer.o \
 		 st_lsm6dsvx_shub.o st_lsm6dsvx_qvar.o \
 		 st_lsm6dsvx_mlc.o st_lsm6dsvx_events.o \

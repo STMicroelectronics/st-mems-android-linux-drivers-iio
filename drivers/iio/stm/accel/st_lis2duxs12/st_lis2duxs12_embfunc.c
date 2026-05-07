@@ -73,7 +73,7 @@ int st_lis2duxs12_reset_step_counter(struct iio_dev *iio_dev)
 	u16 odr_acc = hw->xl_odr;
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -87,7 +87,7 @@ int st_lis2duxs12_reset_step_counter(struct iio_dev *iio_dev)
 		iio_dev_acc = hw->iio_devs[ST_LIS2DUXS12_ID_ACC];
 
 		/* claim and lock accel iio device during reset step counter */
-		err = iio_device_claim_direct_mode(iio_dev_acc);
+		err = st_iio_device_claim_direct(iio_dev_acc);
 		if (err)
 			goto unlock;
 
@@ -133,7 +133,7 @@ unlock:
 	__st_lis2duxs12_write_with_mask(hw, ST_LIS2DUXS12_EMB_FUNC_EN_A_ADDR,
 					ST_LIS2DUXS12_PEDO_EN_MASK, 0);
 	if (release_acc) {
-		iio_device_release_direct_mode(iio_dev_acc);
+		st_iio_device_release_direct(iio_dev_acc);
 		__st_lis2duxs12_write_with_mask(hw,
 			hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].reg.addr,
 			hw->odr_table_entry[ST_LIS2DUXS12_ID_ACC].reg.mask,
@@ -142,7 +142,7 @@ unlock:
 
 	mutex_unlock(&hw->page_lock);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -450,7 +450,7 @@ st_lis2duxs12_write_event_step_config(struct iio_dev *iio_dev,
 				      const struct iio_chan_spec *chan,
 				      enum iio_event_type type,
 				      enum iio_event_direction dir,
-				      int state)
+				      ST_IIO_EVENT_EN_TYPE enable)
 {
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	struct st_lis2duxs12_hw *hw = sensor->hw;
@@ -467,11 +467,11 @@ st_lis2duxs12_write_event_step_config(struct iio_dev *iio_dev,
 			 */
 			case IIO_EV_DIR_NONE:
 				err = st_lis2duxs12_step_event_enable(sensor,
-								      state);
+								      enable);
 				if (err < 0)
 					return err;
 
-				if (state)
+				if (enable)
 					hw->enable_ev_mask |=
 						BIT(ST_LIS2DUXS12_EVENT_STEPC);
 				else
@@ -487,11 +487,11 @@ st_lis2duxs12_write_event_step_config(struct iio_dev *iio_dev,
 			 */
 			case IIO_EV_DIR_RISING:
 				err = st_lis2duxs12_signmot_event_enable(sensor,
-									 state);
+									 enable);
 				if (err < 0)
 					return err;
 
-				if (state)
+				if (enable)
 					hw->enable_ev_mask |=
 					      BIT(ST_LIS2DUXS12_EVENT_SIGNMOT);
 				else
@@ -526,13 +526,13 @@ static int st_lis2duxs12_read_step_raw(struct iio_dev *iio_dev,
 	case IIO_STEPS:
 		switch (mask) {
 		case IIO_CHAN_INFO_PROCESSED:
-			ret = iio_device_claim_direct_mode(iio_dev);
+			ret = st_iio_device_claim_direct(iio_dev);
 			if (ret)
 				return ret;
 
 			ret = st_lis2duxs12_read_step_counter(sensor,
 							      ch->address, val);
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			return IIO_VAL_INT;
 		case IIO_CHAN_INFO_ENABLE:
 			*val = !!(hw->enable_mask & BIT(sensor->id));

@@ -20,15 +20,8 @@ static const struct regmap_config st_mag40_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int st_mag40_i2c_probe(struct i2c_client *client)
+ST_I2C_PROBE(st_mag40_i2c_probe)
 {
-#else /* LINUX_VERSION_CODE */
-static int st_mag40_i2c_probe(struct i2c_client *client,
-			      const struct i2c_device_id *id)
-{
-#endif /* LINUX_VERSION_CODE */
-
 	struct st_mag40_data *cdata;
 	struct iio_dev *iio_dev;
 	struct regmap *regmap;
@@ -59,19 +52,7 @@ static int st_mag40_i2c_probe(struct i2c_client *client,
 	return st_mag40_common_probe(iio_dev);
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void st_mag40_i2c_remove(struct i2c_client *client)
-{
-	st_mag40_remove(&client->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_mag40_i2c_remove(struct i2c_client *client)
-{
-	st_mag40_remove(&client->dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_REMOVE(st_mag40_i2c_remove, st_mag40_remove)
 
 #if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_mag40_i2c_suspend(struct device *dev)

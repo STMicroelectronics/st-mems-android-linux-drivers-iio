@@ -279,7 +279,7 @@ st_lis2duxs12_reg_access(struct iio_dev *iio_dev, unsigned int reg,
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -288,7 +288,7 @@ st_lis2duxs12_reg_access(struct iio_dev *iio_dev, unsigned int reg,
 	else
 		ret = regmap_read(sensor->hw->regmap, reg, readval);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return (ret < 0) ? ret : 0;
 }
@@ -596,13 +596,13 @@ static int st_lis2duxs12_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_lis2duxs12_read_oneshot(sensor, ch->address,
 						 val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_OFFSET:
 		switch (ch->type) {
@@ -650,7 +650,7 @@ static int st_lis2duxs12_write_raw(struct iio_dev *iio_dev,
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -699,7 +699,7 @@ static int st_lis2duxs12_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -789,14 +789,14 @@ static ssize_t st_lis2duxs12_set_power_mode(struct device *dev,
 	if (i == ARRAY_SIZE(st_lis2duxs12_power_mode))
 		return -EINVAL;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
 	/* update power mode */
 	sensor->pm = st_lis2duxs12_power_mode[i].val;
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return size;
 }
@@ -1036,7 +1036,7 @@ st_lis2duxs12_sysfs_start_selftest(struct device *dev,
 	if (sensor->id != ST_LIS2DUXS12_ID_ACC)
 		return -EINVAL;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -1081,8 +1081,7 @@ out_claim:
 					     ST_LIS2DUXS12_INT_FIFO_TH_MASK, 1);
 	}
 
-	iio_device_release_direct_mode(iio_dev);
-
+	st_iio_device_release_direct(iio_dev);
 	return size;
 }
 
@@ -1379,14 +1378,7 @@ int st_lis2duxs12_probe(struct device *dev, int irq,
 	if (err < 0)
 		return err;
 
-#if KERNEL_VERSION(5, 15, 0) <= LINUX_VERSION_CODE
-	err = iio_read_mount_matrix(hw->dev, &hw->orientation);
-#elif KERNEL_VERSION(5, 2, 0) <= LINUX_VERSION_CODE
-	err = iio_read_mount_matrix(hw->dev, "mount-matrix", &hw->orientation);
-#else /* LINUX_VERSION_CODE */
-	err = of_iio_read_mount_matrix(hw->dev, "mount-matrix", &hw->orientation);
-#endif /* LINUX_VERSION_CODE */
-
+	err = st_iio_read_mount_matrix(hw->dev, &hw->orientation);
 	if (err) {
 		dev_err(dev, "Failed to retrieve mounting matrix %d\n", err);
 

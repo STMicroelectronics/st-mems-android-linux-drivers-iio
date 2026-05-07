@@ -17,12 +17,6 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_ism330is.h"
 
 #define ST_ISM330IS_AG_SAMPLE_SIZE	6
@@ -50,13 +44,8 @@ static int st_ism330is_fifo_postdisable(struct iio_dev *iio_dev)
 }
 
 static const struct iio_buffer_setup_ops st_ism330is_buffer_setup_ops = {
+	ST_IIO_TRIGGERED_OLD_SETUP_OPS
 	.preenable = st_ism330is_fifo_preenable,
-
-#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
-	.postenable = iio_triggered_buffer_postenable,
-	.predisable = iio_triggered_buffer_predisable,
-#endif /* LINUX_VERSION_CODE */
-
 	.postdisable = st_ism330is_fifo_postdisable,
 };
 

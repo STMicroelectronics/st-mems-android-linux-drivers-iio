@@ -22,12 +22,6 @@
 #include <linux/types.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_ilps22qs.h"
 
 static const struct st_ilps22qs_odr_table_t st_ilps22qs_odr_table = {
@@ -239,7 +233,7 @@ static __maybe_unused int st_ilps22qs_reg_access(struct iio_dev *iio_dev,
 	struct st_ilps22qs_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -248,7 +242,7 @@ static __maybe_unused int st_ilps22qs_reg_access(struct iio_dev *iio_dev,
 	else
 		ret = regmap_read(sensor->hw->regmap, reg, readval);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return (ret < 0) ? ret : 0;
 }
@@ -466,7 +460,7 @@ static int st_ilps22qs_read_raw(struct iio_dev *iio_dev,
 		u8 data[4] = {};
 		int delay;
 
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
@@ -499,7 +493,7 @@ static int st_ilps22qs_read_raw(struct iio_dev *iio_dev,
 
 read_error:
 		st_ilps22qs_set_enable(sensor, false);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 
 		if (ret < 0)
 			return ret;
@@ -548,7 +542,7 @@ static int st_ilps22qs_write_raw(struct iio_dev *iio_dev,
 	struct st_ilps22qs_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -566,7 +560,7 @@ static int st_ilps22qs_write_raw(struct iio_dev *iio_dev,
 	}
 
 exit_fail:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return ret < 0 ? ret : 0;
 }
@@ -753,8 +747,8 @@ static struct iio_dev *st_ilps22qs_alloc_iiodev(struct st_ilps22qs_hw *hw,
 	iio_dev->name = sensor->name;
 
 	/* configure sensor hrtimer */
-	hrtimer_init(&sensor->hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	sensor->hr_timer.function = &st_ilps22qs_poll_function_read;
+	st_hrtimer_setup(&sensor->hr_timer, st_ilps22qs_poll_function_read);
+
 	INIT_WORK(&sensor->iio_work, st_ilps22qs_poll_function_work);
 
 	return iio_dev;
@@ -788,36 +782,14 @@ int st_ilps22qs_probe(struct device *dev, struct regmap *regmap)
 		return err;
 
 	for (i = 0; i < ST_ILPS22QS_SENSORS_NUM; i++) {
-
-#if KERNEL_VERSION(5, 13, 0) > LINUX_VERSION_CODE
-		struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
-
 		hw->iio_devs[i] = st_ilps22qs_alloc_iiodev(hw, i);
 		if (!hw->iio_devs[i])
 			return -ENOMEM;
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev,
-						  hw->iio_devs[i],
-						  &st_ilps22qs_fifo_ops);
+		err = st_devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
+						     &st_ilps22qs_fifo_ops);
 		if (err)
 			return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-						  INDIO_BUFFER_SOFTWARE,
-						  &st_ilps22qs_fifo_ops);
-		if (err)
-			return err;
-#else /* LINUX_VERSION_CODE */
-		buffer = devm_iio_kfifo_allocate(hw->dev);
-		if (!buffer)
-			return -ENOMEM;
-
-		iio_device_attach_buffer(hw->iio_devs[i], buffer);
-		hw->iio_devs[i]->modes |= INDIO_BUFFER_SOFTWARE;
-		hw->iio_devs[i]->setup_ops = &st_ilps22qs_fifo_ops;
-#endif /* LINUX_VERSION_CODE */
 
 		err = devm_iio_device_register(hw->dev, hw->iio_devs[i]);
 		if (err)

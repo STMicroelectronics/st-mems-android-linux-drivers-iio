@@ -21,12 +21,7 @@ static const struct regmap_config st_sths34pf80_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int st_sths34pf80_i2c_probe(struct i2c_client *client)
-#else /* LINUX_VERSION_CODE */
-static int st_sths34pf80_i2c_probe(struct i2c_client *client,
-				   const struct i2c_device_id *id)
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_PROBE(st_sths34pf80_i2c_probe)
 {
 	struct regmap *regmap;
 
@@ -42,17 +37,7 @@ static int st_sths34pf80_i2c_probe(struct i2c_client *client,
 	return st_sths34pf80_probe(&client->dev, client->irq, regmap);
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void st_sths34pf80_i2c_remove(struct i2c_client *client)
-{
-	st_sths34pf80_remove(&client->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_sths34pf80_i2c_remove(struct i2c_client *client)
-{
-	return st_sths34pf80_remove(&client->dev);
-}
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_REMOVE(st_sths34pf80_i2c_remove, st_sths34pf80_remove)
 
 static const struct of_device_id st_sths34pf80_i2c_of_match[] = {
 	{ .compatible = "st," ST_STHS34PF80_DEV_NAME },

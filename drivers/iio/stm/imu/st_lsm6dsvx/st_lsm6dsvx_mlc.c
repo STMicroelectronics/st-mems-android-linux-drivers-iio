@@ -195,11 +195,12 @@ static int
 st_lsm6dsvx_mlc_write_event_config(struct iio_dev *iio_dev,
 				   const struct iio_chan_spec *chan,
 				   enum iio_event_type type,
-				   enum iio_event_direction dir, int state)
+				   enum iio_event_direction dir,
+				   ST_IIO_EVENT_EN_TYPE enable)
 {
 	struct st_lsm6dsvx_sensor *sensor = iio_priv(iio_dev);
 
-	return st_lsm6dsvx_mlc_enable_sensor(sensor, state);
+	return st_lsm6dsvx_mlc_enable_sensor(sensor, enable);
 }
 
 static int
@@ -584,11 +585,7 @@ st_lsm6dsvx_mlc_alloc_iio_dev(struct st_lsm6dsvx_hw *hw,
 	if (id == ST_LSM6DSVX_ID_MLC) {
 		iio_dev = devm_iio_device_alloc(hw->dev, sizeof(*sensor));
 	} else {
-#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE
-		iio_dev = iio_device_alloc(NULL, sizeof(*sensor));
-#else /* LINUX_VERSION_CODE */
-		iio_dev = iio_device_alloc(sizeof(*sensor));
-#endif /* LINUX_VERSION_CODE */
+		iio_dev = st_iio_device_alloc(sizeof(*sensor));
 	}
 
 	if (!iio_dev)

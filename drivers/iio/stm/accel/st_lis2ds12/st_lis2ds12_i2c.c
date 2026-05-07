@@ -20,15 +20,8 @@ static const struct regmap_config st_lis2ds12_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int lis2ds12_i2c_probe(struct i2c_client *client)
+ST_I2C_PROBE(lis2ds12_i2c_probe)
 {
-#else /* LINUX_VERSION_CODE */
-static int lis2ds12_i2c_probe(struct i2c_client *client,
-			      const struct i2c_device_id *id)
-{
-#endif /* LINUX_VERSION_CODE */
-
 	struct lis2ds12_data *cdata;
 	struct regmap *regmap;
 

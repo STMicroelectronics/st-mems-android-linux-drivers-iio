@@ -25,17 +25,10 @@ static const struct regmap_config st_h3lis331dl_i2c_regmap_config = {
 	.read_flag_mask = ST_H3LIS331DL_AUTO_INCREMENT,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int st_h3lis331dl_i2c_probe(struct i2c_client *client)
+ST_I2C_PROBE(st_h3lis331dl_i2c_probe)
 {
-	const struct i2c_device_id *id = i2c_client_get_device_id(client);
-#else /* LINUX_VERSION_CODE */
-static int st_h3lis331dl_i2c_probe(struct i2c_client *client,
-				   const struct i2c_device_id *id)
-{
-#endif /* LINUX_VERSION_CODE */
-
 	struct regmap *regmap;
+	ST_I2C_GET_PROBE_ID(client, match_id);
 
 	regmap = devm_regmap_init_i2c(client, &st_h3lis331dl_i2c_regmap_config);
 	if (IS_ERR(regmap)) {
@@ -46,7 +39,7 @@ static int st_h3lis331dl_i2c_probe(struct i2c_client *client,
 	}
 
 	return st_h3lis331dl_probe(&client->dev, client->irq,
-				   id->driver_data, regmap);
+				   match_id->driver_data, regmap);
 }
 
 static const struct of_device_id st_h3lis331dl_i2c_of_match[] = {

@@ -14,12 +14,6 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_lsm6dsrx.h"
 
 #define ST_LSM6DSRX_MAX_SLV_NUM			2
@@ -844,12 +838,12 @@ static int st_lsm6dsrx_shub_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_lsm6dsrx_shub_read_oneshot(sensor, ch, val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
 		*val = sensor->odr;
@@ -886,7 +880,7 @@ static int st_lsm6dsrx_shub_write_raw(struct iio_dev *iio_dev,
 	struct st_lsm6dsrx_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -907,7 +901,7 @@ static int st_lsm6dsrx_shub_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }

@@ -23,14 +23,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/events.h>
-
 #include <linux/version.h>
-
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
 
 #include <linux/platform_data/st_sensors_pdata.h>
 
@@ -2014,12 +2007,12 @@ static int st_lsm6dsm_read_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		err = iio_device_claim_direct_mode(indio_dev);
+		err = st_iio_device_claim_direct(indio_dev);
 		if (err)
 			return err;
 
 		if (st_lsm6dsm_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return -EBUSY;
 		}
 
@@ -2028,7 +2021,7 @@ static int st_lsm6dsm_read_raw(struct iio_dev *indio_dev,
 		err = st_lsm6dsm_set_enable(sdata, true, false);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return err;
 		}
 
@@ -2043,7 +2036,7 @@ static int st_lsm6dsm_read_raw(struct iio_dev *indio_dev,
 		if (err < 0) {
 			st_lsm6dsm_set_enable(sdata, false, false);
 			mutex_unlock(&sdata->cdata->odr_lock);
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return err;
 		}
 
@@ -2053,7 +2046,7 @@ static int st_lsm6dsm_read_raw(struct iio_dev *indio_dev,
 		st_lsm6dsm_set_enable(sdata, false, false);
 
 		mutex_unlock(&sdata->cdata->odr_lock);
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 
 		return IIO_VAL_INT;
 	case IIO_CHAN_INFO_SCALE:
@@ -2075,17 +2068,17 @@ static int st_lsm6dsm_write_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
-		err = iio_device_claim_direct_mode(indio_dev);
+		err = st_iio_device_claim_direct(indio_dev);
 		if (err)
 			return err;
 
 		if (st_lsm6dsm_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return -EBUSY;
 		}
 
 		err = st_lsm6dsm_set_fs(sdata, val2);
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 		break;
 	default:
 		return -EINVAL;
@@ -2309,7 +2302,7 @@ static ssize_t st_lsm6dsm_sysfs_set_sampling_frequency(struct device *dev,
 	if (odr == 12)
 		odr++;
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
@@ -2333,7 +2326,7 @@ static ssize_t st_lsm6dsm_sysfs_set_sampling_frequency(struct device *dev,
 	}
 	mutex_unlock(&sdata->cdata->odr_lock);
 
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -2597,7 +2590,7 @@ ssize_t st_lsm6dsm_sysfs_flush_fifo(struct device *dev,
 	struct lsm6dsm_sensor_data *sdata = iio_priv(indio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
@@ -2605,7 +2598,7 @@ ssize_t st_lsm6dsm_sysfs_flush_fifo(struct device *dev,
 		mutex_lock(&sdata->cdata->odr_lock);
 		disable_irq(sdata->cdata->irq);
 	} else {
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 		return -EINVAL;
 	}
 
@@ -2646,7 +2639,7 @@ ssize_t st_lsm6dsm_sysfs_flush_fifo(struct device *dev,
 				timestamp_flush);
 
 	mutex_unlock(&sdata->cdata->odr_lock);
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	return size;
 }
@@ -2669,7 +2662,7 @@ ssize_t st_lsm6dsm_sysfs_set_hwfifo_enabled(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lsm6dsm_sensor_data *sdata = iio_priv(indio_dev);
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
@@ -2692,12 +2685,12 @@ ssize_t st_lsm6dsm_sysfs_set_hwfifo_enabled(struct device *dev,
 		sdata->cdata->sensors_use_fifo &= ~BIT(sdata->sindex);
 
 	mutex_unlock(&sdata->cdata->odr_lock);
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	return size;
 
 set_hwfifo_enabled_unlock_mutex:
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 	return err;
 }
 
@@ -2770,18 +2763,18 @@ static ssize_t st_lsm6dsm_sysfs_set_injection_mode(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lsm6dsm_sensor_data *sdata = iio_priv(indio_dev);
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
 	if (st_lsm6dsm_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 		return -EBUSY;
 	}
 
 	err = kstrtoint(buf, 10, &start);
 	if (err < 0) {
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 		return err;
 	}
 
@@ -2794,7 +2787,7 @@ static ssize_t st_lsm6dsm_sysfs_set_injection_mode(struct device *dev,
 				ST_LSM6DSM_START_INJECT_XL_MASK, 0, true);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return err;
 		}
 
@@ -2806,7 +2799,7 @@ static ssize_t st_lsm6dsm_sysfs_set_injection_mode(struct device *dev,
 				st_lsm6dsm_odr_table.odr_avl[1].value, true);
 			if (err < 0) {
 				mutex_unlock(&sdata->cdata->odr_lock);
-				iio_device_release_direct_mode(indio_dev);
+				st_iio_device_release_direct(indio_dev);
 				return err;
 			}
 		}
@@ -2822,7 +2815,7 @@ static ssize_t st_lsm6dsm_sysfs_set_injection_mode(struct device *dev,
 				ST_LSM6DSM_START_INJECT_XL_MASK, 1, true);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return err;
 		}
 
@@ -2830,7 +2823,7 @@ static ssize_t st_lsm6dsm_sysfs_set_injection_mode(struct device *dev,
 	}
 
 	mutex_unlock(&sdata->cdata->odr_lock);
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	return size;
 }
@@ -2853,12 +2846,12 @@ static ssize_t st_lsm6dsm_sysfs_upload_xl_data(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct lsm6dsm_sensor_data *sdata = iio_priv(indio_dev);
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
 	if (!sdata->cdata->injection_mode) {
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 		return -EINVAL;
 	}
 
@@ -2886,7 +2879,7 @@ static ssize_t st_lsm6dsm_sysfs_upload_xl_data(struct device *dev,
 			current_odr = 26;
 			n = 1;
 		} else {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return -EINVAL;
 		}
 
@@ -2896,7 +2889,7 @@ static ssize_t st_lsm6dsm_sysfs_upload_xl_data(struct device *dev,
 				st_lsm6dsm_odr_table.mask[sdata->sindex],
 				st_lsm6dsm_odr_table.odr_avl[n].value, true);
 			if (err < 0) {
-				iio_device_release_direct_mode(indio_dev);
+				st_iio_device_release_direct(indio_dev);
 				return err;
 			}
 
@@ -2909,11 +2902,11 @@ static ssize_t st_lsm6dsm_sysfs_upload_xl_data(struct device *dev,
 	err = sdata->cdata->tf->write(sdata->cdata, ST_LSM6DSM_INJECT_XL_X_ADDR,
 				       3, (u8 *)sample, false);
 	if (err < 0) {
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 		return err;
 	}
 
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	usleep_range(1000, 2000);
 

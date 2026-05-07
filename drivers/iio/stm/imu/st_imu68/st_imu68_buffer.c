@@ -63,12 +63,7 @@ static irqreturn_t st_imu68_trigger_thread_handler(int irq, void *p)
 		sensor = iio_priv(hw->iio_devs[i]);
 
 		if (((u8)status) & sensor->status_mask) {
-
-#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
-			iio_trigger_poll_nested(sensor->trigger);
-#else /* LINUX_VERSION_CODE */
-			iio_trigger_poll_chained(sensor->trigger);
-#endif /* LINUX_VERSION_CODE */
+			st_iio_trigger_poll(sensor->trigger);
 
 			count++;
 		}
@@ -145,11 +140,8 @@ static int st_imu68_buffer_postdisable(struct iio_dev *iio_dev)
 }
 
 static const struct iio_buffer_setup_ops st_imu68_buffer_setup_ops = {
+	ST_IIO_TRIGGERED_OLD_SETUP_OPS
 	.preenable = st_imu68_buffer_preenable,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0)
-	.postenable = iio_triggered_buffer_postenable,
-	.predisable = iio_triggered_buffer_predisable,
-#endif /* LINUX_VERSION_CODE */
 	.postdisable = st_imu68_buffer_postdisable,
 };
 

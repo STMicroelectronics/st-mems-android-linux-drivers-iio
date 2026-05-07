@@ -32,17 +32,7 @@ static int st_ilps22qs_spi_probe(struct spi_device *spi)
 	return st_ilps22qs_probe(&spi->dev, regmap);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_ilps22qs_spi_remove(struct spi_device *spi)
-{
-	st_ilps22qs_remove(&spi->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_ilps22qs_spi_remove(struct spi_device *spi)
-{
-	return st_ilps22qs_remove(&spi->dev);
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_ilps22qs_spi_remove, st_ilps22qs_remove)
 
 static const struct spi_device_id st_ilps22qs_ids[] = {
 	{ ST_ILPS22QS_DEV_NAME },

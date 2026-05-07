@@ -37,19 +37,7 @@ static int st_asm330lhhx_spi_probe(struct spi_device *spi)
 				   id->driver_data, regmap, false);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_asm330lhhx_spi_remove(struct spi_device *spi)
-{
-	st_asm330lhhx_remove(&spi->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_asm330lhhx_spi_remove(struct spi_device *spi)
-{
-	st_asm330lhhx_remove(&spi->dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_asm330lhhx_spi_remove, st_asm330lhhx_remove)
 
 static const struct of_device_id st_asm330lhhx_spi_of_match[] = {
 	{

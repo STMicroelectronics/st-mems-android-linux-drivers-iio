@@ -139,13 +139,13 @@ static int st_lis2duxs12_qvar_read_raw(struct iio_dev *iio_dev,
 		ret = IIO_VAL_INT;
 		break;
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_lis2duxs12_qvar_read_oneshot(sensor,
 						      ch->address, val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
 		*val = (int)sensor->odr;
@@ -168,7 +168,7 @@ st_lis2duxs12_qvar_write_raw(struct iio_dev *iio_dev,
 	struct st_lis2duxs12_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -189,7 +189,7 @@ st_lis2duxs12_qvar_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }

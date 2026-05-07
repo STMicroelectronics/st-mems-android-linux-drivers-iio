@@ -844,7 +844,7 @@ static __maybe_unused int st_asm330lhhx_reg_access(struct iio_dev *iio_dev,
 	struct st_asm330lhhx_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -853,7 +853,7 @@ static __maybe_unused int st_asm330lhhx_reg_access(struct iio_dev *iio_dev,
 	else
 		ret = regmap_read(sensor->hw->regmap, reg, readval);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return (ret < 0) ? ret : 0;
 }
@@ -1349,12 +1349,12 @@ static int st_asm330lhhx_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			break;
 
 		ret = st_asm330lhhx_read_oneshot(sensor, ch->address, val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_OFFSET:
 		switch (ch->type) {
@@ -1405,20 +1405,20 @@ static int st_asm330lhhx_write_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
-		err = iio_device_claim_direct_mode(iio_dev);
+		err = st_iio_device_claim_direct(iio_dev);
 		if (err)
 			return err;
 
 		err = st_asm330lhhx_set_full_scale(s, val2);
 		if (err) {
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			return err;
 		}
 
 		/* some events depends on xl full scale */
 		if (chan->type == IIO_ACCEL)
 			err = st_asm330lhhx_update_threshold_events(s->hw);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		int todr, tuodr;
@@ -1576,14 +1576,14 @@ st_asm330lhhx_set_power_mode(struct device *dev,
 	if (i == ARRAY_SIZE(st_asm330lhhx_power_mode))
 		return -EINVAL;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
 	/* update power mode */
 	sensor->pm = st_asm330lhhx_power_mode[i].val;
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return size;
 }
@@ -1828,7 +1828,7 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 	if (test == ARRAY_SIZE(st_asm330lhhx_selftest_table))
 		return -EINVAL;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -1887,7 +1887,7 @@ restore_regs:
 	st_asm330lhhx_restore_regs(hw);
 
 out_claim:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return size;
 }
@@ -2520,15 +2520,7 @@ int st_asm330lhhx_probe(struct device *dev, int irq,
 	if (err < 0)
 		return err;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
-	err = iio_read_mount_matrix(hw->dev, &hw->orientation);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5,2,0)
-	err = iio_read_mount_matrix(hw->dev, "mount-matrix", &hw->orientation);
-#else /* LINUX_VERSION_CODE */
-	err = of_iio_read_mount_matrix(hw->dev, "mount-matrix",
-				       &hw->orientation);
-#endif /* LINUX_VERSION_CODE */
-
+	err = st_iio_read_mount_matrix(hw->dev, &hw->orientation);
 	if (err) {
 		dev_err(dev, "Failed to retrieve mounting matrix %d\n", err);
 		return err;

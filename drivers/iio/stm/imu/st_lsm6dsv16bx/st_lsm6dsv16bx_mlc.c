@@ -40,7 +40,6 @@ DECLARE_BUILTIN_FIRMWARE(LSM6DSV16BX_MLC_FIRMWARE_NAME, st_lsm6dsv16bx_mlc_fw);
 #include "st_lsm6dsv16bx_preload_mlc.h"
 #endif /* CONFIG_IIO_ST_LSM6DSV16BX_MLC_PRELOAD */
 
-
 /* converts MLC odr to main sensor trigger odr (acc) */
 static const uint16_t mlc_odr_data[] = {
 	[0x00] = 15,
@@ -210,11 +209,12 @@ static int
 st_lsm6dsv16bx_mlc_write_event_config(struct iio_dev *iio_dev,
 				      const struct iio_chan_spec *chan,
 				      enum iio_event_type type,
-				      enum iio_event_direction dir, int state)
+				      enum iio_event_direction dir,
+				      ST_IIO_EVENT_EN_TYPE enable)
 {
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 
-	return st_lsm6dsv16bx_mlc_enable_sensor(sensor, state);
+	return st_lsm6dsv16bx_mlc_enable_sensor(sensor, enable);
 }
 
 static int
@@ -602,11 +602,7 @@ st_lsm6dsv16bx_mlc_alloc_iio_dev(struct st_lsm6dsv16bx_hw *hw,
 	if (id == ST_LSM6DSV16BX_ID_MLC) {
 		iio_dev = devm_iio_device_alloc(hw->dev, sizeof(*sensor));
 	} else {
-#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE
-		iio_dev = iio_device_alloc(NULL, sizeof(*sensor));
-#else /* LINUX_VERSION_CODE */
-		iio_dev = iio_device_alloc(sizeof(*sensor));
-#endif /* LINUX_VERSION_CODE */
+		iio_dev = st_iio_device_alloc(sizeof(*sensor));
 	}
 
 	if (!iio_dev)

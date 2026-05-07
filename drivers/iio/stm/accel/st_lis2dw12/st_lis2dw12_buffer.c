@@ -77,7 +77,7 @@ ssize_t st_lis2dw12_set_hwfifo_watermark(struct device *dev,
 	struct st_lis2dw12_hw *hw = sensor->hw;
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -102,7 +102,7 @@ ssize_t st_lis2dw12_set_hwfifo_watermark(struct device *dev,
 	hw->watermark = val;
 
 unlock:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -262,10 +262,6 @@ static irqreturn_t st_lis2dw12_handler_thread(int irq, void *private)
 
 int st_lis2dw12_fifo_setup(struct st_lis2dw12_hw *hw)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
-	struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
-
 	int ret, i;
 
 	ret = devm_request_threaded_irq(hw->dev, hw->irq,
@@ -283,27 +279,11 @@ int st_lis2dw12_fifo_setup(struct st_lis2dw12_hw *hw)
 		if (!hw->iio_devs[i])
 			continue;
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-		ret = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-					     &st_lis2dw12_acc_buffer_setup_ops);
-		if (ret)
+		ret = st_devm_iio_kfifo_buffer_setup(hw->dev,
+					hw->iio_devs[i],
+					&st_lis2dw12_acc_buffer_setup_ops);
+		if (ret < 0)
 			return ret;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-		ret = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-					     INDIO_BUFFER_SOFTWARE,
-					     &st_lis2dw12_acc_buffer_setup_ops);
-		if (ret)
-			return ret;
-#else /* LINUX_VERSION_CODE */
-		buffer = devm_iio_kfifo_allocate(hw->dev);
-		if (!buffer)
-			return -ENOMEM;
-
-		iio_device_attach_buffer(hw->iio_devs[i], buffer);
-		hw->iio_devs[i]->setup_ops = &st_lis2dw12_acc_buffer_setup_ops;
-		hw->iio_devs[i]->modes |= INDIO_BUFFER_SOFTWARE;
-#endif /* LINUX_VERSION_CODE */
-
 	}
 
 	return 0;

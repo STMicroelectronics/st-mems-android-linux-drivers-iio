@@ -13,7 +13,7 @@ KBUILD_OPTIONS += CONFIG_IIO_ST_LIS2DU12_I3C=m
 endif
 
 modules:
-	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(EXTRA_CFLAGS) modules $(KBUILD_OPTIONS)
+	$(MAKE) -C $(KDIR) M=$(PWD) modules $(KBUILD_OPTIONS)
 	$(foreach subdir,$(SUBDIRS),(cd $(subdir) && $(MAKE) modules);)
 
 modules_install:

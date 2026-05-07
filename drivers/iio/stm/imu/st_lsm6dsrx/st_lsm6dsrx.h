@@ -22,6 +22,7 @@
 #include <linux/workqueue.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_LSM6DSRX_ODR_EXPAND(odr, uodr)	(((odr) * 1000000) + (uodr))
@@ -1122,6 +1123,7 @@ int st_lsm6dsrx_shub_set_enable(struct st_lsm6dsrx_sensor *sensor,
 				bool enable);
 int st_lsm6dsrx_shub_read(struct st_lsm6dsrx_sensor *sensor,
 			  u8 addr, u8 *data, int len);
+
 #if IS_ENABLED(CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP)
 int st_lsm6dsrx_hwtimesync_init(struct st_lsm6dsrx_hw *hw);
 #else /* CONFIG_IIO_ST_LSM6DSRX_ASYNC_HW_TIMESTAMP */
@@ -1146,7 +1148,7 @@ int st_lsm6dsrx_write_event_config(struct iio_dev *iio_dev,
 				   const struct iio_chan_spec *chan,
 				   enum iio_event_type type,
 				   enum iio_event_direction dir,
-				   int enable);
+				   ST_IIO_EVENT_EN_TYPE enable);
 int st_lsm6dsrx_read_event_value(struct iio_dev *iio_dev,
 				 const struct iio_chan_spec *chan,
 				 enum iio_event_type type,

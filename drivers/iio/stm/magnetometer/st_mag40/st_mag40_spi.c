@@ -50,19 +50,7 @@ static int st_mag40_spi_probe(struct spi_device *spi)
 	return st_mag40_common_probe(iio_dev);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_mag40_spi_remove(struct spi_device *spi)
-{
-	st_mag40_remove(&spi->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_mag40_spi_remove(struct spi_device *spi)
-{
-	st_mag40_remove(&spi->dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_mag40_spi_remove, st_mag40_remove)
 
 #if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_mag40_spi_suspend(struct device *dev)

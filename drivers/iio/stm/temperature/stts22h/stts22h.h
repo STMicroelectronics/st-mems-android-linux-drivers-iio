@@ -15,6 +15,8 @@
 #include <linux/err.h>
 #include <linux/regmap.h>
 
+#include "../../common/st_linux_compat.h"
+
 #define ST_STTS22H_DEV_NAME				"stts22h"
 
 #define ST_STTS22H_WHOAMI_ADDR				0x01

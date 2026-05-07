@@ -16,11 +16,8 @@
 #include <linux/regmap.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
-
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-#include <linux/iio/iio-opaque.h>
-#endif /* LINUX_VERSION_CODE */
 
 #define LIS2HH12_WHO_AM_I_ADDR			0x0f
 #define LIS2HH12_WHO_AM_I_DEF			0x41

@@ -141,7 +141,7 @@ ssize_t st_acc33_set_hwfifo_watermark(struct device *device,
 	struct st_acc33_hw *hw = iio_priv(iio_dev);
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -161,7 +161,7 @@ ssize_t st_acc33_set_hwfifo_watermark(struct device *device,
 	hw->watermark = val;
 
 unlock:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -246,10 +246,6 @@ static const struct iio_buffer_setup_ops st_acc33_buffer_ops = {
 
 int st_acc33_fifo_setup(struct st_acc33_hw *hw)
 {
-	struct iio_dev *iio_dev = hw->iio_dev;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
-	struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
 	int ret;
 
 	ret = devm_request_threaded_irq(hw->dev, hw->irq,
@@ -263,26 +259,8 @@ int st_acc33_fifo_setup(struct st_acc33_hw *hw)
 		return ret;
 	}
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-	ret = devm_iio_kfifo_buffer_setup(hw->dev, iio_dev,
-					  &st_acc33_buffer_ops);
-	if (ret)
-		return ret;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-	ret = devm_iio_kfifo_buffer_setup(hw->dev, iio_dev,
-					  INDIO_BUFFER_SOFTWARE,
-					  &st_acc33_buffer_ops);
-	if (ret)
-		return ret;
-#else /* LINUX_VERSION_CODE */
-	buffer = devm_iio_kfifo_allocate(hw->dev);
-	if (!buffer)
-		return -ENOMEM;
-
-	iio_device_attach_buffer(iio_dev, buffer);
-	iio_dev->setup_ops = &st_acc33_buffer_ops;
-	iio_dev->modes |= INDIO_BUFFER_SOFTWARE;
-#endif /* LINUX_VERSION_CODE */
-
-	return 0;
+	ret = st_devm_iio_kfifo_buffer_setup(hw->dev,
+					     hw->iio_dev,
+					     &st_acc33_buffer_ops);
+	return ret < 0 ? ret : 0;
 }

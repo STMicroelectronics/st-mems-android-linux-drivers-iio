@@ -45,23 +45,7 @@ static int st_asm330lhhx_i3c_probe(struct i3c_device *i3cdev)
 				   regmap, true);
 }
 
-#if KERNEL_VERSION(5, 12, 0) <= LINUX_VERSION_CODE
-static void st_asm330lhhx_i3c_remove(struct i3c_device *i3cdev)
-{
-	st_asm330lhhx_remove(&i3cdev->dev);
-	i3c_device_disable_ibi(i3cdev);
-	i3c_device_free_ibi(i3cdev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_asm330lhhx_i3c_remove(struct i3c_device *i3cdev)
-{
-	st_asm330lhhx_remove(&i3cdev->dev);
-	i3c_device_disable_ibi(i3cdev);
-	i3c_device_free_ibi(i3cdev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_I3C_REMOVE(st_asm330lhhx_i3c_remove, st_asm330lhhx_remove)
 
 static struct i3c_driver st_asm330lhhx_driver = {
 	.driver = {

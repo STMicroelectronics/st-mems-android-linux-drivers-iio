@@ -33,23 +33,14 @@ static int st_mag3d_spi_probe(struct spi_device *spi)
 	return st_mag3d_probe(&spi->dev, spi->irq, spi->modalias, regmap);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_mag3d_spi_remove(struct spi_device *spi)
+static void st_mag3d_spi_remove_dev(struct device *dev)
 {
-	struct iio_dev *iio_dev = spi_get_drvdata(spi);
+	struct iio_dev *iio_dev = dev_get_drvdata(dev);
 
 	st_mag3d_remove(iio_dev);
 }
-#else /* LINUX_VERSION_CODE */
-static int st_mag3d_spi_remove(struct spi_device *spi)
-{
-	struct iio_dev *iio_dev = spi_get_drvdata(spi);
 
-	st_mag3d_remove(iio_dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_mag3d_spi_remove, st_mag3d_spi_remove_dev)
 
 static const struct spi_device_id st_mag3d_ids[] = {
 	{ LIS3MDL_DEV_NAME },

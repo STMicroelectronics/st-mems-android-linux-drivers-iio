@@ -19,12 +19,6 @@
 #include <linux/iio/buffer.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_asm330lhhx.h"
 
 #define ST_ASM330LHHX_REG_FIFO_STATUS1_ADDR		0x3a
@@ -491,7 +485,7 @@ ssize_t st_asm330lhhx_set_watermark(struct device *dev,
 		return err;
 	}
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -506,7 +500,7 @@ ssize_t st_asm330lhhx_set_watermark(struct device *dev,
 	sensor->watermark = val;
 
 out:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -730,13 +724,10 @@ static int st_asm330lhhx_fifo_postdisable(struct iio_dev *iio_dev)
 }
 
 static const struct iio_buffer_setup_ops st_asm330lhhx_buffer_setup_ops = {
+	ST_IIO_TRIGGERED_OLD_SETUP_OPS
 	.preenable = st_asm330lhhx_fifo_preenable,
-#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
-	.postenable = iio_triggered_buffer_postenable,
-	.predisable = iio_triggered_buffer_predisable,
-#endif /* LINUX_VERSION_CODE */
 	.postdisable = st_asm330lhhx_fifo_postdisable,
- };
+};
 
 static irqreturn_t st_asm330lhhx_buffer_pollfunc(int irq, void *private)
 {
@@ -819,9 +810,11 @@ static int st_asm330lhhx_config_timestamp(struct st_asm330lhhx_hw *hw)
 {
 	int err;
 
-	err = st_asm330lhhx_hwtimesync_init(hw);
-	if (err)
-		return err;
+	if (IS_ENABLED(CONFIG_IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP)) {
+		err = st_asm330lhhx_hwtimesync_init(hw);
+		if (err)
+			return err;
+	}
 
 	/* init timestamp engine */
 	err = regmap_update_bits(hw->regmap,

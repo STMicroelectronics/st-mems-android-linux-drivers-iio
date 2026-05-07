@@ -16,6 +16,7 @@
 #include <linux/regmap.h>
 #include <linux/iio/trigger.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_LPS33HW_MAX_FIFO_LENGTH		31

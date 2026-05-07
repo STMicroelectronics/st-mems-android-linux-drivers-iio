@@ -17,11 +17,8 @@
 #include <linux/types.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
-
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-#include <linux/iio/iio-opaque.h>
-#endif /* LINUX_VERSION_CODE */
 
 #define LIS2DS12_WHO_AM_I_ADDR			0x0f
 #define LIS2DS12_WHO_AM_I_DEF			0x43
@@ -329,7 +326,7 @@ static inline int lis2ds12_iio_dev_currentmode(struct iio_dev *indio_dev)
 
 static bool __maybe_unused lis2ds12_skip_basic_features(int i)
 {
-#ifndef CONFIG_IIO_ST_LIS2DS12_EN_BASIC_FEATURES
+#if !IS_ENABLED(CONFIG_IIO_ST_LIS2DS12_EN_BASIC_FEATURES)
 	if (i >= LIS2DS12_STEP_C &&
 	    i <= LIS2DS12_SIGN_M)
 		return true;

@@ -281,35 +281,13 @@ static const struct iio_buffer_setup_ops st_lsm6dsvx_qvar_ops = {
 
 static int st_lsm6dsvx_qvar_buffer(struct st_lsm6dsvx_hw *hw)
 {
-
-#if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
 	int err;
-#endif /* LINUX_VERSION_CODE */
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-	err = devm_iio_kfifo_buffer_setup(hw->dev,
-					  hw->iio_devs[ST_LSM6DSVX_ID_QVAR],
-					  &st_lsm6dsvx_qvar_ops);
+	err = st_devm_iio_kfifo_buffer_setup(hw->dev,
+				  hw->iio_devs[ST_LSM6DSVX_ID_QVAR],
+				  &st_lsm6dsvx_qvar_ops);
 	if (err)
 		return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-	err = devm_iio_kfifo_buffer_setup(hw->dev,
-					  hw->iio_devs[ST_LSM6DSVX_ID_QVAR],
-					  INDIO_BUFFER_SOFTWARE,
-					  &st_lsm6dsvx_qvar_ops);
-	if (err)
-		return err;
-#else /* LINUX_VERSION_CODE */
-	struct iio_buffer *buffer;
-
-	buffer = devm_iio_kfifo_allocate(hw->dev);
-	if (!buffer)
-		return -ENOMEM;
-
-	iio_device_attach_buffer(hw->iio_devs[ST_LSM6DSVX_ID_QVAR], buffer);
-	hw->iio_devs[ST_LSM6DSVX_ID_QVAR]->modes |= INDIO_BUFFER_SOFTWARE;
-	hw->iio_devs[ST_LSM6DSVX_ID_QVAR]->setup_ops = &st_lsm6dsvx_qvar_ops;
-#endif /* LINUX_VERSION_CODE */
 
 	return st_lsm6dsvx_allocate_workqueue(hw);
 }
@@ -346,8 +324,7 @@ st_lsm6dsvx_alloc_qvar_iiodev(struct st_lsm6dsvx_hw *hw)
 
 	if (!IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_QVAR_IN_FIFO)) {
 		/* configure hrtimer */
-		hrtimer_init(&sensor->hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-		sensor->hr_timer.function = &st_lsm6dsvx_qvar_poll_function_read;
+		st_hrtimer_setup(&sensor->hr_timer, st_lsm6dsvx_qvar_poll_function_read);
 
 		sensor->oldktime = ktime_set(0, 1000000000 / sensor->odr);
 		INIT_WORK(&sensor->iio_work, st_lsm6dsvx_qvar_poll_function_work);

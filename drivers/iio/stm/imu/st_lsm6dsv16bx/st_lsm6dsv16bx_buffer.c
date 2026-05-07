@@ -21,12 +21,6 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_lsm6dsv16bx.h"
 
 #define ST_LSM6DSV16BX_SAMPLE_DISCHARD		0x7ffd
@@ -442,7 +436,7 @@ ssize_t st_lsm6dsv16bx_set_watermark(struct device *dev,
 	struct st_lsm6dsv16bx_sensor *sensor = iio_priv(iio_dev);
 	int err, val;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -463,7 +457,7 @@ ssize_t st_lsm6dsv16bx_set_watermark(struct device *dev,
 	sensor->watermark = val;
 
 out:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -706,13 +700,8 @@ static int st_lsm6dsv16bx_fifo_postdisable(struct iio_dev *iio_dev)
 }
 
 static const struct iio_buffer_setup_ops st_lsm6dsv16bx_buffer_setup_ops = {
+	ST_IIO_TRIGGERED_OLD_SETUP_OPS
 	.preenable = st_lsm6dsv16bx_fifo_preenable,
-
-#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
-	.postenable = iio_triggered_buffer_postenable,
-	.predisable = iio_triggered_buffer_predisable,
-#endif /* LINUX_VERSION_CODE */
-
 	.postdisable = st_lsm6dsv16bx_fifo_postdisable,
 };
 

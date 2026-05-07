@@ -12,6 +12,7 @@
 
 #include <linux/iio/iio.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_LIS3DHH_DATA_SIZE		6

@@ -18,16 +18,9 @@ static const struct regmap_config st_lps22df_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int st_lps22df_i2c_probe(struct i2c_client *client)
+ST_I2C_PROBE(st_lps22df_i2c_probe)
 {
-	const struct i2c_device_id *id = i2c_client_get_device_id(client);
-#else /* LINUX_VERSION_CODE */
-static int st_lps22df_i2c_probe(struct i2c_client *client,
-				const struct i2c_device_id *id)
-{
-#endif /* LINUX_VERSION_CODE */
-
+	ST_I2C_GET_PROBE_ID(client, match_id);
 	struct regmap *regmap;
 
 	regmap = devm_regmap_init_i2c(client, &st_lps22df_i2c_regmap_config);
@@ -40,20 +33,10 @@ static int st_lps22df_i2c_probe(struct i2c_client *client,
 	}
 
 	return st_lps22df_probe(&client->dev, client->irq,
-				id->driver_data, regmap);
+				match_id->driver_data, regmap);
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void st_lps22df_i2c_remove(struct i2c_client *client)
-{
-	st_lps22df_remove(&client->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_lps22df_i2c_remove(struct i2c_client *client)
-{
-	return st_lps22df_remove(&client->dev);
-}
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_REMOVE(st_lps22df_i2c_remove, st_lps22df_remove)
 
 static const struct i2c_device_id st_lps22df_ids[] = {
 	{ "lps22df", ST_LPS22DF_ID },

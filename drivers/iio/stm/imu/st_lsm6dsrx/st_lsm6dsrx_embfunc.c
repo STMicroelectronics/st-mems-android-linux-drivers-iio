@@ -71,7 +71,7 @@ static int st_lsm6dsrx_reset_step_counter(struct iio_dev *iio_dev)
 	struct st_lsm6dsrx_hw *hw = sensor->hw;
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -89,7 +89,7 @@ static int st_lsm6dsrx_reset_step_counter(struct iio_dev *iio_dev)
 unlock:
 	mutex_unlock(&hw->page_lock);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -311,7 +311,7 @@ st_lsm6dsrx_write_event_step_config(struct iio_dev *iio_dev,
 				    const struct iio_chan_spec *chan,
 				    enum iio_event_type type,
 				    enum iio_event_direction dir,
-				    int state)
+				    ST_IIO_EVENT_EN_TYPE enable)
 {
 	struct st_lsm6dsrx_sensor *sensor = iio_priv(iio_dev);
 	int err;
@@ -327,7 +327,7 @@ st_lsm6dsrx_write_event_step_config(struct iio_dev *iio_dev,
 			 */
 			case IIO_EV_DIR_NONE:
 				err = st_lsm6dsrx_step_event_enable(sensor,
-								    state);
+								    enable);
 				break;
 
 			/*
@@ -337,7 +337,7 @@ st_lsm6dsrx_write_event_step_config(struct iio_dev *iio_dev,
 			 */
 			case IIO_EV_DIR_RISING:
 				err = st_lsm6dsrx_signmot_event_enable(sensor,
-								       state);
+								       enable);
 				break;
 
 			default:
@@ -394,13 +394,13 @@ static int st_lsm6dsrx_read_step_raw(struct iio_dev *iio_dev,
 	case IIO_CHAN_INFO_PROCESSED:
 		switch (ch->type) {
 		case IIO_STEPS:
-			ret = iio_device_claim_direct_mode(iio_dev);
+			ret = st_iio_device_claim_direct(iio_dev);
 			if (ret)
 				return ret;
 
 			ret = st_lsm6dsrx_read_step_counter(sensor,
 							    ch->address, val);
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			break;
 		default:
 			ret = -EINVAL;

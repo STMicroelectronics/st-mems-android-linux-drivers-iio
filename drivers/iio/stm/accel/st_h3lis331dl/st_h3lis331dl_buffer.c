@@ -23,12 +23,6 @@
 #include <linux/property.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_h3lis331dl.h"
 
 static int st_h3lis331dl_get_int_reg(struct st_h3lis331dl_hw *hw)
@@ -82,12 +76,7 @@ static irqreturn_t st_h3lis331dl_handler_thread(int irq, void *private)
 		struct st_h3lis331dl_sensor *sensor;
 
 		sensor = iio_priv(hw->iio_devs);
-
-#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
-		iio_trigger_poll_nested(sensor->trig);
-#else /* LINUX_VERSION_CODE */
-		iio_trigger_poll_chained(sensor->trig);
-#endif /* LINUX_VERSION_CODE */
+		st_iio_trigger_poll(sensor->trig);
 
 		return IRQ_HANDLED;
 	}

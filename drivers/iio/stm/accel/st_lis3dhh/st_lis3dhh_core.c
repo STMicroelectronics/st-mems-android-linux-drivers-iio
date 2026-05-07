@@ -19,12 +19,6 @@
 #include <linux/spi/spi.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include <linux/platform_data/st_sensors_pdata.h>
 
 #include "st_lis3dhh.h"
@@ -136,18 +130,18 @@ static int st_lis3dhh_read_raw(struct iio_dev *iio_dev,
 		int err, delay;
 		u8 data[2];
 
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		if (iio_buffer_enabled(iio_dev)) {
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			return -EBUSY;
 		}
 
 		err = st_lis3dhh_set_enable(hw, true);
 		if (err < 0) {
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			return err;
 		}
 
@@ -157,20 +151,20 @@ static int st_lis3dhh_read_raw(struct iio_dev *iio_dev,
 
 		err = st_lis3dhh_spi_read(hw, ch->address, 2, data);
 		if (err < 0) {
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			return err;
 		}
 
 		err = st_lis3dhh_set_enable(hw, false);
 		if (err < 0) {
-			iio_device_release_direct_mode(iio_dev);
+			st_iio_device_release_direct(iio_dev);
 			return err;
 		}
 
 		*val = (s16)get_unaligned_le16(data);
 		*val = *val >> ch->scan_type.shift;
 
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 
 		ret = IIO_VAL_INT;
 		break;

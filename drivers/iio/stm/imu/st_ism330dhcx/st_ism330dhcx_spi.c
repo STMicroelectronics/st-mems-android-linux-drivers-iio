@@ -34,19 +34,7 @@ static int st_ism330dhcx_spi_probe(struct spi_device *spi)
 	return st_ism330dhcx_probe(&spi->dev, spi->irq, regmap);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_ism330dhcx_spi_remove(struct spi_device *spi)
-{
-	st_ism330dhcx_remove(&spi->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_ism330dhcx_spi_remove(struct spi_device *spi)
-{
-	st_ism330dhcx_remove(&spi->dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_ism330dhcx_spi_remove, st_ism330dhcx_remove)
 
 static const struct of_device_id st_ism330dhcx_spi_of_match[] = {
 	{

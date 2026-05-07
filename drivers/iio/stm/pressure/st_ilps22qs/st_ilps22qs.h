@@ -19,6 +19,8 @@
 #include <linux/types.h>
 #include <linux/workqueue.h>
 
+#include "../../common/st_linux_compat.h"
+
 #define ST_ILPS22QS_DEV_NAME			"ilps22qs"
 #define ST_ILPS28QSW_DEV_NAME			"ilps28qsw"
 

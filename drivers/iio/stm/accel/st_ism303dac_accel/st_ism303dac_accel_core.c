@@ -25,12 +25,6 @@
 #include <linux/iio/events.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_ism303dac_accel.h"
 
 #define ISM303DAC_FS_LIST_NUM			4
@@ -696,12 +690,12 @@ static ssize_t ism303dac_set_sampling_frequency(struct device *dev,
 	if (i == ISM303DAC_ODR_LP_LIST_NUM)
 		return -EINVAL;
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
 	sdata->odr = ism303dac_odr_table.odr_avl[power_mode][i].hz;
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	err = ism303dac_write_max_odr(sdata);
 
@@ -765,18 +759,18 @@ static int ism303dac_read_raw(struct iio_dev *indio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
 		if (ch->type == IIO_ACCEL) {
-			err = iio_device_claim_direct_mode(indio_dev);
+			err = st_iio_device_claim_direct(indio_dev);
 			if (err)
 				return err;
 
 			if (ism303dac_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-				iio_device_release_direct_mode(indio_dev);
+				st_iio_device_release_direct(indio_dev);
 				return -EBUSY;
 			}
 
 			err = ism303dac_set_enable(sdata, true);
 			if (err < 0) {
-				iio_device_release_direct_mode(indio_dev);
+				st_iio_device_release_direct(indio_dev);
 				return -EBUSY;
 			}
 
@@ -785,7 +779,7 @@ static int ism303dac_read_raw(struct iio_dev *indio_dev,
 			err = ism303dac_read_register(sdata->cdata, ch->address, 2,
 						      outdata, true);
 			if (err < 0) {
-				iio_device_release_direct_mode(indio_dev);
+				st_iio_device_release_direct(indio_dev);
 				return err;
 			}
 
@@ -793,7 +787,7 @@ static int ism303dac_read_raw(struct iio_dev *indio_dev,
 			*val = *val >> ch->scan_type.shift;
 
 			err = ism303dac_set_enable(sdata, false);
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 
 			if (err < 0)
 				return err;
@@ -807,13 +801,13 @@ static int ism303dac_read_raw(struct iio_dev *indio_dev,
 
 			/* temperature sensor requires accel enabled */
 			if (!acc_data->enabled) {
-				err = iio_device_claim_direct_mode(acc_indio_dev);
+				err = st_iio_device_claim_direct(acc_indio_dev);
 				if (err)
 					break;
 
 				err = ism303dac_enable_temp(acc_data, true);
 				if (err < 0) {
-					iio_device_release_direct_mode(acc_indio_dev);
+					st_iio_device_release_direct(acc_indio_dev);
 
 					return -EBUSY;
 				}
@@ -831,7 +825,7 @@ static int ism303dac_read_raw(struct iio_dev *indio_dev,
 						      1, outdata, true);
 			if (acc_poweroff) {
 				err = ism303dac_enable_temp(acc_data, false);
-				iio_device_release_direct_mode(acc_indio_dev);
+				st_iio_device_release_direct(acc_indio_dev);
 			}
 
 			*val = (u8)outdata[0];
@@ -862,12 +856,12 @@ static int ism303dac_write_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
-		err = iio_device_claim_direct_mode(indio_dev);
+		err = st_iio_device_claim_direct(indio_dev);
 		if (err)
 			return err;
 
 		if (ism303dac_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return -EBUSY;
 		}
 
@@ -877,7 +871,7 @@ static int ism303dac_write_raw(struct iio_dev *indio_dev,
 		}
 
 		err = ism303dac_set_fs(sdata, ism303dac_fs_table.fs_avl[i].urv);
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 
 		break;
 
@@ -985,14 +979,14 @@ static ssize_t ism303dac_sysfs_flush_fifo(struct device *dev,
 	struct ism303dac_sensor_data *sdata = iio_priv(indio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
 	if (ism303dac_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
 		disable_irq(sdata->cdata->irq);
 	} else {
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 		return -EINVAL;
 	}
 
@@ -1014,7 +1008,7 @@ static ssize_t ism303dac_sysfs_flush_fifo(struct device *dev,
 		       sensor_last_timestamp);
 
 	enable_irq(sdata->cdata->irq);
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	return size;
 }
@@ -1037,7 +1031,7 @@ static ssize_t ism303dac_get_selftest_status(struct device *dev,
 	int result;
 	int err;
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
@@ -1045,7 +1039,7 @@ static ssize_t ism303dac_get_selftest_status(struct device *dev,
 
 	/* restore to reset value */
 	sdata->cdata->selftest_status = ST_ISM303DAC_ST_RESET;
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	if (result == ST_ISM303DAC_ST_RESET)
 		message = "na";
@@ -1069,7 +1063,7 @@ static ssize_t ism303dac_set_selftest_status(struct device *dev,
 	u8 odr_reg, fs_reg, data[6], status;
 	int err, i, count, n = 0;
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
@@ -1316,7 +1310,7 @@ restore_fs:
 				 ISM303DAC_SELFTEST_NORMAL, true);
 
 unlock:
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	return err < 0 ? err : size;
 }

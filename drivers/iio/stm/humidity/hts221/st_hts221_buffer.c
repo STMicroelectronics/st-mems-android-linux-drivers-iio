@@ -69,11 +69,7 @@ static irqreturn_t st_hts221_trigger_handler_thread(int irq, void *private)
 	if (!(status & ST_HTS221_RH_DRDY_MASK))
 		return IRQ_NONE;
 
-#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
-	iio_trigger_poll_nested(hw->trig);
-#else /* LINUX_VERSION_CODE */
-	iio_trigger_poll_chained(hw->trig);
-#endif /* LINUX_VERSION_CODE */
+	st_iio_trigger_poll(hw->trig);
 
 	return IRQ_HANDLED;
 }
@@ -160,13 +156,8 @@ static int st_hts221_buffer_postdisable(struct iio_dev *iio_dev)
 }
 
 static const struct iio_buffer_setup_ops st_hts221_buffer_ops = {
+	ST_IIO_TRIGGERED_OLD_SETUP_OPS
 	.preenable = st_hts221_buffer_preenable,
-
-#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
-	.postenable = iio_triggered_buffer_postenable,
-	.predisable = iio_triggered_buffer_predisable,
-#endif /* LINUX_VERSION_CODE */
-
 	.postdisable = st_hts221_buffer_postdisable,
 };
 

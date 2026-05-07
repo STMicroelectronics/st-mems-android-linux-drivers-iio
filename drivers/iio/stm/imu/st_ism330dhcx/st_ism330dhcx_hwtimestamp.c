@@ -15,12 +15,6 @@
 #include "st_ism330dhcx.h"
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #define ST_ISM330DHCX_TSYNC_OFFSET_NS		(300 * 1000LL)
 #define ST_ISM330DHCX_TSYNC_DECREMENT(_id)	do { \
 							if ((hw->enable_mask & BIT_ULL(_id)) && \
@@ -47,10 +41,9 @@ static void st_ism330dhcx_read_hw_timestamp(struct st_ism330dhcx_hw *hw)
 	timestamp_cpu = st_ism330dhcx_get_time_ns(hw) -
 			ST_ISM330DHCX_TSYNC_OFFSET_NS;
 
-	eventLSB = IIO_EVENT_CODE(IIO_COUNT, 0, 0, 0,
-				  STM_IIO_EV_TYPE_TIME_SYNC, 0, 0, 0);
-	eventMSB = IIO_EVENT_CODE(IIO_COUNT, 0, 0, 1,
-				  STM_IIO_EV_TYPE_TIME_SYNC, 0, 0, 0);
+	st_iio_get_timesync_event_codes(&eventLSB, &eventMSB,
+					IIO_COUNT,
+					STM_IIO_EV_TYPE_TIME_SYNC);
 
 	spin_lock_irq(&hw->hwtimestamp_lock);
 	timestamp_hw_global = (hw->hw_timestamp_global & GENMASK_ULL(63, 32)) |
@@ -131,8 +124,8 @@ int st_ism330dhcx_hwtimesync_init(struct st_ism330dhcx_hw *hw)
 {
 	memset(hw->timesync_c, 0, sizeof(hw->timesync_c));
 	hw->timesync_ktime = ktime_set(0, ST_ISM330DHCX_DEFAULT_KTIME);
-	hrtimer_init(&hw->timesync_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	hw->timesync_timer.function = st_ism330dhcx_timer_fn;
+
+	st_hrtimer_setup(&hw->timesync_timer, st_ism330dhcx_timer_fn);
 
 	spin_lock_init(&hw->hwtimestamp_lock);
 	hw->hw_timestamp_global = 0;

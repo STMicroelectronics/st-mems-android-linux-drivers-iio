@@ -36,19 +36,7 @@ static int st_iis2iclx_spi_probe(struct spi_device *spi)
 	return st_iis2iclx_probe(&spi->dev, spi->irq, regmap);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_iis2iclx_spi_remove(struct spi_device *spi)
-{
-	st_iis2iclx_remove(&spi->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_iis2iclx_spi_remove(struct spi_device *spi)
-{
-	st_iis2iclx_remove(&spi->dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_iis2iclx_spi_remove, st_iis2iclx_remove)
 
 static const struct of_device_id st_iis2iclx_spi_of_match[] = {
 	{ .compatible = "st," ST_IIS2ICLX_DEV_NAME },

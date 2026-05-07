@@ -17,6 +17,8 @@
 #include <linux/regmap.h>
 #include <linux/bitfield.h>
 
+#include "../../common/st_linux_compat.h"
+
 #define ST_ISM330IS_DEV_NAME			"ism330is"
 
 #define ST_ISM330IS_REG_FUNC_CFG_ACCESS_ADDR	0x01

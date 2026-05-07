@@ -16,6 +16,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_MAG40_DEV_NAME			"st_mag40"

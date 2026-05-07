@@ -148,7 +148,7 @@ ssize_t st_lps22hb_sysfs_flush_fifo(struct device *dev,
 	int len;
 	int ret;
 
-	ret = iio_device_claim_direct_mode(indio_dev);
+	ret = st_iio_device_claim_direct(indio_dev);
 	if (ret)
 		return ret;
 
@@ -164,7 +164,7 @@ ssize_t st_lps22hb_sysfs_flush_fifo(struct device *dev,
 		event = IIO_UNMOD_EVENT_CODE(IIO_TEMP, -1,
 					     STM_IIO_EV_TYPE_FIFO_FLUSH, type);
 	iio_push_event(indio_dev, event, st_lps22hb_get_time_ns(indio_dev));
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	return size;
 }
@@ -252,9 +252,6 @@ static const struct iio_buffer_setup_ops st_lps22hb_buffer_ops = {
 
 int st_lps22hb_allocate_buffers(struct st_lps22hb_hw *hw)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
-	struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
 	int err, i;
 
 	err = devm_request_threaded_irq(hw->dev, hw->irq,
@@ -266,28 +263,11 @@ int st_lps22hb_allocate_buffers(struct st_lps22hb_hw *hw)
 		return err;
 
 	for (i = 0; i < ST_LPS22HB_SENSORS_NUMB; i++) {
-
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-						  &st_lps22hb_buffer_ops);
+		err = st_devm_iio_kfifo_buffer_setup(hw->dev,
+						     hw->iio_devs[i],
+						     &st_lps22hb_buffer_ops);
 		if (err)
 			return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-		err = devm_iio_kfifo_buffer_setup(hw->dev, hw->iio_devs[i],
-						  INDIO_BUFFER_SOFTWARE,
-						  &st_lps22hb_buffer_ops);
-		if (err)
-			return err;
-#else /* LINUX_VERSION_CODE */
-		buffer = devm_iio_kfifo_allocate(hw->dev);
-		if (!buffer)
-			return -ENOMEM;
-
-		iio_device_attach_buffer(hw->iio_devs[i], buffer);
-		hw->iio_devs[i]->modes |= INDIO_BUFFER_SOFTWARE;
-		hw->iio_devs[i]->setup_ops = &st_lps22hb_buffer_ops;
-#endif /* LINUX_VERSION_CODE */
-
 	}
 
 	return 0;

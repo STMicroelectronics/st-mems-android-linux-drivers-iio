@@ -17,6 +17,7 @@
 #include <linux/regmap.h>
 #include <linux/bitfield.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_LSM6DSO16IS_DEV_NAME			"lsm6dso16is"

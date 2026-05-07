@@ -27,15 +27,8 @@ static const struct regmap_config st_hts221_i2c_regmap_config = {
 	.read_flag_mask = ST_HTS221_I2C_AUTO_INCREMENT,
 };
 
-#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
-static int st_hts221_i2c_probe(struct i2c_client *client)
+ST_I2C_PROBE(st_hts221_i2c_probe)
 {
-#else /* LINUX_VERSION_CODE */
-static int st_hts221_i2c_probe(struct i2c_client *client,
-			       const struct i2c_device_id *id)
-{
-#endif /* LINUX_VERSION_CODE */
-
 	struct regmap *regmap;
 
 	regmap = devm_regmap_init_i2c(client, &st_hts221_i2c_regmap_config);

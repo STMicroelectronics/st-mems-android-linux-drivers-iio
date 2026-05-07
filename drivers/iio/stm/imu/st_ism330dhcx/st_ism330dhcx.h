@@ -18,6 +18,7 @@
 #include <linux/regmap.h>
 #include <linux/version.h>
 
+#include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
 #define ST_ISM330DHCX_MAX_ODR			833
@@ -1166,7 +1167,7 @@ int st_ism330dhcx_write_event_config(struct iio_dev *iio_dev,
 				     const struct iio_chan_spec *chan,
 				     enum iio_event_type type,
 				     enum iio_event_direction dir,
-				     int enable);
+					 ST_IIO_EVENT_EN_TYPE enable);
 int st_ism330dhcx_read_event_value(struct iio_dev *iio_dev,
 				   const struct iio_chan_spec *chan,
 				   enum iio_event_type type,

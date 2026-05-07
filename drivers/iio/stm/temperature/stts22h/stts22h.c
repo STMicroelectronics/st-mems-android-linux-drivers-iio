@@ -98,7 +98,7 @@ static __maybe_unused int st_stts22h_reg_access(struct iio_dev *iio_dev,
 	struct st_stts22h_data *data = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -109,7 +109,7 @@ static __maybe_unused int st_stts22h_reg_access(struct iio_dev *iio_dev,
 		err = st_stts22h_read(data, reg, 1, (u8 *)readval);
 	mutex_unlock(&data->lock);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return (err < 0) ? err : 0;
 }
@@ -259,12 +259,12 @@ static int st_stts22h_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		err = iio_device_claim_direct_mode(iio_dev);
+		err = st_iio_device_claim_direct(iio_dev);
 		if (err)
 			return err;
 
 		err = st_stts22h_read_oneshot(data, ch->address, val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
 		*val = (int)data->odr;
@@ -298,12 +298,12 @@ static int st_stts22h_write_raw(struct iio_dev *iio_dev,
 		if (err < 0)
 			return err;
 
-		err = iio_device_claim_direct_mode(iio_dev);
+		err = st_iio_device_claim_direct(iio_dev);
 		if (err)
 			return err;
 
 		data->odr = odr;
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 	}
 
 	return err < 0 ? err : 0;
@@ -443,19 +443,9 @@ static const struct iio_buffer_setup_ops st_stts22h_buffer_ops = {
 	.postdisable = st_stts22h_postdisable,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int st_stts22h_probe(struct i2c_client *client)
-#else /* LINUX_VERSION_CODE */
-static int st_stts22h_probe(struct i2c_client *client,
-			    const struct i2c_device_id *id)
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_PROBE(st_stts22h_i2c_probe)
 {
 	struct st_stts22h_data *data;
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
-	struct iio_buffer *buffer;
-#endif /* LINUX_VERSION_CODE */
-
 	struct iio_dev *iio_dev;
 	struct regmap *regmap;
 	struct device *dev;
@@ -503,8 +493,9 @@ static int st_stts22h_probe(struct i2c_client *client,
 	/* configure hrtimer */
 	data->odr = st_stts22h_odr_table.odr_avl[0].hz;
 	data->enable = false;
-	hrtimer_init(&data->hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	data->hr_timer.function = &st_stts22h_poll_function_read;
+
+	st_hrtimer_setup(&data->hr_timer, st_stts22h_poll_function_read);
+
 	data->sensorktime = ktime_set(0, HZ_TO_PERIOD_NSEC(data->odr));
 	INIT_WORK(&data->iio_work, st_stts22h_poll_function_work);
 
@@ -512,34 +503,18 @@ static int st_stts22h_probe(struct i2c_client *client,
 	if (err < 0)
 		return err;
 
-#if KERNEL_VERSION(5, 19, 0) <= LINUX_VERSION_CODE
-	err = devm_iio_kfifo_buffer_setup(data->dev, data->iio_devs,
-					  &st_stts22h_buffer_ops);
+	err = st_devm_iio_kfifo_buffer_setup(data->dev,
+					     data->iio_devs,
+					     &st_stts22h_buffer_ops);
 	if (err)
 		return err;
-#elif KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-	err = devm_iio_kfifo_buffer_setup(data->dev, data->iio_devs,
-					  INDIO_BUFFER_SOFTWARE,
-					  &st_stts22h_buffer_ops);
-	if (err)
-		return err;
-#else /* LINUX_VERSION_CODE */
-	buffer = devm_iio_kfifo_allocate(data->dev);
-	if (!buffer)
-		return -ENOMEM;
-
-	iio_device_attach_buffer(data->iio_devs, buffer);
-	data->iio_devs->modes |= INDIO_BUFFER_SOFTWARE;
-	data->iio_devs->setup_ops = &st_stts22h_buffer_ops;
-#endif /* LINUX_VERSION_CODE */
 
 	return devm_iio_device_register(data->dev, data->iio_devs);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_stts22h_remove(struct i2c_client *client)
+static void st_stts22h_remove(struct device *dev)
 {
-	struct st_stts22h_data *data = dev_get_drvdata(&client->dev);
+	struct st_stts22h_data *data = dev_get_drvdata(dev);
 
 	if (data->enable)
 		st_stts22h_sensor_set_enable(data, false);
@@ -548,22 +523,8 @@ static void st_stts22h_remove(struct i2c_client *client)
 	destroy_workqueue(data->st_stts22h_workqueue);
 	data->st_stts22h_workqueue = NULL;
 }
-#else /* LINUX_VERSION_CODE */
-static int st_stts22h_remove(struct i2c_client *client)
-{
-	struct st_stts22h_data *data = dev_get_drvdata(&client->dev);
-	int err = 0;
 
-	if (data->enable)
-		err = st_stts22h_sensor_set_enable(data, false);
-
-	st_stts22h_flush_works(data);
-	destroy_workqueue(data->st_stts22h_workqueue);
-	data->st_stts22h_workqueue = NULL;
-
-	return err;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_REMOVE(st_stts22h_i2c_remove, st_stts22h_remove)
 
 static int __maybe_unused st_stts22h_suspend(struct device *dev)
 {
@@ -615,8 +576,8 @@ static struct i2c_driver st_stts22h_driver = {
 #endif /* CONFIG_PM */
 		.of_match_table = of_match_ptr(st_stts22h_of_match),
 	},
-	.probe = st_stts22h_probe,
-	.remove = st_stts22h_remove,
+	.probe = st_stts22h_i2c_probe,
+	.remove = st_stts22h_i2c_remove,
 	.id_table = st_stts22h_id_table,
 };
 module_i2c_driver(st_stts22h_driver);

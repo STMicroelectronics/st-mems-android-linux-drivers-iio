@@ -12,6 +12,8 @@
 
 #include <linux/iio/iio.h>
 
+#include "../../common/st_linux_compat.h"
+
 #define ST_HTS221_DEV_NAME	"sst_hts221"
 #define ST_HTS221_DATA_SIZE	2
 

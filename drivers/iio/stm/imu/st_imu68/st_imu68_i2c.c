@@ -20,13 +20,7 @@ static const struct regmap_config st_imu68_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int st_imu68_i2c_probe(struct i2c_client *client)
-#else /* LINUX_VERSION_CODE */
-static int st_imu68_i2c_probe(struct i2c_client *client,
-			      const struct i2c_device_id *id)
-#endif /* LINUX_VERSION_CODE */
-
+ST_I2C_PROBE(st_imu68_i2c_probe)
 {
 	struct regmap *regmap;
 
@@ -41,19 +35,7 @@ static int st_imu68_i2c_probe(struct i2c_client *client,
 	return st_imu68_probe(&client->dev, client->irq, client->name, regmap);
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void st_imu68_i2c_remove(struct i2c_client *client)
-{
-	st_imu68_remove(&client->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_imu68_i2c_remove(struct i2c_client *client)
-{
-	st_imu68_remove(&client->dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_REMOVE(st_imu68_i2c_remove, st_imu68_remove)
 
 static const struct of_device_id st_imu68_i2c_of_match[] = {
 	{

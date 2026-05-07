@@ -14,12 +14,6 @@
 #include <linux/module.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_lsm6dsv16bx.h"
 
 #define ST_LSM6DSV16BX_TSYNC_OFFSET_NS		(300 * 1000LL)
@@ -48,10 +42,9 @@ static void st_lsm6dsv16bx_read_hw_timestamp(struct st_lsm6dsv16bx_hw *hw)
 	timestamp_cpu = iio_get_time_ns(hw->iio_devs[0]) -
 					ST_LSM6DSV16BX_TSYNC_OFFSET_NS;
 
-	eventLSB = IIO_EVENT_CODE(IIO_COUNT, 0, 0, 0,
-				  STM_IIO_EV_TYPE_TIME_SYNC, 0, 0, 0);
-	eventMSB = IIO_EVENT_CODE(IIO_COUNT, 0, 0, 1,
-				  STM_IIO_EV_TYPE_TIME_SYNC, 0, 0, 0);
+	st_iio_get_timesync_event_codes(&eventLSB, &eventMSB,
+					IIO_COUNT,
+					STM_IIO_EV_TYPE_TIME_SYNC);
 
 	spin_lock_irq(&hw->hwtimestamp_lock);
 	timestamp_hw_global = (hw->hw_timestamp_global & GENMASK_ULL(63, 32)) |
@@ -117,8 +110,8 @@ int st_lsm6dsv16bx_hwtimesync_init(struct st_lsm6dsv16bx_hw *hw)
 {
 	memset(hw->timesync_c, 0, sizeof(hw->timesync_c));
 	hw->timesync_ktime = ktime_set(0, ST_LSM6DSV16BX_DEFAULT_KTIME);
-	hrtimer_init(&hw->timesync_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	hw->timesync_timer.function = st_lsm6dsv16bx_timer_fn;
+
+	st_hrtimer_setup(&hw->timesync_timer, st_lsm6dsv16bx_timer_fn);
 
 	spin_lock_init(&hw->hwtimestamp_lock);
 	hw->hw_timestamp_global = 0;

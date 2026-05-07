@@ -8,6 +8,7 @@
  */
 
 #include <linux/i2c.h>
+#include <linux/device.h>
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/version.h>
@@ -19,13 +20,7 @@ static const struct regmap_config st_mag3d_i2c_regmap_config = {
 	.val_bits = 8,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-static int st_mag3d_i2c_probe(struct i2c_client *client)
-#else /* LINUX_VERSION_CODE */
-static int st_mag3d_i2c_probe(struct i2c_client *client,
-			      const struct i2c_device_id *id)
-#endif /* LINUX_VERSION_CODE */
-
+ST_I2C_PROBE(st_mag3d_i2c_probe)
 {
 	struct regmap *regmap;
 
@@ -40,23 +35,14 @@ static int st_mag3d_i2c_probe(struct i2c_client *client,
 	return st_mag3d_probe(&client->dev, client->irq, client->name, regmap);
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void st_mag3d_i2c_remove(struct i2c_client *client)
+static void st_mag3d_i2c_remove_dev(struct device *dev)
 {
-	struct iio_dev *iio_dev = i2c_get_clientdata(client);
+	struct iio_dev *iio_dev = dev_get_drvdata(dev);
 
 	st_mag3d_remove(iio_dev);
 }
-#else /* LINUX_VERSION_CODE */
-static int st_mag3d_i2c_remove(struct i2c_client *client)
-{
-	struct iio_dev *iio_dev = i2c_get_clientdata(client);
 
-	st_mag3d_remove(iio_dev);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
+ST_I2C_REMOVE(st_mag3d_i2c_remove, st_mag3d_i2c_remove_dev)
 
 static const struct i2c_device_id st_mag3d_ids[] = {
 	{ LIS3MDL_DEV_NAME },

@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
+ccflags-$(CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP) += -DCONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP
+ccflags-$(CONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD) += -DCONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD
+
 st_iis2iclx-y := st_iis2iclx_core.o st_iis2iclx_buffer.o \
 		 st_iis2iclx_events.o st_iis2iclx_shub.o \
 		 st_iis2iclx_mlc.o

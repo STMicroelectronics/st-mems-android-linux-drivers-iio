@@ -69,11 +69,7 @@ static irqreturn_t st_mag40_trigger_thread_handler(int irq, void *private)
 	if (!(status & ST_MAG40_AVL_DATA_MASK))
 		return IRQ_NONE;
 
-#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
-	iio_trigger_poll_nested(cdata->iio_trig);
-#else /* LINUX_VERSION_CODE */
-	iio_trigger_poll_chained(cdata->iio_trig);
-#endif /* LINUX_VERSION_CODE */
+	st_iio_trigger_poll(cdata->iio_trig);
 
 	return IRQ_HANDLED;
 }
@@ -176,11 +172,8 @@ static int st_mag40_buffer_postdisable(struct iio_dev *indio_dev)
 }
 
 static const struct iio_buffer_setup_ops st_mag40_buffer_setup_ops = {
+	ST_IIO_TRIGGERED_OLD_SETUP_OPS
 	.preenable = st_mag40_buffer_preenable,
-#if KERNEL_VERSION(5, 10, 0) > LINUX_VERSION_CODE
-	.postenable = iio_triggered_buffer_postenable,
-	.predisable = iio_triggered_buffer_predisable,
-#endif /* LINUX_VERSION_CODE */
 	.postdisable = st_mag40_buffer_postdisable,
 };
 

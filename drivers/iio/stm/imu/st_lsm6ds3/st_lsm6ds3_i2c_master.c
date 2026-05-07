@@ -22,16 +22,6 @@
 #include <linux/iio/triggered_buffer.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0)
-#include <linux/iio/buffer_impl.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_lsm6ds3.h"
 
 #define EXT0_INDEX				0
@@ -409,7 +399,7 @@ static ssize_t st_lsm6ds3_i2c_master_sysfs_set_sampling_frequency(
 	if (err < 0)
 		return err;
 
-	err = iio_device_claim_direct_mode(indio_dev);
+	err = st_iio_device_claim_direct(indio_dev);
 	if (err)
 		return err;
 
@@ -419,7 +409,7 @@ static ssize_t st_lsm6ds3_i2c_master_sysfs_set_sampling_frequency(
 		err = st_lsm6ds3_i2c_master_set_odr(sdata, odr, false);
 
 	mutex_unlock(&sdata->cdata->odr_lock);
-	iio_device_release_direct_mode(indio_dev);
+	st_iio_device_release_direct(indio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -1340,12 +1330,12 @@ static int st_lsm6ds3_i2c_master_read_raw(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		err = iio_device_claim_direct_mode(indio_dev);
+		err = st_iio_device_claim_direct(indio_dev);
 		if (err)
 			return err;
 
 		if (st_lsm6ds3_iio_dev_currentmode(indio_dev) == INDIO_BUFFER_TRIGGERED) {
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return -EBUSY;
 		}
 
@@ -1354,7 +1344,7 @@ static int st_lsm6ds3_i2c_master_read_raw(struct iio_dev *indio_dev,
 		err = st_lsm6ds3_i2c_master_set_enable(sdata, true, false);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return err;
 		}
 
@@ -1367,14 +1357,14 @@ static int st_lsm6ds3_i2c_master_read_raw(struct iio_dev *indio_dev,
 		if (err < 0) {
 			st_lsm6ds3_i2c_master_set_enable(sdata, false, false);
 			mutex_unlock(&sdata->cdata->odr_lock);
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return err;
 		}
 
 		err = st_lsm6ds3_i2c_master_set_enable(sdata, false, false);
 		if (err < 0) {
 			mutex_unlock(&sdata->cdata->odr_lock);
-			iio_device_release_direct_mode(indio_dev);
+			st_iio_device_release_direct(indio_dev);
 			return err;
 		}
 
@@ -1386,7 +1376,7 @@ static int st_lsm6ds3_i2c_master_read_raw(struct iio_dev *indio_dev,
 		*val = *val >> ch->scan_type.shift;
 
 		mutex_unlock(&sdata->cdata->odr_lock);
-		iio_device_release_direct_mode(indio_dev);
+		st_iio_device_release_direct(indio_dev);
 
 		return IIO_VAL_INT;
 	case IIO_CHAN_INFO_SCALE:

@@ -37,17 +37,7 @@ static int st_sths34pf80_spi_probe(struct spi_device *spi)
 	return st_sths34pf80_probe(&spi->dev, spi->irq, regmap);
 }
 
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_sths34pf80_spi_remove(struct spi_device *spi)
-{
-	st_sths34pf80_remove(&spi->dev);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_sths34pf80_spi_remove(struct spi_device *spi)
-{
-	return st_sths34pf80_remove(&spi->dev);
-}
-#endif /* LINUX_VERSION_CODE */
+ST_SPI_REMOVE(st_sths34pf80_spi_remove, st_sths34pf80_remove)
 
 static const struct of_device_id st_sths34pf80_spi_of_match[] = {
 	{ .compatible = "st," ST_STHS34PF80_DEV_NAME },

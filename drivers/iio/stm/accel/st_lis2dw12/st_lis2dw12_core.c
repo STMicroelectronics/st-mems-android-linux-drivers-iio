@@ -17,12 +17,6 @@
 #include <linux/of_irq.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include <linux/platform_data/st_sensors_pdata.h>
 
 #include "st_lis2dw12.h"
@@ -638,12 +632,12 @@ static int st_lis2dw12_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_lis2dw12_read_oneshot(sensor, ch->address, val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SCALE:
 		switch (ch->type) {
@@ -690,7 +684,7 @@ static int st_lis2dw12_write_raw(struct iio_dev *iio_dev,
 	struct st_lis2dw12_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -719,7 +713,7 @@ static int st_lis2dw12_write_raw(struct iio_dev *iio_dev,
 	}
 
 unlock:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -788,7 +782,7 @@ static ssize_t st_lis2dw12_enable_selftest(struct device *dev,
 	u8 data[ST_LIS2DW12_DATA_SIZE], val;
 	int i, err, gain;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -879,7 +873,7 @@ static ssize_t st_lis2dw12_enable_selftest(struct device *dev,
 	err = st_lis2dw12_sensor_set_enable(sensor, false);
 
 unlock:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }
@@ -1065,8 +1059,8 @@ static struct iio_dev *st_lis2dw12_alloc_iiodev(struct st_lis2dw12_hw *hw,
 			   st_lis2dw12_fs_table[ST_LIS2DW12_ID_TEMP].fs[0].gain;
 
 		/* configure hrtimer and workqueue */
-		hrtimer_init(&hw->hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-		hw->hr_timer.function = &st_lis2dw12_temp_poll_function_read;
+		st_hrtimer_setup(&hw->hr_timer,
+				 st_lis2dw12_temp_poll_function_read);
 
 		hw->oldktime = ktime_set(0, 1000000000 / sensor->odr);
 		INIT_WORK(&hw->iio_work, st_lis2dw12_temp_poll_function_work);

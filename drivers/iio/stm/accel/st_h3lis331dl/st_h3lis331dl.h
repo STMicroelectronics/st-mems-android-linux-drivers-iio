@@ -16,6 +16,8 @@
 #include <linux/delay.h>
 #include <linux/regmap.h>
 
+#include "../../common/st_linux_compat.h"
+
 #define ST_H3LIS331DL_DEV_NAME			"h3lis331dl"
 #define ST_LIS331DLH_DEV_NAME			"lis331dlh"
 

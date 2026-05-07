@@ -179,7 +179,7 @@ static __maybe_unused int st_ism330is_reg_access(struct iio_dev *iio_dev,
 	struct st_ism330is_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -188,7 +188,7 @@ static __maybe_unused int st_ism330is_reg_access(struct iio_dev *iio_dev,
 	else
 		ret = regmap_read(sensor->hw->regmap, reg, readval);
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return (ret < 0) ? ret : 0;
 }
@@ -443,12 +443,12 @@ static int st_ism330is_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_ism330is_read_oneshot(sensor, ch->address, val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_OFFSET:
 		switch (ch->type) {
@@ -497,7 +497,7 @@ static int st_ism330is_write_raw(struct iio_dev *iio_dev,
 	struct st_ism330is_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -523,7 +523,7 @@ static int st_ism330is_write_raw(struct iio_dev *iio_dev,
 	}
 
 release:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -802,7 +802,7 @@ st_ism330is_sysfs_start_selftest(struct device *dev,
 	if (test == ARRAY_SIZE(st_ism330is_selftest_table))
 		return -EINVAL;
 
-	ret = iio_device_claim_direct_mode(iio_dev);
+	ret = st_iio_device_claim_direct(iio_dev);
 	if (ret)
 		return ret;
 
@@ -832,7 +832,7 @@ st_ism330is_sysfs_start_selftest(struct device *dev,
 	st_ism330is_set_odr(sensor, mhz);
 
 out_claim:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return size;
 }
@@ -1106,15 +1106,7 @@ int st_ism330is_probe(struct device *dev, int irq, struct regmap *regmap)
 	if (err < 0)
 		return err;
 
-#if KERNEL_VERSION(5, 15, 0) <= LINUX_VERSION_CODE
-	err = iio_read_mount_matrix(hw->dev, &hw->orientation);
-#elif KERNEL_VERSION(5, 2, 0) <= LINUX_VERSION_CODE
-	err = iio_read_mount_matrix(hw->dev, "mount-matrix", &hw->orientation);
-#else /* LINUX_VERSION_CODE */
-	err = of_iio_read_mount_matrix(hw->dev, "mount-matrix",
-				       &hw->orientation);
-#endif /* LINUX_VERSION_CODE */
-
+	err = st_iio_read_mount_matrix(hw->dev, &hw->orientation);
 	if (err) {
 		dev_err(dev, "Failed to retrieve mounting matrix %d\n", err);
 

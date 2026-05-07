@@ -17,12 +17,6 @@
 #include <linux/of_device.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(6, 11, 0) < LINUX_VERSION_CODE
-#include <linux/unaligned.h>
-#else /* LINUX_VERSION_CODE */
-#include <asm/unaligned.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include <linux/platform_data/st_sensors_pdata.h>
 
 #include "st_lis2du12.h"
@@ -405,13 +399,13 @@ static int st_lis2du12_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		ret = iio_device_claim_direct_mode(iio_dev);
+		ret = st_iio_device_claim_direct(iio_dev);
 		if (ret)
 			return ret;
 
 		ret = st_lis2du12_read_oneshot(sensor, ch->address,
 					       val);
-		iio_device_release_direct_mode(iio_dev);
+		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_OFFSET:
 		switch (ch->type) {
@@ -459,7 +453,7 @@ static int st_lis2du12_write_raw(struct iio_dev *iio_dev,
 	struct st_lis2du12_sensor *sensor = iio_priv(iio_dev);
 	int err = 0;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -492,7 +486,7 @@ static int st_lis2du12_write_raw(struct iio_dev *iio_dev,
 		break;
 	}
 
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err;
 }
@@ -560,7 +554,7 @@ static ssize_t st_lis2du12_enable_selftest(struct device *dev,
 	s16 out1[3], out2[3];
 	int i, err, gain;
 
-	err = iio_device_claim_direct_mode(iio_dev);
+	err = st_iio_device_claim_direct(iio_dev);
 	if (err)
 		return err;
 
@@ -688,7 +682,7 @@ selftest_restore:
 	err = st_lis2du12_sensor_set_enable(sensor, false);
 
 unlock:
-	iio_device_release_direct_mode(iio_dev);
+	st_iio_device_release_direct(iio_dev);
 
 	return err < 0 ? err : size;
 }

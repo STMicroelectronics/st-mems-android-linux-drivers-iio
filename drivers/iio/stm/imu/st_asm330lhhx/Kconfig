@@ -31,18 +31,18 @@ config IIO_ST_ASM330LHHX_I3C
 	depends on IIO_ST_ASM330LHHX
 	select REGMAP_I3C
 
+config IIO_ST_ASM330LHHX_MLC_PRELOAD
+	bool "Preload some examples on MLC/FSM core"
+	depends on IIO_ST_ASM330LHHX
+	help
+	  Select yes if you want to preload some examples on machine learning core
+	  and finite state machine.
+
 config IIO_ST_ASM330LHHX_ASYNC_HW_TIMESTAMP
 	bool "Enable async hw timestamp read"
 	depends on IIO_ST_ASM330LHHX
 	help
 	  Enable async task that sends over hw timestamp events.
-
-config IIO_ST_ASM330LHHX_MLC_PRELOAD
-	bool "Preload some examples on MLC/FSM core"
-	depends on IIO_ST_ASM330LHHX
-	help
-	  Preload some examples on machine learning core and finite state
-	  machine. The examples code are hardcoded in to the driver.
 
 config IIO_ST_ASM330LHHX_STORE_SAMPLE_FIFO_SUSPEND
 	bool "Store accel sample in FIFO during suspend"
