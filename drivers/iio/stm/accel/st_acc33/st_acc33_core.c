@@ -394,6 +394,271 @@ static __maybe_unused int st_acc33_reg_access(struct iio_dev *iio_dev,
 	return (ret < 0) ? ret : 0;
 }
 
+static int st_acc33_enable_selftest(struct st_acc33_hw *hw, bool enable)
+{
+	return st_acc33_write_with_mask(hw, REG_CTRL4_ADDR,
+					REG_CTRL4_ST_MASK,
+					enable ? 0x02 : 0x00);
+}
+
+static int st_acc33_run_selftest(struct st_acc33_hw *hw)
+{
+	int x = 0, y = 0, z = 0, try_count = 0, n;
+	int x_st = 0, y_st = 0, z_st = 0;
+	u8 acc[6], bkregs[4];
+	int delay;
+	int err;
+	int i;
+
+	err = iio_device_claim_direct_mode(hw->iio_dev);
+	if (err)
+		return err;
+
+	err = regmap_bulk_read(hw->regmap, REG_CTRL1_ADDR,
+			       (void *)&bkregs[0], sizeof(bkregs));
+	if (err < 0)
+		goto selftest_release;
+
+	/*
+	 * initialize sensor, turn on sensor, enable x/y/z axes
+	 * set bdu, fs 2G, normal mode, odr 100 hz
+	 */
+	err = regmap_write(hw->regmap, REG_CTRL2_ADDR, 0x00);
+	if (err < 0)
+		return err;
+
+	err = regmap_write(hw->regmap, REG_CTRL3_ADDR, 0x00);
+	if (err < 0)
+		goto selftest_restore;
+
+	err = regmap_write(hw->regmap, REG_CTRL4_ADDR, 0x81);
+	if (err < 0)
+		goto selftest_restore;
+
+	err = regmap_write(hw->regmap, REG_CTRL1_ADDR, 0x57);
+	if (err < 0)
+		goto selftest_restore;
+
+	/* wait for 90 ms to be sure to have stable output */
+	usleep_range(90000, 91000);
+
+	/* set delay to 10ms (ODR 100Hz) */
+	delay = 10000;
+
+	/* reset number of samples read */
+	n = 0;
+
+	/* for 5 times, after checking status bit, read the output registers */
+	for (i = 0; i < 6; i++) {
+		unsigned int status;
+
+		try_count = 0;
+
+		while (try_count < 3) {
+			usleep_range(delay, delay + delay / 10);
+
+			err = regmap_read(hw->regmap, REG_STATUS_REG_A_ADDR,
+					  &status);
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to read status register\n");
+
+				goto selftest_exit;
+			}
+
+			if ((status & REG_STATUS_ZYXDA_MASK) && (i > 0)) {
+				/*
+				 * for 5 times, after checking status bit,
+				 * read the output registers, skip the first
+				 * read because it could be a stale sample
+				 * from before enabling the sensor
+				 */
+				err = regmap_bulk_read(hw->regmap,
+						       REG_OUTX_L_ADDR,
+						       (void *)&acc[0],
+						       sizeof(acc));
+				if (err < 0) {
+					dev_err(hw->dev,
+						"failed to read output registers\n");
+
+					goto selftest_exit;
+				}
+
+				/*
+				 * shift right by 6 to remove the 6 LSBs (left
+				 * justified 10-bit data)
+				 */
+				x += ((s16)get_unaligned_le16(&acc[0])) >> 6;
+				y += ((s16)get_unaligned_le16(&acc[2])) >> 6;
+				z += ((s16)get_unaligned_le16(&acc[4])) >> 6;
+				n++;
+
+				break;
+			}
+
+			try_count++;
+		}
+	}
+
+	if ((i - 1) != n) {
+		dev_err(hw->dev,
+			"II step: samples missing (expected %d, read %d)\n",
+			(i - 1), n);
+		err = -1;
+
+		goto selftest_exit;
+	}
+
+	/* average the stored data on each axis */
+	x /= n;
+	y /= n;
+	z /= n;
+	n = 0;
+
+	/* write self test registers */
+	st_acc33_enable_selftest(hw, true);
+	if (err < 0)
+		return err;
+
+	/* wait for 90 ms to be sure to have stable output */
+	usleep_range(90000, 91000);
+
+	/* for 5 times, after checking status bit, read the output registers */
+	for (i = 0; i < 6; i++) {
+		unsigned int status;
+
+		try_count = 0;
+
+		while (try_count < 3) {
+			usleep_range(delay, delay + delay / 10);
+
+			err = regmap_read(hw->regmap, REG_STATUS_REG_A_ADDR,
+					  &status);
+			if (err < 0) {
+				dev_err(hw->dev,
+					"failed to read status register\n");
+
+				goto selftest_exit;
+			}
+
+			if ((status & REG_STATUS_ZYXDA_MASK) && (i > 0)) {
+				/*
+				 * for 5 times, after checking status bit,
+				 * read the output registers, skip the first
+				 * read because it could be a stale sample
+				 * from before enabling the sensor
+				 */
+				err = regmap_bulk_read(hw->regmap,
+						       REG_OUTX_L_ADDR,
+						       (void *)&acc[0],
+						       sizeof(acc));
+				if (err < 0) {
+					dev_err(hw->dev,
+						"failed to read output registers\n");
+
+					goto selftest_exit;
+				}
+
+				/*
+				 * shift right by 6 to remove the 6 LSBs (left
+				 * justified 10-bit data)
+				 */
+				x_st += ((s16)get_unaligned_le16(&acc[0])) >> 6;
+				y_st += ((s16)get_unaligned_le16(&acc[2])) >> 6;
+				z_st += ((s16)get_unaligned_le16(&acc[4])) >> 6;
+				n++;
+
+				break;
+			}
+
+			try_count++;
+		}
+	}
+
+	if ((i - 1) != n) {
+		dev_err(hw->dev,
+			"II step: samples missing (expected %d, read %d)\n",
+			(i - 1), n);
+		err = -1;
+
+		goto selftest_exit;
+	}
+
+	/* average the stored data on each axis */
+	x_st /= n;
+	y_st /= n;
+	z_st /= n;
+
+	/* check if the difference between self test and normal values is in
+	 * the expected range
+	 */
+	if ((abs(x_st - x) >= ST_ACC33_ST_MIN) && (abs(x_st - x) <= ST_ACC33_ST_MAX) &&
+	    (abs(y_st - y) >= ST_ACC33_ST_MIN) && (abs(y_st - y) <= ST_ACC33_ST_MAX) &&
+	    (abs(z_st - z) >= ST_ACC33_ST_MIN) && (abs(z_st - z) <= ST_ACC33_ST_MAX)) {
+		hw->self_test = ST_ACC33_SELFTEST_SUCCESS;
+		dev_info(hw->dev,
+			 "self test passed: x_st %d, y_st %d, z_st %d\n",
+			 abs(x_st - x), abs(y_st - y), abs(z_st - z));
+	} else {
+		hw->self_test = ST_ACC33_SELFTEST_FAIL;
+		dev_err(hw->dev,
+			"self test failed: x_st %d, y_st %d, z_st %d\n",
+			abs(x_st - x), abs(y_st - y), abs(z_st - z));
+	}
+
+selftest_exit:
+	st_acc33_enable_selftest(hw, false);
+
+selftest_restore:
+	/* restore registers sensor */
+	regmap_write(hw->regmap, REG_CTRL2_ADDR, bkregs[1]);
+	regmap_write(hw->regmap, REG_CTRL4_ADDR, bkregs[3]);
+	regmap_write(hw->regmap, REG_CTRL1_ADDR, bkregs[0]);
+	regmap_write(hw->regmap, REG_CTRL3_ADDR, bkregs[2]);
+
+selftest_release:
+	iio_device_release_direct_mode(hw->iio_dev);
+
+	return err;
+}
+
+static ssize_t st_acc33_get_selftest_status(struct device *dev,
+					    struct device_attribute *attr,
+					    char *buf)
+{
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
+	struct st_acc33_hw *hw = iio_priv(iio_dev);
+	int self_test = hw->self_test;
+
+	hw->self_test = ST_ACC33_SELFTEST_NA;
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", self_test);
+}
+
+static ssize_t st_acc33_set_selftest_status(struct device *dev,
+					    struct device_attribute *attr,
+					    const char *buf, size_t size)
+{
+	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
+	struct st_acc33_hw *hw = iio_priv(iio_dev);
+	int i;
+
+	if (kstrtoint(buf, 10, &i))
+		return -EINVAL;
+
+	if (i == 1) {
+		int err;
+
+		hw->self_test = ST_ACC33_SELFTEST_FAIL;
+
+		err = st_acc33_run_selftest(hw);
+		if (err < 0)
+			return err;
+	}
+
+	return size;
+}
+
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(st_acc33_get_sampling_frequency_avail);
 static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
 		       st_acc33_get_scale_avail, NULL, 0);
@@ -404,6 +669,8 @@ static IIO_DEVICE_ATTR(hwfifo_watermark_max, 0444,
 		       st_acc33_get_max_hwfifo_watermark, NULL, 0);
 static IIO_DEVICE_ATTR(hwfifo_flush, 0200, NULL, st_acc33_flush_hwfifo, 0);
 static IIO_DEVICE_ATTR(module_id, 0444, st_acc33_get_module_id, NULL, 0);
+static IIO_DEVICE_ATTR(selftest, 0644, st_acc33_get_selftest_status,
+		       st_acc33_set_selftest_status, 0);
 
 static struct attribute *st_acc33_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -412,6 +679,7 @@ static struct attribute *st_acc33_attributes[] = {
 	&iio_dev_attr_hwfifo_watermark_max.dev_attr.attr,
 	&iio_dev_attr_hwfifo_flush.dev_attr.attr,
 	&iio_dev_attr_module_id.dev_attr.attr,
+	&iio_dev_attr_selftest.dev_attr.attr,
 	NULL,
 };
 
@@ -470,6 +738,8 @@ static int st_acc33_init_device(struct st_acc33_hw *hw)
 	err = st_acc33_update_watermark(hw, hw->watermark);
 	if (err < 0)
 		return err;
+
+	hw->self_test = ST_ACC33_SELFTEST_NA;
 
 	return st_acc33_write_with_mask(hw, REG_CTRL3_ADDR,
 					REG_CTRL3_I1_WTM_MASK, 1);

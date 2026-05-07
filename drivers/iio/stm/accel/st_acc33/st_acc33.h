@@ -41,7 +41,12 @@
 #define REG_CTRL4_ADDR			0x23
 #define REG_CTRL4_BDU_MASK		BIT(7)
 #define REG_CTRL4_FS_MASK		GENMASK(5, 4)
+#define REG_CTRL4_ST_MASK		GENMASK(2, 1)
 #define REG_CTRL4_SIM_MASK		BIT(0)
+
+/* self test max and min value in LSB */
+#define ST_ACC33_ST_MIN			17
+#define ST_ACC33_ST_MAX			360
 
 #define REG_CTRL5_ACC_ADDR		0x24
 #define REG_CTRL5_ACC_LIR_INT1_MASK	BIT(3)
@@ -49,6 +54,9 @@
 #define REG_CTRL5_ACC_BOOT_MASK		BIT(7)
 
 #define REG_CTRL6_ACC_ADDR		0x25
+
+#define REG_STATUS_REG_A_ADDR		0x27
+#define REG_STATUS_ZYXDA_MASK		BIT(3)
 
 #define REG_OUTX_L_ADDR			0x28
 #define REG_OUTY_L_ADDR			0x2a
@@ -101,6 +109,12 @@ enum st_acc33_fifo_mode {
 	ST_ACC33_FIFO_STREAM = 0x2,
 };
 
+enum st_acc33_selftest_result {
+	ST_ACC33_SELFTEST_NA = -1,
+	ST_ACC33_SELFTEST_SUCCESS = 0,
+	ST_ACC33_SELFTEST_FAIL = 1,
+};
+
 struct st_acc33_hw {
 	struct device *dev;
 	const char *name;
@@ -125,6 +139,8 @@ struct st_acc33_hw {
 	s64 delta_ts;
 	s64 ts_irq;
 	s64 ts;
+
+	enum st_acc33_selftest_result self_test;
 
 	int xl_th_mg;
 	int duration_ms;
