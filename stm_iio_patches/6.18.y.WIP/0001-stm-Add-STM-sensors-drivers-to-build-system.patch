@@ -1,0 +1,36 @@
+From 2461f866d5a57aad2c3f492e6ed33ef227fa3b99 Mon Sep 17 00:00:00 2001
+From: Mario Tesi <mario.tesi@st.com>
+Date: Thu, 30 Apr 2026 16:43:37 +0200
+Subject: [PATCH] Add STM sensors drivers to build system
+
+this is for Kernel Release v6.18
+
+Signed-off-by: Mario Tesi <mario.tesi@st.com>
+---
+ drivers/iio/Kconfig  | 1 +
+ drivers/iio/Makefile | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/drivers/iio/Kconfig b/drivers/iio/Kconfig
+index 661127aed2f9..4e2046c39d4f 100644
+--- a/drivers/iio/Kconfig
++++ b/drivers/iio/Kconfig
+@@ -112,5 +112,6 @@ source "drivers/iio/pressure/Kconfig"
+ source "drivers/iio/proximity/Kconfig"
+ source "drivers/iio/resolver/Kconfig"
+ source "drivers/iio/temperature/Kconfig"
++source "drivers/iio/stm/Kconfig"
+ 
+ endif # IIO
+diff --git a/drivers/iio/Makefile b/drivers/iio/Makefile
+index cb80ef837e84..03dfa398fe95 100644
+--- a/drivers/iio/Makefile
++++ b/drivers/iio/Makefile
+@@ -46,3 +46,4 @@ obj-y += resolver/
+ obj-y += temperature/
+ obj-y += test/
+ obj-y += trigger/
++obj-y += stm/
+-- 
+2.43.0
+
