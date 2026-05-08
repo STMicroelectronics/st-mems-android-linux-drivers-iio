@@ -1716,7 +1716,7 @@ static ssize_t st_lsm6dsv16bx_sysfs_start_selftest(struct device *dev,
 	if (ret < 0)
 		goto out_claim;
 
-	/* disable interrupt on FIFO watermak */
+	/* disable interrupt on FIFO watermark */
 	if (hw->has_hw_fifo) {
 		ret = st_lsm6dsv16bx_write_with_mask(hw, hw->drdy_reg,
 						ST_LSM6DSV16BX_INT_FIFO_TH_MASK,

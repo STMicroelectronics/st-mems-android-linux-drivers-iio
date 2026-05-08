@@ -53,7 +53,7 @@ git rebase --no-fork-point \
            stmems_iio_github/master
 ```
 
-Note: older git versions (i.e.: 2.7.4) would require to use sligthly different options:
+Note: older git versions (i.e.: 2.7.4) would require slightly different options:
 
 ```bash
 git merge --no-fork-point \
@@ -69,9 +69,9 @@ git rebase -Xno-renames \
 ```
 
 ## Apply patches
-Now that drivers code has been added to the target kernel branch, few patches needs to be added in order to:
+Now that drivers code has been added to the target kernel branch, a few patches need to be added in order to:
 * add STM drivers into Kconfig & Makefile systems
-* patch IIO framework with custom events with custom events, channels and devices
+* patch IIO framework with custom events, channels and devices
 
 Apply the patches available in the just added repository (i.e branch linux-5.4.y):
 
@@ -89,7 +89,7 @@ Sensors defconfig can be appended to the board defconfig (i.e. if your current c
 cat stm_iio_configs/lsm6dsm_defconfig >> arch/arm/configs/stm32_defconfig
 ```
 
-Alternatively, it can be done at build time without altering the board config file, as follow.
+Alternatively, it can be done at build time without altering the board config file, as follows.
 
 ### Merge configuration
 Driver config can be merged into current target pre-configured kernel using a script available in the kernel itself:
@@ -101,7 +101,7 @@ scripts/kconfig/merge_config.sh -n .config stm_iio_configs/lsm6dsm_defconfig
 ```
 
 ## Build Modules
-This repo include Makefile for building in tree and out of tree modules
+This repo includes a Makefile for building in-tree and out-of-tree modules
 
 ### In Kernel Tree build
 Set CROSS_COMPILE and ARCH accordingly to your target board. Follow an example for a RPI 4 target board (32 bits):
@@ -111,23 +111,23 @@ export CROSS_COMPILE=arm-linux-gnu-
 make KCFLAGS=-Werror -j $(nproc)
 ```
 ### Out of Kernel Tree build
-The drivers in this project can also be build as external module. Follow an example for RPI 4 target board (32 bits):
+The drivers in this project can also be built as external modules. Follow an example for RPI 4 target board (32 bits):
 ```bash
 export ARCH=arm
 export CROSS_COMPILE=arm-linux-gnu-
-export KDIR=<the directory where Linux kernel is build>
+export KDIR=<the directory where Linux kernel is built>
 
 # Specifying INSTALL_MOD_PATH the modules installation path will be:
 # /INSTALL_MOD_PATH/lib/modules/$(KERNELRELEASE)/kernel/
 # instead of /lib/modules/$(KERNELRELEASE)/extra/
 export INSTALL_MOD_PATH=<modules installation path>
 
-# Specifying INSTALL_MOD_DIR to set analternative name to "extra" path:
+# Specifying INSTALL_MOD_DIR to set an alternative name to "extra" path:
 # /lib/modules/$(KERNELRELEASE)/INSTALL_MOD_DIR/ instead of standard
 # /lib/modules/$(KERNELRELEASE)/extra/
 export INSTALL_MOD_DIR=<modules alternate dir>
 
-# Add flags "-Werror" for stop build on warning, then build the driver modules project:
+# Add flag "-Werror" to stop the build on warnings, then build the driver modules project:
 make KCFLAGS=-Werror -C drivers/iio/stm/ $1 -j$(nproc)
 
 # Install modules

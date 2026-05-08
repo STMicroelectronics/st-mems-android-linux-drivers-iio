@@ -1567,7 +1567,7 @@ static IIO_DEVICE_ATTR(selftest, 0644,
 static IIO_DEVICE_ATTR(module_id, 0444, st_iis2iclx_get_module_id, NULL, 0);
 
 static ssize_t
-__maybe_unused st_iis2iclx_get_discharded_samples(struct device *dev,
+__maybe_unused st_iis2iclx_get_discarded_samples(struct device *dev,
 						  struct device_attribute *attr,
 						  char *buf)
 {
@@ -1575,10 +1575,10 @@ __maybe_unused st_iis2iclx_get_discharded_samples(struct device *dev,
 	struct st_iis2iclx_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	ret = sprintf(buf, "%d\n", sensor->discharged_samples);
+	ret = sprintf(buf, "%d\n", sensor->discarded_samples);
 
 	/* reset counter */
-	sensor->discharged_samples = 0;
+	sensor->discarded_samples = 0;
 
 	return ret;
 }
@@ -1605,8 +1605,8 @@ static int st_iis2iclx_write_raw_get_fmt(struct iio_dev *indio_dev,
 	return -EINVAL;
 }
 
-static IIO_DEVICE_ATTR(discharded_samples, 0444,
-		       st_iis2iclx_get_discharded_samples, NULL, 0);
+static IIO_DEVICE_ATTR(discarded_samples, 0444,
+		       st_iis2iclx_get_discarded_samples, NULL, 0);
 
 static struct attribute *st_iis2iclx_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -1618,9 +1618,9 @@ static struct attribute *st_iis2iclx_acc_attributes[] = {
 	&iio_dev_attr_selftest.dev_attr.attr,
 	&iio_dev_attr_module_id.dev_attr.attr,
 
-#ifdef ST_IIS2ICLX_DEBUG_DISCHARGE
-	&iio_dev_attr_discharded_samples.dev_attr.attr,
-#endif /* ST_IIS2ICLX_DEBUG_DISCHARGE */
+#ifdef ST_IIS2ICLX_DEBUG_DISCARD
+	&iio_dev_attr_discarded_samples.dev_attr.attr,
+#endif /* ST_IIS2ICLX_DEBUG_DISCARD */
 
 	NULL,
 };
@@ -1654,9 +1654,9 @@ static struct attribute *st_iis2iclx_gyro_attributes[] = {
 	&iio_dev_attr_selftest.dev_attr.attr,
 	&iio_dev_attr_module_id.dev_attr.attr,
 
-#ifdef ST_IIS2ICLX_DEBUG_DISCHARGE
-	&iio_dev_attr_discharded_samples.dev_attr.attr,
-#endif /* ST_IIS2ICLX_DEBUG_DISCHARGE */
+#ifdef ST_IIS2ICLX_DEBUG_DISCARD
+	&iio_dev_attr_discarded_samples.dev_attr.attr,
+#endif /* ST_IIS2ICLX_DEBUG_DISCARD */
 
 	NULL,
 };
@@ -1843,9 +1843,9 @@ static struct iio_dev *st_iis2iclx_alloc_iiodev(struct st_iis2iclx_hw *hw,
 	sensor->discard_samples = 0;
 	sensor->last_fifo_timestamp = 0;
 
-#ifdef ST_IIS2ICLX_DEBUG_DISCHARGE
-	sensor->discharged_samples = 0;
-#endif /* ST_IIS2ICLX_DEBUG_DISCHARGE */
+#ifdef ST_IIS2ICLX_DEBUG_DISCARD
+	sensor->discarded_samples = 0;
+#endif /* ST_IIS2ICLX_DEBUG_DISCARD */
 
 	switch (id) {
 	case ST_IIS2ICLX_ID_ACC:

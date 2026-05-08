@@ -164,7 +164,7 @@ static struct lis2ds12_fs_table {
 	},
 };
 
-static const struct iio_event_spec singol_thr_event = {
+static const struct iio_event_spec single_thr_event = {
 	.type = IIO_EV_TYPE_THRESH,
 	.dir = IIO_EV_DIR_RISING,
 };
@@ -230,7 +230,7 @@ static const struct lis2ds12_sensors_table {
 				.type = (enum iio_chan_type)STM_IIO_TAP,
 				.channel = 0,
 				.modified = 0,
-				.event_spec = &singol_thr_event,
+				.event_spec = &single_thr_event,
 				.num_event_specs = 1,
 			},
 			IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -246,7 +246,7 @@ static const struct lis2ds12_sensors_table {
 				.type = (enum iio_chan_type)STM_IIO_TAP_TAP,
 				.channel = 0,
 				.modified = 0,
-				.event_spec = &singol_thr_event,
+				.event_spec = &single_thr_event,
 				.num_event_specs = 1,
 			},
 			IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -262,7 +262,7 @@ static const struct lis2ds12_sensors_table {
 				.type = (enum iio_chan_type)IIO_STEPS,
 				.channel = 0,
 				.modified = 0,
-				.event_spec = &singol_thr_event,
+				.event_spec = &single_thr_event,
 				.num_event_specs = 1,
 			},
 			IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -278,7 +278,7 @@ static const struct lis2ds12_sensors_table {
 				.type = (enum iio_chan_type)STM_IIO_TILT,
 				.channel = 0,
 				.modified = 0,
-				.event_spec = &singol_thr_event,
+				.event_spec = &single_thr_event,
 				.num_event_specs = 1,
 			},
 			IIO_CHAN_SOFT_TIMESTAMP(1),
@@ -294,7 +294,7 @@ static const struct lis2ds12_sensors_table {
 				.type = (enum iio_chan_type)STM_IIO_SIGN_MOTION,
 				.channel = 0,
 				.modified = 0,
-				.event_spec = &singol_thr_event,
+				.event_spec = &single_thr_event,
 				.num_event_specs = 1,
 			},
 			IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -390,8 +390,8 @@ static int lis2ds12_set_fifo_mode(struct lis2ds12_data *cdata, enum fifo_mode fm
 	case BYPASS:
 		reg_value = LIS2DS12_FIFO_MODE_BYPASS;
 		break;
-	case CONTINUOS:
-		reg_value = LIS2DS12_FIFO_MODE_CONTINUOS;
+	case CONTINUOUS:
+		reg_value = LIS2DS12_FIFO_MODE_CONTINUOUS;
 		break;
 	default:
 		return -EINVAL;
@@ -613,7 +613,7 @@ int lis2ds12_update_fifo(struct lis2ds12_data *cdata, u16 watermark)
 		cdata->fifo_size = fifo_size;
 	}
 
-	return lis2ds12_set_fifo_mode(cdata, CONTINUOS);
+	return lis2ds12_set_fifo_mode(cdata, CONTINUOUS);
 }
 EXPORT_SYMBOL(lis2ds12_update_fifo);
 
@@ -631,7 +631,7 @@ int lis2ds12_set_enable(struct lis2ds12_sensor_data *sdata, bool state)
 	 */
 	if (state) {
 		SET_BIT(sdata->cdata->enabled_sensor, sdata->sindex);
-		mode = CONTINUOS;
+		mode = CONTINUOUS;
 	} else {
 		RESET_BIT(sdata->cdata->enabled_sensor, sdata->sindex);
 		mode = BYPASS;
@@ -793,7 +793,7 @@ static int lis2ds12_init_sensors(struct lis2ds12_data *cdata)
 	 */
 	err = lis2ds12_write_with_mask(sdata->cdata, LIS2DS12_TAP_AXIS_ADDR,
 				       LIS2DS12_TAP_AXIS_MASK,
-				       LIS2DS12_TAP_AXIS_ANABLE_ALL, true);
+				       LIS2DS12_TAP_AXIS_ENABLE_ALL, true);
 	if (err < 0)
 		return err;
 
@@ -1067,7 +1067,7 @@ static ssize_t lis2ds12_sysfs_set_hwfifo_enabled(struct device *dev,
 	if (enable != 0x0 && enable != 0x1)
 		return -EINVAL;
 
-	mode = (enable == 0x0) ? BYPASS : CONTINUOS;
+	mode = (enable == 0x0) ? BYPASS : CONTINUOUS;
 
 	err = lis2ds12_set_fifo_mode(sdata->cdata, mode);
 	if (err < 0)

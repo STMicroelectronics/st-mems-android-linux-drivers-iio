@@ -1058,7 +1058,7 @@ st_lis2duxs12_sysfs_start_selftest(struct device *dev,
 	if (mode == ARRAY_SIZE(st_lis2duxs12_selftest_table))
 		return -EINVAL;
 
-	/* disable interrupt on FIFO watermak */
+	/* disable interrupt on FIFO watermark */
 	if (hw->ft_int_reg) {
 		ret = st_lis2duxs12_write_with_mask_locked(hw, hw->ft_int_reg,
 					     ST_LIS2DUXS12_INT_FIFO_TH_MASK, 0);
@@ -1075,7 +1075,7 @@ st_lis2duxs12_sysfs_start_selftest(struct device *dev,
 	st_lis2duxs12_set_full_scale(sensor, gain);
 
 out_claim:
-	/* re-enable interrupt on FIFO watermak */
+	/* re-enable interrupt on FIFO watermark */
 	if (hw->ft_int_reg) {
 		st_lis2duxs12_write_with_mask_locked(hw, hw->ft_int_reg,
 					     ST_LIS2DUXS12_INT_FIFO_TH_MASK, 1);

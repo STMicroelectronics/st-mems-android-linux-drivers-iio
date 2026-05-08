@@ -24,7 +24,7 @@
 #include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
-#define ST_ASM330LHHX_DEBUG_DISCHARGE
+#define ST_ASM330LHHX_DEBUG_DISCARD
 
 #define ST_ASM330LHHX_MAX_ODR			833
 #define ST_ASM330LHHX_ODR_LIST_SIZE		9
@@ -751,9 +751,9 @@ struct st_asm330lhhx_sensor {
 	int uodr;
 	int event_hw_odr;
 
-#ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
+#ifdef ST_ASM330LHHX_DEBUG_DISCARD
 	u32 discarded_samples;
-#endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
+#endif /* ST_ASM330LHHX_DEBUG_DISCARD */
 
 	u16 max_watermark;
 	u16 watermark;

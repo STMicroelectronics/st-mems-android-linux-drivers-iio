@@ -281,7 +281,7 @@ int st_lsm6ds3_read_fifo(struct lsm6ds3_data *cdata, bool async)
 
 	if (fifo_status[1] & ST_LSM6DS3_FIFO_DATA_OVR) {
 		st_lsm6ds3_set_fifo_mode(cdata, BYPASS);
-		st_lsm6ds3_set_fifo_mode(cdata, CONTINUOS);
+		st_lsm6ds3_set_fifo_mode(cdata, CONTINUOUS);
 		dev_err(cdata->dev, "data fifo overrun, failed to read it.\n");
 		return -EINVAL;
 	}

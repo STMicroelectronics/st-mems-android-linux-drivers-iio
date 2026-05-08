@@ -27,7 +27,7 @@
 #define ST_ASM330LHHX_REG_TIMESTAMP2_ADDR		0x42
 #define ST_ASM330LHHX_REG_FIFO_DATA_OUT_TAG_ADDR	0x78
 
-#define ST_ASM330LHHX_SAMPLE_DISCHARD			0x7ffd
+#define ST_ASM330LHHX_SAMPLE_DISCARD			0x7ffd
 
 /* Timestamp convergence filter parameter */
 #define ST_ASM330LHHX_EWMA_LEVEL			120
@@ -399,10 +399,10 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 
 				/* skip samples if not ready */
 				drdymask = (s16)le16_to_cpu(get_unaligned_le16(ptr));
-				if (unlikely(drdymask >= ST_ASM330LHHX_SAMPLE_DISCHARD)) {
-#ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
+				if (unlikely(drdymask >= ST_ASM330LHHX_SAMPLE_DISCARD)) {
+#ifdef ST_ASM330LHHX_DEBUG_DISCARD
 					sensor->discarded_samples++;
-#endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
+#endif /* ST_ASM330LHHX_DEBUG_DISCARD */
 					continue;
 				}
 
@@ -428,9 +428,9 @@ static int st_asm330lhhx_read_fifo(struct st_asm330lhhx_hw *hw)
 				if (sensor->discard_samples) {
 					sensor->discard_samples--;
 
-#ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
+#ifdef ST_ASM330LHHX_DEBUG_DISCARD
 					sensor->discarded_samples++;
-#endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
+#endif /* ST_ASM330LHHX_DEBUG_DISCARD */
 
 					continue;
 				}
@@ -693,7 +693,7 @@ static irqreturn_t st_asm330lhhx_handler_thread(int irq, void *private)
 		st_asm330lhhx_mlc_check_status(hw);
 
 	if (hw->irq_edge)
-		/* disable FIFO watermak interrupt */
+		/* disable FIFO watermark interrupt */
 		st_asm330lhhx_write_locked(hw, hw->drdy_reg, 0);
 
 	mutex_lock(&hw->fifo_lock);
@@ -706,7 +706,7 @@ static irqreturn_t st_asm330lhhx_handler_thread(int irq, void *private)
 		st_asm330lhhx_event_handler(hw);
 
 	if (hw->irq_edge)
-		/* restore FIFO watermak interrupt */
+		/* restore FIFO watermark interrupt */
 		st_asm330lhhx_write_locked(hw, hw->drdy_reg,
 					   ST_ASM330LHHX_REG_INT_FIFO_TH_MASK);
 
@@ -799,7 +799,7 @@ static int st_asm330lhhx_config_interrupt(struct st_asm330lhhx_hw *hw,
 	if (err < 0)
 		return err;
 
-	/* enable FIFO watermak interrupt */
+	/* enable FIFO watermark interrupt */
 	return regmap_update_bits(hw->regmap, hw->drdy_reg,
 				  ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,
 				  FIELD_PREP(ST_ASM330LHHX_REG_INT_FIFO_TH_MASK,

@@ -272,7 +272,7 @@ int st_ism330dlc_read_fifo(struct ism330dlc_data *cdata, bool async)
 
 	if (fifo_status[1] & ST_ISM330DLC_FIFO_DATA_OVR) {
 		st_ism330dlc_set_fifo_mode(cdata, BYPASS);
-		st_ism330dlc_set_fifo_mode(cdata, CONTINUOS);
+		st_ism330dlc_set_fifo_mode(cdata, CONTINUOUS);
 		dev_err(cdata->dev, "data fifo overrun, failed to read it.\n");
 		return -EINVAL;
 	}

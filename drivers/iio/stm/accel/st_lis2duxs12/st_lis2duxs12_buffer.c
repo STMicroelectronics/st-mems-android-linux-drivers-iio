@@ -609,7 +609,7 @@ static int st_lis2duxs12_fifo_init(struct st_lis2duxs12_hw *hw)
 
 	hw->xl_only = true;
 
-	/* enable FIFO watermak interrupt */
+	/* enable FIFO watermark interrupt */
 	return regmap_update_bits(hw->regmap, hw->ft_int_reg,
 				  ST_LIS2DUXS12_INT_FIFO_TH_MASK,
 				  FIELD_PREP(ST_LIS2DUXS12_INT_FIFO_TH_MASK,

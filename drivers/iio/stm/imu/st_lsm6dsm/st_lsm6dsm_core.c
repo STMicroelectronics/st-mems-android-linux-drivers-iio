@@ -101,7 +101,7 @@
 #define ST_LSM6DSM_FIFO_MODE_ADDR			0x0a
 #define ST_LSM6DSM_FIFO_MODE_MASK			0x07
 #define ST_LSM6DSM_FIFO_MODE_BYPASS			0x00
-#define ST_LSM6DSM_FIFO_MODE_CONTINUOS			0x06
+#define ST_LSM6DSM_FIFO_MODE_CONTINUOUS			0x06
 #define ST_LSM6DSM_FIFO_THRESHOLD_IRQ_MASK		0x08
 #define ST_LSM6DSM_FIFO_ODR_MAX				0x40
 #define ST_LSM6DSM_FIFO_DECIMATOR_ADDR			0x08
@@ -328,7 +328,7 @@ static struct st_lsm6dsm_fs_table {
 	}
 };
 
-static const struct iio_event_spec singol_thr_event = {
+static const struct iio_event_spec single_thr_event = {
 	.type = IIO_EV_TYPE_THRESH,
 	.dir = IIO_EV_DIR_RISING,
 };
@@ -365,7 +365,7 @@ static const struct iio_chan_spec st_lsm6dsm_sign_motion_ch[] = {
 		.type = (enum iio_chan_type)STM_IIO_SIGN_MOTION,
 		.channel = 0,
 		.modified = 0,
-		.event_spec = &singol_thr_event,
+		.event_spec = &single_thr_event,
 		.num_event_specs = 1,
 	},
 	IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -420,7 +420,7 @@ static const struct iio_chan_spec st_lsm6dsm_tap_ch[] = {
 		.type = (enum iio_chan_type)STM_IIO_TAP,
 		.channel = 0,
 		.modified = 0,
-		.event_spec = &singol_thr_event,
+		.event_spec = &single_thr_event,
 		.num_event_specs = 1,
 	},
 	IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -431,7 +431,7 @@ static const struct iio_chan_spec st_lsm6dsm_tap_tap_ch[] = {
 		.type = (enum iio_chan_type)STM_IIO_TAP_TAP,
 		.channel = 0,
 		.modified = 0,
-		.event_spec = &singol_thr_event,
+		.event_spec = &single_thr_event,
 		.num_event_specs = 1,
 	},
 	IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -659,8 +659,8 @@ int st_lsm6dsm_set_fifo_mode(struct lsm6dsm_data *cdata, enum fifo_mode fm)
 	case BYPASS:
 		reg_value = ST_LSM6DSM_FIFO_MODE_BYPASS;
 		break;
-	case CONTINUOS:
-		reg_value = ST_LSM6DSM_FIFO_MODE_CONTINUOS | ST_LSM6DSM_FIFO_ODR_MAX;
+	case CONTINUOUS:
+		reg_value = ST_LSM6DSM_FIFO_MODE_CONTINUOUS | ST_LSM6DSM_FIFO_ODR_MAX;
 		break;
 	default:
 		return -EINVAL;
@@ -1217,7 +1217,7 @@ static int st_lsm6dsm_set_odr(struct lsm6dsm_sensor_data *sdata,
 				goto reenable_fifo_irq;
 
 			if ((samples_in_pattern[0] > 0) || (samples_in_pattern[1] > 0) || (samples_in_pattern[2] > 0)) {
-				err = st_lsm6dsm_set_fifo_mode(sdata->cdata, CONTINUOS);
+				err = st_lsm6dsm_set_fifo_mode(sdata->cdata, CONTINUOUS);
 				if (err < 0)
 					goto reenable_fifo_irq;
 
@@ -1410,7 +1410,7 @@ static int st_lsm6dsm_set_odr(struct lsm6dsm_sensor_data *sdata,
 			if ((sdata->cdata->fifo_output[ST_MASK_ID_ACCEL].sip > 0) ||
 					(sdata->cdata->fifo_output[ST_MASK_ID_GYRO].sip > 0) ||
 						(sdata->cdata->fifo_output[ST_MASK_ID_EXT0].sip > 0)) {
-				err = st_lsm6dsm_set_fifo_mode(sdata->cdata, CONTINUOS);
+				err = st_lsm6dsm_set_fifo_mode(sdata->cdata, CONTINUOUS);
 				if (err < 0)
 					goto reenable_fifo_irq;
 

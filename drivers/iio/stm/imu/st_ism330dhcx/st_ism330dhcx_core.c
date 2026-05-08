@@ -1490,7 +1490,7 @@ st_ism330dhcx_sysfs_start_selftest(struct device *dev,
 
 	st_ism330dhcx_bk_regs(hw);
 
-	/* disable interrupt on FIFO watermak */
+	/* disable interrupt on FIFO watermark */
 	if (hw->has_hw_fifo) {
 		ret = st_ism330dhcx_get_int_reg(hw);
 		if (ret < 0)

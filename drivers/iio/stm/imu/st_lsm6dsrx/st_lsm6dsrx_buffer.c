@@ -697,7 +697,7 @@ static int st_lsm6dsrx_config_interrupt(struct st_lsm6dsrx_hw *hw, bool enable)
 	if (err < 0)
 		return err;
 
-	/* enable FIFO watermak interrupt */
+	/* enable FIFO watermark interrupt */
 	return regmap_update_bits(hw->regmap, hw->irq_reg,
 				  ST_LSM6DSRX_REG_FIFO_TH_MASK,
 				  FIELD_PREP(ST_LSM6DSRX_REG_FIFO_TH_MASK,

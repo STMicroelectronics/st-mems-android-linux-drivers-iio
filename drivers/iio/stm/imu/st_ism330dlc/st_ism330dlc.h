@@ -111,7 +111,7 @@ extern const struct iio_event_spec ism330dlc_fifo_flush_event;
 
 enum fifo_mode {
 	BYPASS = 0,
-	CONTINUOS,
+	CONTINUOUS,
 };
 
 struct st_ism330dlc_transfer_buffer {

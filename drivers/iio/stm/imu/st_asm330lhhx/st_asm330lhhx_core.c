@@ -312,7 +312,7 @@ static const struct st_asm330lhhx_odr_table_entry st_asm330lhhx_odr_table[] = {
 };
 
 /**
- * List of supported supported device settings
+ * List of supported device settings
  *
  * The following table list all device features in terms of supported
  * MLC and SHUB.
@@ -1851,7 +1851,7 @@ static ssize_t st_asm330lhhx_sysfs_start_selftest(struct device *dev,
 
 	st_asm330lhhx_bk_regs(hw);
 
-	/* disable FIFO watermak interrupt */
+	/* disable FIFO watermark interrupt */
 	ret = st_asm330lhhx_get_int_reg(hw);
 	if (ret > 0) {
 		ret = st_asm330lhhx_update_bits_locked(hw, hw->drdy_reg,
@@ -1941,7 +1941,7 @@ static IIO_DEVICE_ATTR(selftest, 0644,
 static IIO_DEVICE_ATTR(module_id, 0444, st_asm330lhhx_get_module_id, NULL, 0);
 
 static ssize_t __maybe_unused
-st_asm330lhhx_get_discharded_samples(struct device *dev,
+st_asm330lhhx_get_discarded_samples(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
 	struct iio_dev *iio_dev = dev_to_iio_dev(dev);
@@ -2030,8 +2030,8 @@ st_asm330lhhx_sysfs_write_enable_wakeup(struct device *dev,
 	return size;
 }
 
-static IIO_DEVICE_ATTR(discharded_samples, 0444,
-		       st_asm330lhhx_get_discharded_samples, NULL, 0);
+static IIO_DEVICE_ATTR(discarded_samples, 0444,
+		       st_asm330lhhx_get_discarded_samples, NULL, 0);
 static IIO_DEVICE_ATTR(wakeup_status, 0444,
 		       st_asm330lhhx_get_wakeup_status, NULL, 0);
 static IIO_DEVICE_ATTR(enable_wakeup, 0644,
@@ -2050,9 +2050,9 @@ static struct attribute *st_asm330lhhx_acc_attributes[] = {
 	&iio_dev_attr_selftest.dev_attr.attr,
 	&iio_dev_attr_module_id.dev_attr.attr,
 
-#ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
-	&iio_dev_attr_discharded_samples.dev_attr.attr,
-#endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
+#ifdef ST_ASM330LHHX_DEBUG_DISCARD
+	&iio_dev_attr_discarded_samples.dev_attr.attr,
+#endif /* ST_ASM330LHHX_DEBUG_DISCARD */
 
 	&iio_dev_attr_wakeup_status.dev_attr.attr,
 	&iio_dev_attr_enable_wakeup.dev_attr.attr,
@@ -2092,9 +2092,9 @@ static struct attribute *st_asm330lhhx_gyro_attributes[] = {
 	&iio_dev_attr_selftest.dev_attr.attr,
 	&iio_dev_attr_module_id.dev_attr.attr,
 
-#ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
-	&iio_dev_attr_discharded_samples.dev_attr.attr,
-#endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
+#ifdef ST_ASM330LHHX_DEBUG_DISCARD
+	&iio_dev_attr_discarded_samples.dev_attr.attr,
+#endif /* ST_ASM330LHHX_DEBUG_DISCARD */
 
 	NULL,
 };
@@ -2343,9 +2343,9 @@ static struct iio_dev *st_asm330lhhx_alloc_iiodev(struct st_asm330lhhx_hw *hw,
 	sensor->discard_samples = 0;
 	sensor->last_fifo_timestamp = 0;
 
-#ifdef ST_ASM330LHHX_DEBUG_DISCHARGE
+#ifdef ST_ASM330LHHX_DEBUG_DISCARD
 	sensor->discarded_samples = 0;
-#endif /* ST_ASM330LHHX_DEBUG_DISCHARGE */
+#endif /* ST_ASM330LHHX_DEBUG_DISCARD */
 
 	/*
 	 * for acc/gyro the default Android full scale settings are:

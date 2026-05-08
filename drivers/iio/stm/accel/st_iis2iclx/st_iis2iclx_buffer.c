@@ -316,9 +316,9 @@ static int st_iis2iclx_read_fifo(struct st_iis2iclx_hw *hw)
 				drdymask = (s16)le16_to_cpu(get_unaligned_le16(ptr));
 				if (unlikely(drdymask >= ST_IIS2ICLX_SAMPLE_DISCHARD)) {
 
-#ifdef ST_IIS2ICLX_DEBUG_DISCHARGE
-					sensor->discharged_samples++;
-#endif /* ST_IIS2ICLX_DEBUG_DISCHARGE */
+#ifdef ST_IIS2ICLX_DEBUG_DISCARD
+					sensor->discarded_samples++;
+#endif /* ST_IIS2ICLX_DEBUG_DISCARD */
 
 					continue;
 				}
@@ -693,7 +693,7 @@ static int st_iis2iclx_config_interrupt(struct st_iis2iclx_hw *hw,
 	if (err < 0)
 		return err;
 
-	/* enable FIFO watermak interrupt */
+	/* enable FIFO watermark interrupt */
 	return regmap_update_bits(hw->regmap, hw->drdy_reg,
 				  ST_IIS2ICLX_INT_FIFO_TH_MASK,
 				  FIELD_PREP(ST_IIS2ICLX_INT_FIFO_TH_MASK,

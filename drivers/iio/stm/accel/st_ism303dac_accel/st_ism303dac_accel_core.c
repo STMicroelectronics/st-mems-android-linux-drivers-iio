@@ -175,7 +175,7 @@ static struct ism303dac_fs_table {
 	},
 };
 
-static const struct iio_event_spec singol_thr_event = {
+static const struct iio_event_spec single_thr_event = {
 	.type = IIO_EV_TYPE_THRESH,
 	.dir = IIO_EV_DIR_RISING,
 };
@@ -217,7 +217,7 @@ static const struct ism303dac_sensors_table {
 				.type = (enum iio_chan_type)STM_IIO_TAP,
 				.channel = 0,
 				.modified = 0,
-				.event_spec = &singol_thr_event,
+				.event_spec = &single_thr_event,
 				.num_event_specs = 1,
 			},
 			IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -233,7 +233,7 @@ static const struct ism303dac_sensors_table {
 				.type = (enum iio_chan_type)STM_IIO_TAP_TAP,
 				.channel = 0,
 				.modified = 0,
-				.event_spec = &singol_thr_event,
+				.event_spec = &single_thr_event,
 				.num_event_specs = 1,
 			},
 			IIO_CHAN_SOFT_TIMESTAMP(1)
@@ -312,8 +312,8 @@ static int ism303dac_set_fifo_mode(struct ism303dac_data *cdata, enum fifo_mode 
 	case BYPASS:
 		reg_value = ISM303DAC_FIFO_MODE_BYPASS;
 		break;
-	case CONTINUOS:
-		reg_value = ISM303DAC_FIFO_MODE_CONTINUOS;
+	case CONTINUOUS:
+		reg_value = ISM303DAC_FIFO_MODE_CONTINUOUS;
 		break;
 	default:
 		return -EINVAL;
@@ -478,7 +478,7 @@ static int ism303dac_update_fifo(struct ism303dac_data *cdata, u16 watermark)
 		cdata->fifo_size = fifo_size;
 	}
 
-	return ism303dac_set_fifo_mode(cdata, CONTINUOS);
+	return ism303dac_set_fifo_mode(cdata, CONTINUOUS);
 }
 
 int ism303dac_set_enable(struct ism303dac_sensor_data *sdata, bool state)
@@ -495,7 +495,7 @@ int ism303dac_set_enable(struct ism303dac_sensor_data *sdata, bool state)
 	 */
 	if (state) {
 		SET_BIT(sdata->cdata->enabled_sensor, sdata->sindex);
-		mode = CONTINUOS;
+		mode = CONTINUOUS;
 	} else {
 		RESET_BIT(sdata->cdata->enabled_sensor, sdata->sindex);
 		mode = BYPASS;
@@ -647,7 +647,7 @@ static int ism303dac_init_sensors(struct ism303dac_data *cdata)
 	 */
 	err = ism303dac_write_register(sdata->cdata, ISM303DAC_TAP_AXIS_ADDR,
 				       ISM303DAC_TAP_AXIS_MASK,
-				       ISM303DAC_TAP_AXIS_ANABLE_ALL, true);
+				       ISM303DAC_TAP_AXIS_ENABLE_ALL, true);
 	if (err < 0)
 		return err;
 
@@ -924,7 +924,7 @@ static ssize_t ism303dac_sysfs_set_hwfifo_enabled(struct device *dev,
 	if (enable != 0x0 && enable != 0x1)
 		return -EINVAL;
 
-	mode = (enable == 0x0) ? BYPASS : CONTINUOS;
+	mode = (enable == 0x0) ? BYPASS : CONTINUOUS;
 
 	err = ism303dac_set_fifo_mode(sdata->cdata, mode);
 	if (err < 0)

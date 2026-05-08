@@ -117,7 +117,7 @@ extern const struct iio_event_spec lsm6ds3_fifo_flush_event;
 
 enum fifo_mode {
 	BYPASS = 0,
-	CONTINUOS,
+	CONTINUOUS,
 };
 
 struct st_lsm6ds3_transfer_buffer {

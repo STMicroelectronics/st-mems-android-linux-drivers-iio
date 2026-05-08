@@ -25,7 +25,7 @@
 #include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
-#define ST_IIS2ICLX_DEBUG_DISCHARGE
+#define ST_IIS2ICLX_DEBUG_DISCARD
 
 #define ST_IIS2ICLX_MAX_ODR			833
 #define ST_IIS2ICLX_ODR_LIST_SIZE		8
@@ -645,7 +645,7 @@ struct st_iis2iclx_ext_dev_info {
  * @discard_samples: Sensor discard sample counter, used when LPF enabled.
  * @odr: Output data rate of the sensor [Hz].
  * @uodr: Output data rate of the sensor [uHz].
- * @discharged_samples: Report number of samples discharded by drdy mask filters.
+ * @discarded_samples: Report number of samples discarded by drdy mask filters.
  * @max_watermark: Max supported watermark level.
  * @watermark: Sensor watermark level.
  * @last_fifo_timestamp: Store last sample timestamp in FIFO, used by flush
@@ -673,9 +673,9 @@ struct st_iis2iclx_sensor {
 	int odr;
 	int uodr;
 
-#ifdef ST_IIS2ICLX_DEBUG_DISCHARGE
-	u32 discharged_samples;
-#endif /* ST_IIS2ICLX_DEBUG_DISCHARGE */
+#ifdef ST_IIS2ICLX_DEBUG_DISCARD
+	u32 discarded_samples;
+#endif /* ST_IIS2ICLX_DEBUG_DISCARD */
 
 	u16 max_watermark;
 	u16 watermark;

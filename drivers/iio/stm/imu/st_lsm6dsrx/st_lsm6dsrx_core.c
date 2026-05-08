@@ -1422,7 +1422,7 @@ static ssize_t st_lsm6dsrx_sysfs_start_selftest(struct device *dev,
 
 	st_lsm6dsrx_bk_regs(hw);
 
-	/* disable FIFO watermak interrupt */
+	/* disable FIFO watermark interrupt */
 	if (hw->has_hw_fifo) {
 		ret = st_lsm6dsrx_update_bits_locked(hw, hw->irq_reg,
 					ST_LSM6DSRX_REG_FIFO_TH_MASK, 0);

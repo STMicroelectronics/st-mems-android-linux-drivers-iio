@@ -97,7 +97,7 @@
 #define ST_ISM330DLC_FIFO_MODE_ADDR			0x0a
 #define ST_ISM330DLC_FIFO_MODE_MASK			0x07
 #define ST_ISM330DLC_FIFO_MODE_BYPASS			0x00
-#define ST_ISM330DLC_FIFO_MODE_CONTINUOS		0x06
+#define ST_ISM330DLC_FIFO_MODE_CONTINUOUS		0x06
 #define ST_ISM330DLC_FIFO_THRESHOLD_IRQ_MASK		0x08
 #define ST_ISM330DLC_FIFO_ODR_MAX			0x40
 #define ST_ISM330DLC_FIFO_DECIMATOR_ADDR		0x08
@@ -279,7 +279,7 @@ static struct st_ism330dlc_fs_table {
 	}
 };
 
-static const struct iio_event_spec singol_thr_event = {
+static const struct iio_event_spec single_thr_event = {
 	.type = IIO_EV_TYPE_THRESH,
 	.dir = IIO_EV_DIR_RISING,
 };
@@ -537,8 +537,8 @@ int st_ism330dlc_set_fifo_mode(struct ism330dlc_data *cdata, enum fifo_mode fm)
 	case BYPASS:
 		reg_value = ST_ISM330DLC_FIFO_MODE_BYPASS;
 		break;
-	case CONTINUOS:
-		reg_value = ST_ISM330DLC_FIFO_MODE_CONTINUOS | ST_ISM330DLC_FIFO_ODR_MAX;
+	case CONTINUOUS:
+		reg_value = ST_ISM330DLC_FIFO_MODE_CONTINUOUS | ST_ISM330DLC_FIFO_ODR_MAX;
 		break;
 	default:
 		return -EINVAL;
@@ -1064,7 +1064,7 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 				goto reenable_fifo_irq;
 
 			if ((samples_in_pattern[0] > 0) || (samples_in_pattern[1] > 0) || (samples_in_pattern[2] > 0)) {
-				err = st_ism330dlc_set_fifo_mode(sdata->cdata, CONTINUOS);
+				err = st_ism330dlc_set_fifo_mode(sdata->cdata, CONTINUOUS);
 				if (err < 0)
 					goto reenable_fifo_irq;
 
@@ -1255,7 +1255,7 @@ static int st_ism330dlc_set_odr(struct ism330dlc_sensor_data *sdata,
 			if ((sdata->cdata->fifo_output[ST_MASK_ID_ACCEL].sip > 0) ||
 					(sdata->cdata->fifo_output[ST_MASK_ID_GYRO].sip > 0) ||
 						(sdata->cdata->fifo_output[ST_MASK_ID_EXT0].sip > 0)) {
-				err = st_ism330dlc_set_fifo_mode(sdata->cdata, CONTINUOS);
+				err = st_ism330dlc_set_fifo_mode(sdata->cdata, CONTINUOUS);
 				if (err < 0)
 					goto reenable_fifo_irq;
 

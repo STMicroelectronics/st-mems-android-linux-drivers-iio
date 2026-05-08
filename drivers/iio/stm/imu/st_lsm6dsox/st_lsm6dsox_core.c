@@ -1581,7 +1581,7 @@ static ssize_t st_lsm6dsox_sysfs_start_selftest(struct device *dev,
 
 	st_lsm6dsox_bk_regs(hw);
 
-	/* disable FIFO watermak interrupt */
+	/* disable FIFO watermark interrupt */
 	if (hw->has_hw_fifo) {
 		ret = st_lsm6dsox_write_with_mask_locked(hw, hw->irq_reg,
 						   ST_LSM6DSOX_REG_FIFO_TH_MASK,

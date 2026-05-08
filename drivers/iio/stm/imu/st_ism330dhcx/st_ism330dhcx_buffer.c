@@ -803,7 +803,7 @@ static int st_ism330dhcx_config_interrupt(struct st_ism330dhcx_hw *hw)
 		return err;
 
 
-	/* enable FIFO watermak interrupt */
+	/* enable FIFO watermark interrupt */
 	return st_ism330dhcx_write_with_mask(hw, hw->irq_reg,
 					     ST_ISM330DHCX_REG_INT_FIFO_TH_MASK,
 					     1);
