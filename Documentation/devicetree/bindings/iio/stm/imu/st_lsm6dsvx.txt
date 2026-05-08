@@ -7,13 +7,13 @@ Required properties for all bus drivers:
                     "st,lsm6dsv"
 
 Required properties for the i2c bindings:
-- reg:               i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
-                     constrained by external circuitry
+                     constrained by external circuitry.
 
 Optional properties for all bus drivers:
 - vdd-supply:        an optional regulator that needs to be on to provide VDD
@@ -23,14 +23,12 @@ Optional properties for all bus drivers:
                      VDD IO power to the sensor.
 
 - st,int-pin:        the pin on the package that will be used to signal
-                     "data ready" (valid values: 1 or 2, default: 1).
+                     "data ready". Valid values: 1 or 2, default: 1.
 
 - mount-matrix:      mount rotation matrix.
-
                      Refer to iio/mount-matrix.txt for details.
 
-- drive-open-drain:  the interrupt/data ready line will be configured as open drain,
-                     which is useful if several sensors share the same interrupt line.
+- drive-open-drain:  configure int pin in open drain. Default is disabled.
 
 - enable-sensor-hub: enable i2c master interface. Default is disabled.
 

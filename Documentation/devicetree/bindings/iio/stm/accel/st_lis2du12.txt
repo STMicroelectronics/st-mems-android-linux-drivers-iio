@@ -5,17 +5,17 @@ Required properties for all bus drivers:
               "st,lis2du12"
 
 Required properties for the i2c/i3c bindings:
-- reg:         i2c/i3c address of the sensor (for i3c is the static sddress)
+- reg: i2c/i3c address of the sensor (for i3c is the static sddress).
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
-                     constrained by external circuitry
+                     constrained by external circuitry.
 
 Optional properties for all bus drivers:
 - st,int-pin:  the pin on the package that will be used to signal when
-               sensor data are available (valid values: 1 or 2, default: 1).
+               sensor data are available. Valid values: 1 or 2, default: 1.
 
 - interrupts:  interrupt mapping for IRQ. It should be configured with
                flags IRQ_TYPE_LEVEL_HIGH.

@@ -7,17 +7,23 @@ Required properties for all bus drivers:
               "st,iis2dulpx"
 
 Required properties for the i2c bindings:
-- reg:         i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
-                     constrained by external circuitry
+                     constrained by external circuitry.
 
 Optional properties for all bus drivers:
 - st,int-pin:  the pin on the package that will be used to signal when
-               sensor data are available (valid values: 1 or 2, default: 1).
+               sensor data are available. Valid values: 1 or 2, default: 1.
+
+- st,md-int-pin: xl-based event interrupt pins (sleep-change, wake-up, free fall,
+                 tap, 6D and timestamp). Valid values: 1 or 2, default: 1.
+
+- st,emb-int-pin: interrupt pin for embedded functions (step detector, tilt
+                  and significant motion). Valid values: 1 or 2, default: 1.
 
 - interrupts:  interrupt mapping for IRQ. It should be configured with
                flags IRQ_TYPE_LEVEL_HIGH.
@@ -26,8 +32,10 @@ Optional properties for all bus drivers:
                interrupt client node bindings.
 
 - pd_dis_int1: disable pull down on int1 pin.
+
 - pd_dis_int2: disable pull down on int2 pin.
-- drive-open-drain: set interrupt pin in open drain (disable push-pull)
+
+- drive-open-drain: configure int pin in open drain. Default is disabled.
 
 Example for an spi device node:
 

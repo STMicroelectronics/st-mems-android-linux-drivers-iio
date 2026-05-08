@@ -5,20 +5,20 @@ Required properties for all bus drivers:
               "st,ism303dac_accel"
 
 Required properties for the i2c bindings:
-- reg:            i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
-                     constrained by external circuitry
+                     constrained by external circuitry.
 
 Optional properties for the spi bindings:
 - spi-3wire:       use sensor spi interface with 3 wires.
 
 Optional properties for all bus drivers:
 - st,drdy-int-pin: the pin on the package that will be used to signal
-                   "data ready" (valid values: 1 or 2, default: 1).
+                   "data ready". Valid values: 1 or 2, default: 1.
 
 - interrupts:      interrupt mapping for IRQ. It should be configured with
                    flags IRQ_TYPE_LEVEL_HIGH.

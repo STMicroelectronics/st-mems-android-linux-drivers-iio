@@ -5,10 +5,10 @@ Required properties for all bus drivers:
               "st,ism330is"
 
 Required properties for the i2c bindings:
-- reg:               i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
                      constrained by external circuitry.

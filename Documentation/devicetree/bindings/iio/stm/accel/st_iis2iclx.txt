@@ -1,17 +1,17 @@
-* st_iis2iclxx driver for imu MEMS sensors
+* st_iis2iclx driver for imu MEMS sensors
 
 Required properties for all bus drivers:
 - compatible: must be one of:
               "st,iis2iclx"
 
 Required properties for the i2c bindings:
-- reg:            i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
-                     constrained by external circuitry
+                     constrained by external circuitry.
 
 Optional properties for all bus drivers:
 - vdd-supply:     an optional regulator that needs to be on to provide
@@ -21,14 +21,13 @@ Optional properties for all bus drivers:
                   the VDD IO power to the sensor.
 
 - st,int-pin:     the pin on the package that will be used to signal
-                  "data ready" (valid values: 1 or 2, default: 1).
+                  "data ready". Valid values: 1 or 2, default: 1.
 
 - st,mlc-int-pin: the pin on the package that will be used to signal
-                  MLC/FSM event (valid values: 1 for int pin 1, 2 for
-                  int pin 2 or 3 for both int pin, default: st,int-pin).
+                  MLC/FSM event. Valid values: 1 for int pin 1, 2 for
+                  int pin 2 or 3 for both int pin, default: st,int-pin.
 
 - mount-matrix:   mount rotation matrix.
-
                   Refer to iio/mount-matrix.txt for details.
 
 - interrupts:     interrupt mapping for IRQ. It should be configured
@@ -44,6 +43,10 @@ Optional properties for all bus drivers:
 
 - st,xl_lpf_div: Bandwidth XL ODR divider, if set the value must be within
                  the range [2, 800].
+
+- drive-open-drain: configure int pin in open drain. Default is disabled.
+
+- drive-pullup-shub: enable pull up on the i2c master interface. Default is disabled.
 
 - wakeup-source:  https://www.kernel.org/doc/Documentation/devicetree/bindings/power/wakeup-source.txt
 
@@ -65,10 +68,10 @@ iis2iclx-accel@0 {
                        "0", "0", "1";
 };
 
-Example for an i2c iis2iclxx device node (SA0 pulled down):
+Example for an i2c iis2iclx device node (SA0 pulled down):
 
-iis2iclxx-accel@0x6a {
-        compatible = "st,iis2iclxx";
+iis2iclx-accel@0x6a {
+        compatible = "st,iis2iclx";
         reg = <0x6a>;
         interrupt-parent = <&gpio0>;
         interrupts = <0 IRQ_TYPE_LEVEL_HIGH>;

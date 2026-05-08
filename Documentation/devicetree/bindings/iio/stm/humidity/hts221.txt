@@ -5,13 +5,13 @@ Required properties for all bus drivers:
               "st,st_hts221"
 
 Required properties for the i2c bindings:
-- reg:        i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:        the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
-                     constrained by external circuitry
+                     constrained by external circuitry.
 
 Optional properties for all bus drivers:
 - interrupts: interrupt mapping for IRQ. It should be configured with
@@ -20,7 +20,7 @@ Optional properties for all bus drivers:
               Refer to interrupt-controller/interrupts.txt for generic interrupt
               client node bindings.
 
-- drive-open-drain: configure int pin in open drain.
+- drive-open-drain: configure int pin in open drain. Default is disabled.
 
 Example for an spi device node:
 

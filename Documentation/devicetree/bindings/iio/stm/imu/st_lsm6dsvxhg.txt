@@ -1,18 +1,19 @@
-* st_lsm6dsvx driver for imu MEMS sensors
+* st_lsm6dsvxhg driver for imu MEMS sensors
 
 Required properties for all bus drivers:
 - compatible:       must be one of:
                     "st,lsm6dsv320x"
+		    "st,ism6hg256x"
                     "st,lsm6dsv80x"
 
 Required properties for the i2c bindings:
-- reg:               i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
-                     constrained by external circuitry
+                     constrained by external circuitry.
 
 Optional properties for all bus drivers:
 - vdd-supply:        an optional regulator that needs to be on to provide VDD
@@ -22,10 +23,9 @@ Optional properties for all bus drivers:
                      VDD IO power to the sensor.
 
 - st,int-pin:        the pin on the package that will be used to signal
-                     "data ready" (valid values: 1 or 2, default: 1).
+                     "data ready". Valid values: 1 or 2, default: 1.
 
 - mount-matrix:      mount rotation matrix.
-
                      Refer to iio/mount-matrix.txt for details.
 
 - drive-open-drain:  the interrupt/data ready line will be configured as open drain,
@@ -33,7 +33,7 @@ Optional properties for all bus drivers:
 
 - enable-sensor-hub: enable i2c master interface. Default is disabled.
 
-- drive-pullup-shub: enable pull up on the i2c master interface. Default is disabled.
+- drive-pullup-shub: configure int pin in open drain. Default is disabled.
 
 - interrupts:        interrupt mapping for IRQ. It should be configured with
                      flags IRQ_TYPE_LEVEL_HIGH, IRQ_TYPE_EDGE_RISING,
@@ -51,8 +51,8 @@ Optional properties for all bus drivers:
 
 Example for an spi device node:
 
-lsm6dsvx-imu@0 {
-        compatible = "st,lsm6dsv256x";
+lsm6dsvxhg-imu@0 {
+        compatible = "st,lsm6dsv320x";
         reg = <0x0>;
         spi-max-frequency = <10000000>;
         interrupt-parent = <&gpio0>;
@@ -68,8 +68,8 @@ lsm6dsvx-imu@0 {
 
 Example for an i2c device node (SA0 connected to ground):
 
-lsm6dsvx-imu@6a {
-        compatible = "st,lsm6dsv256x";
+lsm6dsvxhg-imu@6a {
+        compatible = "st,lsm6dsv80x";
         reg = <0x6a>;
         interrupt-parent = <&gpio0>;
         interrupts = <0 IRQ_TYPE_LEVEL_HIGH>;

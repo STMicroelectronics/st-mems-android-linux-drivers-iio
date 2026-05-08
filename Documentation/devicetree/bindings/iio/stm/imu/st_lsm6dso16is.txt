@@ -5,10 +5,10 @@ Required properties for all bus drivers:
               "st,lsm6dso16is"
 
 Required properties for the i2c bindings:
-- reg: i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
                      constrained by external circuitry.
@@ -25,7 +25,7 @@ Optional properties  for all bus drivers:
 
 - enable-sensor-hub: enable i2c master interface. Default is disabled.
 
-- drive-pullup-shub: enable pullup on master i2c line.
+- drive-pullup-shub: enable pullup on master i2c line. Default is disabled.
 
 Example for an spi device node on CS0:
 

@@ -5,24 +5,21 @@ Required properties for all bus drivers:
               "st,ism330dhcx"
 
 Required properties for the i2c bindings:
-- reg:               i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:                the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency:  maximal bus speed, should be set to 10000000 unless
-                      constrained by external circuitry
+                      constrained by external circuitry.
 
 Optional properties  for all bus drivers:
 - st,int-pin:        the pin on the package that will be used to signal
-                     "data ready" (valid values: 1 or 2, default: 1).
+                     "data ready". Valid values: 1 or 2, default: 1.
 
 - st,mlc-int-pin:    the pin on the package that will be used to signal
-                     MLC/FSM event (valid values: 1 for int pin 1, 2 for
-                     int pin 2 or 3 for both int pin, default: st,int-pin).
-
-- drive-open-drain:  the interrupt/data ready line will be configured as open drain,
-                     which is useful if several sensors share the same interrupt line.
+                     MLC/FSM event. Valid values: 1 for int pin 1, 2 for
+                     int pin 2 or 3 for both int pin, default: st,int-pin.
 
 - interrupts:        interrupt mapping for IRQ. It should be configured with
                      flags IRQ_TYPE_LEVEL_HIGH, IRQ_TYPE_EDGE_RISING,
@@ -30,6 +27,8 @@ Optional properties  for all bus drivers:
 
                      Refer to interrupt-controller/interrupts.txt for generic interrupt
                      client node bindings.
+
+- drive-open-drain:  configure int pin in open drain. Default is disabled.
 
 - drive-pullup-shub: enable pull up on the i2c master interface. Default is disabled.
 

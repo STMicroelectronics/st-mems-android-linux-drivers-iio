@@ -8,13 +8,13 @@ Required properties for all bus drivers:
               "st,asm330lhb"
 
 Required properties for the i2c bindings:
-- reg:            i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:            the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
-                     constrained by external circuitry
+                     constrained by external circuitry.
 
 Optional properties for all bus drivers:
 - vdd-supply:     an optional regulator that needs to be on to provide
@@ -24,18 +24,17 @@ Optional properties for all bus drivers:
                   the VDD IO power to the sensor.
 
 - st,int-pin:     the pin on the package that will be used to signal
-                  "data ready" (valid values: 1 or 2, default: 1).
+                  "data ready". Valid values: 1 or 2, default: 1.
 
 - st,mlc-int-pin: the pin on the package that will be used to signal
-                  MLC/FSM event (valid values: 1 for int pin 1, 2 for
-                  int pin 2 or 3 for both int pin, default: st,int-pin).
+                  MLC/FSM event. Valid values: 1 for int pin 1, 2 for
+                  int pin 2 or 3 for both int pin, default: st,int-pin.
 
 - st,wakeup-int-pin: the pin on the package that will be used to signal
-                  embedded function event (valid values: 1 for int pin 1,
-                  2 for int pin 2, default: st,int-pin).
+                  embedded function event. Valid values: 1 for int pin 1,
+                  2 for int pin 2, default: st,int-pin.
 
 - mount-matrix:   mount rotation matrix.
-
                   Refer to iio/mount-matrix.txt for details.
 
 - interrupts:     interrupt mapping for IRQ. It should be configured
@@ -85,6 +84,10 @@ Optional properties for all bus drivers:
                     not used by any client. This allows for a shorter turn-on
                     time, speeding up the sensor's power-on operations.
                     As a consequence, there may be increased power consumption.
+
+- drive-open-drain: enable interrupt pin open drain. Default is disabled.
+
+- drive-pullup-shub: enable pull up on the i2c master interface. Default is disabled.
 
 Example for an spi asm330lhh device node:
 

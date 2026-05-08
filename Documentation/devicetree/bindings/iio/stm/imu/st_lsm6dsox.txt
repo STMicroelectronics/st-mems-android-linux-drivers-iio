@@ -8,13 +8,13 @@ Required properties for all bus drivers:
               "st,lsm6dso32x"
 
 Required properties for the i2c bindings:
-- reg: i2c slave address
+- reg: i2c slave address.
 
 Required properties for the spi bindings:
-- reg:               the chipselect index
+- reg: the chip select index.
 
 - spi-max-frequency: maximal bus speed, should be set to 10000000 unless
-                     constrained by external circuitry
+                     constrained by external circuitry.
 
 Optional properties for all bus drivers:
 - vdd-supply:       an optional regulator that needs to be on to provide VDD
@@ -24,14 +24,10 @@ Optional properties for all bus drivers:
                     VDD IO power to the sensor.
 
 - st,int-pin:       the pin on the package that will be used to signal
-                    "data ready" (valid values: 1 or 2, default: 1).
+                    "data ready". Valid values: 1 or 2, default: 1.
 
 - mount-matrix:     mount rotation matrix.
-
                     Refer to iio/mount-matrix.txt for details.
-
-- drive-open-drain: the interrupt/data ready line will be configured as open drain,
-                    which is useful if several sensors share the same interrupt line.
 
 - interrupts:       interrupt mapping for IRQ. It should be configured with
                     flags IRQ_TYPE_LEVEL_HIGH, IRQ_TYPE_EDGE_RISING,
@@ -44,6 +40,10 @@ Optional properties for all bus drivers:
                     This is used by user-space to identify which devices
                     are part of the same module (particularly important for
                     supporting multiple sensors of the same type).
+
+- drive-open-drain: configure int pin in open drain. Default is disabled.
+
+- drive-pullup-shub: enable pullup on master i2c line. Default is disabled.
 
 - wakeup-source:    https://www.kernel.org/doc/Documentation/devicetree/bindings/power/wakeup-source.txt
 
