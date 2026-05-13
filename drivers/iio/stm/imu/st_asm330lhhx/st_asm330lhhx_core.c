@@ -352,6 +352,22 @@ static const struct st_asm330lhhx_settings st_asm330lhhx_sensor_settings[] = {
 		.st_shub_probe = true,
 		.st_power_mode = true,
 	},
+	{
+		.id = {
+			.hw_id = ST_ASM330LHHG1_ID,
+			.name = ST_ASM330LHHG1_DEV_NAME,
+		},
+		.st_shub_probe = true,
+		.st_power_mode = true,
+	},
+	{
+		.id = {
+			.hw_id = ST_ASM330LHBG1_ID,
+			.name = ST_ASM330LHBG1_DEV_NAME,
+		},
+		.st_mlc_probe = true,
+		.st_power_mode = true,
+	},
 };
 
 static const struct st_asm330lhhx_fs_table_entry st_asm330lhhx_fs_table[] = {
