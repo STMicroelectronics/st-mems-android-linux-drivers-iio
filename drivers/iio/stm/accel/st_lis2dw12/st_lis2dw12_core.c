@@ -38,15 +38,21 @@ struct st_lis2dw12_std_entry {
 	u8 val;
 };
 
+#define ST_LIS2DW12_TURN_ON_TIME	1
+
+/*
+ * from AN5038: sample to discard table (default filter
+ * settings are BW_FILT[1:0]=01b)
+ */
 struct st_lis2dw12_std_entry st_lis2dw12_std_table[] = {
-	{   12, 12 },
-	{   25, 18 },
-	{   50, 24 },
-	{  100, 24 },
-	{  200, 32 },
-	{  400, 48 },
-	{  800, 64 },
-	{ 1600, 64 },
+	{   12, 1 + ST_LIS2DW12_TURN_ON_TIME },
+	{   25, 1 + ST_LIS2DW12_TURN_ON_TIME },
+	{   50, 1 + ST_LIS2DW12_TURN_ON_TIME },
+	{  100, 1 + ST_LIS2DW12_TURN_ON_TIME },
+	{  200, 2 + ST_LIS2DW12_TURN_ON_TIME },
+	{  400, 2 + ST_LIS2DW12_TURN_ON_TIME },
+	{  800, 2 + ST_LIS2DW12_TURN_ON_TIME },
+	{ 1600, 3 + ST_LIS2DW12_TURN_ON_TIME },
 };
 
 struct st_lis2dw12_fs {
@@ -566,6 +572,15 @@ int st_lis2dw12_sensor_set_enable(struct st_lis2dw12_sensor *sensor,
 			hw->oldktime = ktime_set(0, newTime);
 			hrtimer_start(&hw->hr_timer, hw->oldktime,
 				      HRTIMER_MODE_REL);
+		} else {
+			/* std level decimator is just for accel */
+			err = st_lis2dw12_set_std_level(sensor->hw,
+							val);
+			if (err < 0) {
+				dev_warn(hw->dev, "std level set failed\n");
+
+				return err;
+			}
 		}
 
 		hw->enable_mask |= BIT(sensor->id);
@@ -592,8 +607,8 @@ static int st_lis2dw12_read_oneshot(struct st_lis2dw12_sensor *sensor,
 	if (err < 0)
 		return err;
 
-	/* sample to discard, 3 * odr us */
-	delay = 3000000 / sensor->odr;
+	/* sample to discard * odr in us */
+	delay = (hw->std_level * 1000000) / sensor->odr;
 	usleep_range(delay, delay + 1);
 
 	err = st_lis2dw12_read(hw, addr, &data, sizeof(data));
@@ -692,14 +707,6 @@ static int st_lis2dw12_write_raw(struct iio_dev *iio_dev,
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		u8 data;
-
-		/* std level decimator is just for accel */
-		if (sensor->id == ST_LIS2DW12_ID_ACC) {
-			err = st_lis2dw12_set_std_level(sensor->hw,
-							val);
-			if (err < 0)
-				break;
-		}
 
 		err = st_lis2dw12_get_odr_idx(sensor, val, &data);
 		if (!err)
