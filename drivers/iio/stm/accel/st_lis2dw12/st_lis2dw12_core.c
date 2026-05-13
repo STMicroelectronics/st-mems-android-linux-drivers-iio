@@ -603,9 +603,13 @@ static int st_lis2dw12_read_oneshot(struct st_lis2dw12_sensor *sensor,
 	st_lis2dw12_sensor_set_enable(sensor, false);
 
 	if (sensor->id == ST_LIS2DW12_ID_ACC)
-		*val = (s16)get_unaligned_le16(data);
+		/*
+		 * 14 bit left justified (arithmetic shift to have the
+		 * value right justified with maintenance of the sign)
+		 */
+		*val = (s16)get_unaligned_le16(data) >> 2;
 	else
-		*val = (s16)get_unaligned_le16(&data[0]) >> 4;
+		*val = (s16)get_unaligned_le16(data) >> 4;
 
 	return IIO_VAL_INT;
 }
