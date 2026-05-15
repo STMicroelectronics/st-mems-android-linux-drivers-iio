@@ -28,6 +28,12 @@ git fetch stmems_iio_github
 There are now two ways to integrate the drivers code into the kernel target branch:
 * merge (**suggested strategy**)
 * rebase
+> [!IMPORTANT]
+> **In-tree integration risk (merge/rebase with kernel source):**
+> This repository also contains top-level project files (for example [README.md](README.md) and [LICENSE.txt](LICENSE.txt)).
+> When integrating with the kernel tree using merge/rebase, a conflict on [README.md](README.md) may occur because some kernel trees already provide their own top-level `README.md`.
+> The operation may also introduce a new [LICENSE.txt](LICENSE.txt) file that refers to this ST project repository and not to the Linux kernel licensing files.
+> Please review and resolve these files explicitly during conflict resolution.
 
 ### merge
 Merge the stmems_iio_github/master with your target kernel source branch (i.e branch linux-5.4.y):
