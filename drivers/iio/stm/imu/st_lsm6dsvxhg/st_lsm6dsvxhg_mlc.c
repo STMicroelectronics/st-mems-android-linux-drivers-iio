@@ -643,7 +643,11 @@ st_lsm6dsvxhg_mlc_alloc_iio_dev(struct st_lsm6dsvxhg_hw *hw,
 	case ST_LSM6DSVXHG_ID_MLC_0:
 	case ST_LSM6DSVXHG_ID_MLC_1:
 	case ST_LSM6DSVXHG_ID_MLC_2:
-	case ST_LSM6DSVXHG_ID_MLC_3: {
+	case ST_LSM6DSVXHG_ID_MLC_3:
+	case ST_LSM6DSVXHG_ID_MLC_4:
+	case ST_LSM6DSVXHG_ID_MLC_5:
+	case ST_LSM6DSVXHG_ID_MLC_6:
+	case ST_LSM6DSVXHG_ID_MLC_7: {
 		const struct iio_chan_spec st_lsm6dsvxhg_mlc_x_ch[] = {
 			ST_LSM6DSVXHG_EVENT_CHANNEL(IIO_ACTIVITY, thr),
 		};
