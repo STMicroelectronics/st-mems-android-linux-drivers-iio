@@ -38,12 +38,12 @@ static int st_sths34pf80_spi_probe(struct spi_device *spi)
 }
 
 #if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_sths34pf80_i2c_remove(struct spi_device *spi)
+static void st_sths34pf80_spi_remove(struct spi_device *spi)
 {
 	st_sths34pf80_remove(&spi->dev);
 }
 #else /* LINUX_VERSION_CODE */
-static int st_sths34pf80_i2c_remove(struct spi_device *spi)
+static int st_sths34pf80_spi_remove(struct spi_device *spi)
 {
 	return st_sths34pf80_remove(&spi->dev);
 }
@@ -71,7 +71,7 @@ static struct spi_driver st_sths34pf80_driver = {
 			       of_match_ptr(st_sths34pf80_spi_of_match),
 	},
 	.probe = st_sths34pf80_spi_probe,
-	.remove = st_sths34pf80_i2c_remove,
+	.remove = st_sths34pf80_spi_remove,
 	.id_table = st_sths34pf80_spi_id_table,
 };
 module_spi_driver(st_sths34pf80_driver);
