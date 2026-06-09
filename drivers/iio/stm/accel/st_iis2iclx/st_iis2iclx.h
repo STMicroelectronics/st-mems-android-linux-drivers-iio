@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2023 STMicroelectronics Inc.
+ * Copyright 2018 STMicroelectronics Inc.
  */
 
 #ifndef ST_IIS2ICLX_H

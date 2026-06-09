@@ -4,8 +4,8 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2021 STMicroelectronics Inc.
  * Copyright 2018 Lorenzo Bianconi
+ * Copyright 2021 STMicroelectronics Inc.
  */
 
 #include <linux/module.h>
