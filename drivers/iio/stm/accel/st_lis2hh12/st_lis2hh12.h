@@ -32,14 +32,14 @@
 #define LIS2HH12_CTRL6_ADDR			0x25
 #define LIS2HH12_CTRL7_ADDR			0x26
 
-#define LIS2HH12_STATUS_ADDR		0x27
-#define LIS2HH12_DATA_XYZ_RDY		0x08
+#define LIS2HH12_STATUS_ADDR			0x27
+#define LIS2HH12_DATA_XYZ_RDY			0x08
 
 #define LIS2HH12_FIFO_CTRL_ADDR			0x2E
 
-#define LIS2HH12_OUTX_L_ADDR		0x28
-#define LIS2HH12_OUTY_L_ADDR		0x2A
-#define LIS2HH12_OUTZ_L_ADDR		0x2C
+#define LIS2HH12_OUTX_L_ADDR			0x28
+#define LIS2HH12_OUTY_L_ADDR			0x2A
+#define LIS2HH12_OUTZ_L_ADDR			0x2C
 
 #define LIS2HH12_FIFO_THS_ADDR			LIS2HH12_FIFO_CTRL_ADDR
 #define LIS2HH12_FIFO_THS_MASK			0x1f
@@ -70,7 +70,7 @@
 #define LIS2HH12_FS_2G_VAL			0x00
 #define LIS2HH12_FS_4G_VAL			0x02
 #define LIS2HH12_FS_8G_VAL			0x03
-#define LIS2HH12_FS_LIST_NUM		3
+#define LIS2HH12_FS_LIST_NUM			3
 
 #define LIS2HH12_FS_2G_GAIN			IIO_G_TO_M_S_2(61)
 #define LIS2HH12_FS_4G_GAIN			IIO_G_TO_M_S_2(122)
@@ -90,8 +90,8 @@
 
 #define LIS2HH12_BDU_ADDR			LIS2HH12_CTRL1_ADDR
 #define LIS2HH12_BDU_MASK			0x08
-#define LIS2HH12_SOFT_RESET_ADDR	LIS2HH12_CTRL5_ADDR
-#define LIS2HH12_SOFT_RESET_MASK	0x40
+#define LIS2HH12_SOFT_RESET_ADDR		LIS2HH12_CTRL5_ADDR
+#define LIS2HH12_SOFT_RESET_MASK		0x40
 #define LIS2HH12_LIR_ADDR			LIS2HH12_CTRL7_ADDR
 #define LIS2HH12_LIR1_MASK			0x04
 #define LIS2HH12_LIR2_MASK			0x08
@@ -103,12 +103,12 @@
 #define LIS2HH12_MAX_FIFO_THS			(LIS2HH12_MAX_FIFO_LENGHT - 1)
 #define LIS2HH12_FIFO_NUM_AXIS			3
 #define LIS2HH12_FIFO_BYTE_X_AXIS		2
-#define LIS2HH12_FIFO_BYTE_FOR_SAMPLE	(LIS2HH12_FIFO_NUM_AXIS * \
-											LIS2HH12_FIFO_BYTE_X_AXIS)
+#define LIS2HH12_FIFO_BYTE_FOR_SAMPLE		(LIS2HH12_FIFO_NUM_AXIS * \
+						 LIS2HH12_FIFO_BYTE_X_AXIS)
 #define LIS2HH12_TIMESTAMP_SIZE			8
 
 #define LIS2HH12_EN_BIT				0x01
-#define LIS2HH12_DIS_BIT				0x00
+#define LIS2HH12_DIS_BIT			0x00
 
 #define LIS2HH12_MAX_CHANNEL_SPEC		5
 
@@ -131,8 +131,8 @@ static const enum lis2hh12_sensor_id lis2hh12_main_sensor_list[] = {
 
 #define LIS2HH12_SHIFT_VAL(val, mask)		(((val) << __ffs(mask)) & (mask))
 
-#define LIS2HH12_SELFTEST_MIN		1147
-#define LIS2HH12_SELFTEST_MAX		24590
+#define LIS2HH12_SELFTEST_MIN			1147
+#define LIS2HH12_SELFTEST_MAX			24590
 
 #define ST_LIS2HH12_FLUSH_CHANNEL(device_type) \
 { \
@@ -232,8 +232,8 @@ int lis2hh12_allocate_rings(struct lis2hh12_data *cdata);
 int lis2hh12_allocate_triggers(struct lis2hh12_data *cdata,
 			     const struct iio_trigger_ops *trigger_ops);
 int lis2hh12_trig_set_state(struct iio_trigger *trig, bool state);
-int lis2hh12_read_register(struct lis2hh12_data *cdata, u8 reg_addr, int data_len,
-							u8 *data);
+int lis2hh12_read_register(struct lis2hh12_data *cdata, u8 reg_addr,
+			   int data_len, u8 *data);
 int lis2hh12_update_drdy_irq(struct lis2hh12_sensor_data *sdata, bool state);
 int lis2hh12_set_enable(struct lis2hh12_sensor_data *sdata, bool enable);
 int lis2hh12_update_fifo_ths(struct lis2hh12_data *cdata, u8 fifo_len);

@@ -76,8 +76,7 @@ int lis2hh12_allocate_triggers(struct lis2hh12_data *cdata,
 						cdata->iio_trig[id]);
 		if (err < 0) {
 			dev_err(cdata->dev,
-				"failed to register iio trigger %d\n",
-				id);
+				"failed to register iio trigger %d\n", id);
 
 			return err;
 		}

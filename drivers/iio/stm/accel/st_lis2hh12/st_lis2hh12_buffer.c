@@ -37,9 +37,10 @@ static void lis2hh12_push_fifo_data(struct lis2hh12_data *cdata, u16 fifo_ptr)
 	sdata = iio_priv(indio_dev);
 	if (sdata->enabled) {
 		if (indio_dev->active_scan_mask &&
-						test_bit(0, indio_dev->active_scan_mask)) {
-			memcpy(&buffer[out_buf_index], &cdata->fifo_data[fifo_ptr],
-									LIS2HH12_FIFO_BYTE_FOR_SAMPLE);
+		    test_bit(0, indio_dev->active_scan_mask)) {
+			memcpy(&buffer[out_buf_index],
+			       &cdata->fifo_data[fifo_ptr],
+			       LIS2HH12_FIFO_BYTE_FOR_SAMPLE);
 			out_buf_index += LIS2HH12_FIFO_BYTE_FOR_SAMPLE;
 		}
 
@@ -57,7 +58,8 @@ void lis2hh12_read_xyz(struct lis2hh12_data *cdata)
 	int err;
 
 	err = lis2hh12_read_register(cdata, LIS2HH12_OUTX_L_ADDR,
-						LIS2HH12_FIFO_BYTE_FOR_SAMPLE, cdata->fifo_data);
+				     LIS2HH12_FIFO_BYTE_FOR_SAMPLE,
+				     cdata->fifo_data);
 	if (err < 0)
 		return;
 
@@ -76,7 +78,8 @@ void lis2hh12_read_fifo(struct lis2hh12_data *cdata, bool check_fifo_len)
 		return;
 
 	if (check_fifo_len) {
-		err = lis2hh12_read_register(cdata, LIS2HH12_FIFO_STATUS_ADDR, 1, &fifo_src);
+		err = lis2hh12_read_register(cdata, LIS2HH12_FIFO_STATUS_ADDR,
+					     1, &fifo_src);
 		if (err < 0)
 			return;
 
@@ -88,7 +91,7 @@ void lis2hh12_read_fifo(struct lis2hh12_data *cdata, bool check_fifo_len)
 	}
 
 	err = lis2hh12_read_register(cdata, LIS2HH12_OUTX_L_ADDR, read_len,
-							cdata->fifo_data);
+				     cdata->fifo_data);
 	if (err < 0)
 		return;
 
