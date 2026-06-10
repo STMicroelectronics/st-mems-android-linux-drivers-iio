@@ -106,8 +106,10 @@
 
 #define LIS2HH12_MAX_CHANNEL_SPEC		5
 
-#define LIS2HH12_ACCEL				0
-#define LIS2HH12_SENSORS_NUMB		1
+enum lis2hh12_sensor_id {
+	LIS2HH12_ACCEL = 0,
+	LIS2HH12_SENSORS_NUMB
+};
 
 #define LIS2HH12_DEV_NAME			"lis2hh12"
 #define SET_BIT(a, b)				{a |= (1 << b);}
@@ -166,12 +168,11 @@ enum lis2hh12_selftest_status {
 
 struct lis2hh12_sensor_data {
 	struct lis2hh12_data *cdata;
-	const char *name;
 	s64 timestamp;
 	u8 enabled;
 	u32 odr;
 	u32 gain;
-	u8 sindex;
+	u8 id;
 	u8 sample_to_discard;
 };
 
@@ -225,10 +226,7 @@ int lis2hh12_read_register(struct lis2hh12_data *cdata, u8 reg_addr, int data_le
 int lis2hh12_update_drdy_irq(struct lis2hh12_sensor_data *sdata, bool state);
 int lis2hh12_set_enable(struct lis2hh12_sensor_data *sdata, bool enable);
 int lis2hh12_update_fifo_ths(struct lis2hh12_data *cdata, u8 fifo_len);
-void lis2hh12_common_remove(struct lis2hh12_data *cdata, int irq);
 void lis2hh12_read_fifo(struct lis2hh12_data *cdata, bool check_fifo_len);
-void lis2hh12_deallocate_rings(struct lis2hh12_data *cdata);
-void lis2hh12_deallocate_triggers(struct lis2hh12_data *cdata);
 int lis2hh12_set_fifo_mode(struct lis2hh12_data *cdata, enum fifo_mode fm);
 void lis2hh12_read_xyz(struct lis2hh12_data *cdata);
 

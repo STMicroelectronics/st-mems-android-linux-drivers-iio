@@ -114,7 +114,7 @@ const struct iio_event_spec lis2hh12_fifo_flush_event = {
 	.dir = IIO_EV_DIR_EITHER,
 };
 
-static const struct lis2hh12_sensors_table {
+static const struct {
 	const char *name;
 	const char *description;
 	const u32 min_odr_hz;
@@ -292,7 +292,7 @@ int lis2hh12_update_drdy_irq(struct lis2hh12_sensor_data *sdata, bool state)
 {
 	u8 reg_addr, reg_val, reg_mask;
 
-	switch (sdata->sindex) {
+	switch (sdata->id) {
 	case LIS2HH12_ACCEL:
 		reg_addr = LIS2HH12_INT_CFG_ADDR;
 		if (sdata->cdata->hwfifo_enabled)
@@ -321,7 +321,7 @@ static int lis2hh12_alloc_fifo(struct lis2hh12_data *cdata)
 
 	fifo_size = LIS2HH12_MAX_FIFO_LENGHT * LIS2HH12_FIFO_BYTE_FOR_SAMPLE;
 
-	cdata->fifo_data = kmalloc(fifo_size, GFP_KERNEL);
+	cdata->fifo_data = devm_kzalloc(cdata->dev, fifo_size, GFP_KERNEL);
 	if (!cdata->fifo_data)
 		return -ENOMEM;
 
@@ -360,10 +360,10 @@ int lis2hh12_set_enable(struct lis2hh12_sensor_data *sdata, bool state)
 	 * It will be restored if an error occur.
 	 */
 	if (state) {
-		SET_BIT(sdata->cdata->enabled_sensor, sdata->sindex);
+		SET_BIT(sdata->cdata->enabled_sensor, sdata->id);
 		mode = STREAM;
 	} else {
-		RESET_BIT(sdata->cdata->enabled_sensor, sdata->sindex);
+		RESET_BIT(sdata->cdata->enabled_sensor, sdata->id);
 		mode = BYPASS;
 	}
 
@@ -386,9 +386,9 @@ int lis2hh12_set_enable(struct lis2hh12_sensor_data *sdata, bool state)
 
 enable_sensor_error:
 	if (state) {
-		RESET_BIT(sdata->cdata->enabled_sensor, sdata->sindex);
+		RESET_BIT(sdata->cdata->enabled_sensor, sdata->id);
 	} else
-		SET_BIT(sdata->cdata->enabled_sensor, sdata->sindex);
+		SET_BIT(sdata->cdata->enabled_sensor, sdata->id);
 
 	return err;
 }
@@ -1039,12 +1039,39 @@ static u32 lis2hh12_parse_dt(struct lis2hh12_data *cdata)
 	return 0;
 }
 
+static struct iio_dev *lis2hh12_alloc_iiodev(struct lis2hh12_data *cdata,
+					     enum lis2hh12_sensor_id id)
+{
+	struct lis2hh12_sensor_data *sdata;
+	struct iio_dev *iio_dev;
+
+	iio_dev = devm_iio_device_alloc(cdata->dev,
+					sizeof(struct lis2hh12_sensor_data *));
+	if (!iio_dev)
+		return NULL;
+
+	sdata = iio_priv(iio_dev);
+	sdata->enabled = false;
+	sdata->cdata = cdata;
+	sdata->id = id;
+	sdata->odr = lis2hh12_sensors_table[id].min_odr_hz;
+
+	sdata->gain = lis2hh12_fs_table.fs_avl[0].gain;
+
+	iio_dev->channels = lis2hh12_sensors_table[id].iio_channel;
+	iio_dev->num_channels = lis2hh12_sensors_table[id].iio_channel_size;
+	iio_dev->info = &lis2hh12_info[id];
+	iio_dev->modes = INDIO_DIRECT_MODE;
+	iio_dev->name = kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
+				  lis2hh12_sensors_table[id].name);
+
+	return iio_dev;
+}
+
 int lis2hh12_common_probe(struct lis2hh12_data *cdata, int irq)
 {
 	u8 wai = 0;
-	int32_t err, i, n;
-	struct iio_dev *piio_dev;
-	struct lis2hh12_sensor_data *sdata;
+	int32_t err, i;
 
 	mutex_init(&cdata->lock);
 
@@ -1096,95 +1123,41 @@ int lis2hh12_common_probe(struct lis2hh12_data *cdata, int irq)
 		return err;
 
 	for (i = 0; i < LIS2HH12_SENSORS_NUMB; i++) {
-		piio_dev = devm_iio_device_alloc(cdata->dev,
-					sizeof(struct lis2hh12_sensor_data *));
-		if (piio_dev == NULL) {
-			err = -ENOMEM;
-
-			goto iio_device_free;
-		}
-
-		cdata->iio_sensors_dev[i] = piio_dev;
-		sdata = iio_priv(piio_dev);
-		sdata->enabled = false;
-		sdata->cdata = cdata;
-		sdata->sindex = i;
-		sdata->name = lis2hh12_sensors_table[i].name;
-		sdata->odr = lis2hh12_sensors_table[i].min_odr_hz;
-		sdata->gain = lis2hh12_fs_table.fs_avl[0].gain;
-
-		piio_dev->channels = lis2hh12_sensors_table[i].iio_channel;
-		piio_dev->num_channels = lis2hh12_sensors_table[i].iio_channel_size;
-		piio_dev->info = &lis2hh12_info[i];
-		piio_dev->modes = INDIO_DIRECT_MODE;
-		piio_dev->name = kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
-								sdata->name);
+		cdata->iio_sensors_dev[i] = lis2hh12_alloc_iiodev(cdata, i);
+		if (!cdata->iio_sensors_dev[i])
+			return -ENOMEM;
 	}
 
-	err =  lis2hh12_set_fifo_mode(sdata->cdata, BYPASS);
+	err =  lis2hh12_set_fifo_mode(cdata, BYPASS);
 	if (err < 0)
-		goto iio_device_free;
+		return err;
 
 	err = lis2hh12_init_sensors(cdata);
 	if (err < 0)
-		goto iio_device_free;
+		return err;
 
 	err = lis2hh12_allocate_rings(cdata);
 	if (err < 0)
-		goto iio_device_free;
+		return err;
 
 	if (irq > 0) {
 		err = lis2hh12_allocate_triggers(cdata, LIS2HH12_TRIGGER_OPS);
-		if (err < 0)
-			goto deallocate_ring;
+		if (err)
+			return err;
 	}
 
-	for (n = 0; n < LIS2HH12_SENSORS_NUMB; n++) {
-		err = iio_device_register(cdata->iio_sensors_dev[n]);
+	for (i = 0; i < LIS2HH12_SENSORS_NUMB; i++) {
+		err = devm_iio_device_register(cdata->dev,
+					       cdata->iio_sensors_dev[i]);
 		if (err)
-			goto iio_device_unregister_and_trigger_deallocate;
+			return err;
 	}
 
 	dev_info(cdata->dev, "%s: probed\n", LIS2HH12_DEV_NAME);
+
 	return 0;
-
-iio_device_unregister_and_trigger_deallocate:
-	for (n--; n >= 0; n--)
-		iio_device_unregister(cdata->iio_sensors_dev[n]);
-
-deallocate_ring:
-	lis2hh12_deallocate_rings(cdata);
-
-iio_device_free:
-	for (i--; i >= 0; i--)
-		iio_device_free(cdata->iio_sensors_dev[i]);
-
-	return err;
 }
 EXPORT_SYMBOL(lis2hh12_common_probe);
-
-void lis2hh12_common_remove(struct lis2hh12_data *cdata, int irq)
-{
-	int i;
-
-	if (cdata->fifo_data) {
-		kfree(cdata->fifo_data);
-		cdata->fifo_size = 0;
-	}
-
-	for (i = 0; i < LIS2HH12_SENSORS_NUMB; i++)
-		iio_device_unregister(cdata->iio_sensors_dev[i]);
-
-	if (irq > 0)
-		lis2hh12_deallocate_triggers(cdata);
-
-	lis2hh12_deallocate_rings(cdata);
-
-	for (i = 0; i < LIS2HH12_SENSORS_NUMB; i++)
-		iio_device_free(cdata->iio_sensors_dev[i]);
-}
-
-EXPORT_SYMBOL(lis2hh12_common_remove);
 
 #if IS_ENABLED(CONFIG_PM)
 int __maybe_unused lis2hh12_common_suspend(struct lis2hh12_data *cdata)

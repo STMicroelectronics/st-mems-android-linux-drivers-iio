@@ -34,7 +34,7 @@ ST_I2C_PROBE(lis2hh12_i2c_probe)
 		return PTR_ERR(regmap);
 	}
 
-	cdata = kmalloc(sizeof(*cdata), GFP_KERNEL);
+	cdata = devm_kzalloc(&client->dev, sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
 		return -ENOMEM;
 
@@ -44,37 +44,9 @@ ST_I2C_PROBE(lis2hh12_i2c_probe)
 	i2c_set_clientdata(client, cdata);
 
 	err = lis2hh12_common_probe(cdata, client->irq);
-	if (err < 0)
-		goto free_data;
 
-	return 0;
-
-free_data:
-	kfree(cdata);
-	return err;
+	return err < 0 ? err : 0;
 }
-
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void lis2hh12_i2c_remove(struct i2c_client *client)
-{
-	struct lis2hh12_data *cdata = i2c_get_clientdata(client);
-
-	lis2hh12_common_remove(cdata, client->irq);
-	dev_info(cdata->dev, "%s: removed\n", LIS2HH12_DEV_NAME);
-	kfree(cdata);
-}
-#else /* LINUX_VERSION_CODE */
-static int lis2hh12_i2c_remove(struct i2c_client *client)
-{
-	struct lis2hh12_data *cdata = i2c_get_clientdata(client);
-
-	lis2hh12_common_remove(cdata, client->irq);
-	dev_info(cdata->dev, "%s: removed\n", LIS2HH12_DEV_NAME);
-	kfree(cdata);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
 
 #if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused lis2hh12_suspend(struct device *dev)
@@ -126,7 +98,6 @@ static struct i2c_driver lis2hh12_i2c_driver = {
 #endif /* CONFIG_OF */
 		   },
 	.probe = lis2hh12_i2c_probe,
-	.remove = lis2hh12_i2c_remove,
 	.id_table = lis2hh12_ids,
 };
 

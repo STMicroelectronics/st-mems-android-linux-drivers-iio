@@ -133,6 +133,7 @@ static int lis2hh12_buffer_postdisable(struct iio_dev *indio_dev)
 }
 
 static const struct iio_buffer_setup_ops lis2hh12_buffer_setup_ops = {
+	ST_IIO_TRIGGERED_OLD_SETUP_OPS
 	.preenable = &lis2hh12_buffer_preenable,
 	.postdisable = &lis2hh12_buffer_postdisable,
 };
@@ -142,28 +143,14 @@ int lis2hh12_allocate_rings(struct lis2hh12_data *cdata)
 	int err, i;
 
 	for (i = 0; i < LIS2HH12_SENSORS_NUMB; i++) {
-		err = iio_triggered_buffer_setup(
-				cdata->iio_sensors_dev[i],
-				&lis2hh12_handler_empty,
-				NULL,
-				&lis2hh12_buffer_setup_ops);
-		if (err < 0)
-			goto buffer_cleanup;
+		err = devm_iio_triggered_buffer_setup(cdata->dev,
+						    cdata->iio_sensors_dev[i],
+						    &lis2hh12_handler_empty,
+						    NULL,
+						    &lis2hh12_buffer_setup_ops);
+		if (err)
+			return err;
 	}
 
 	return 0;
-
-buffer_cleanup:
-	for (i--; i >= 0; i--)
-		iio_triggered_buffer_cleanup(cdata->iio_sensors_dev[i]);
-
-	return err;
-}
-
-void lis2hh12_deallocate_rings(struct lis2hh12_data *cdata)
-{
-	int i;
-
-	for (i = 0; i < LIS2HH12_SENSORS_NUMB; i++)
-		iio_triggered_buffer_cleanup(cdata->iio_sensors_dev[i]);
 }

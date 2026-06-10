@@ -32,7 +32,7 @@ static int lis2hh12_spi_probe(struct spi_device *spi)
 		return PTR_ERR(regmap);
 	}
 
-	cdata = kmalloc(sizeof(*cdata), GFP_KERNEL);
+	cdata = devm_kzalloc(&spi->dev, sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
 		return -ENOMEM;
 
@@ -42,37 +42,9 @@ static int lis2hh12_spi_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, cdata);
 
 	err = lis2hh12_common_probe(cdata, spi->irq);
-	if (err < 0)
-		goto free_data;
 
-	return 0;
-
-free_data:
-	kfree(cdata);
-	return err;
+	return err < 0 ? err : 0;
 }
-
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void lis2hh12_spi_remove(struct spi_device *spi)
-{
-	struct lis2hh12_data *cdata = spi_get_drvdata(spi);
-
-	lis2hh12_common_remove(cdata, spi->irq);
-	dev_info(cdata->dev, "%s: removed\n", LIS2HH12_DEV_NAME);
-	kfree(cdata);
-}
-#else /* LINUX_VERSION_CODE */
-static int lis2hh12_spi_remove(struct spi_device *spi)
-{
-	struct lis2hh12_data *cdata = spi_get_drvdata(spi);
-
-	lis2hh12_common_remove(cdata, spi->irq);
-	dev_info(cdata->dev, "%s: removed\n", LIS2HH12_DEV_NAME);
-	kfree(cdata);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
 
 #if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused lis2hh12_suspend(struct device *dev)
@@ -124,7 +96,6 @@ static struct spi_driver lis2hh12_spi_driver = {
 #endif /* CONFIG_OF */
 		   },
 	.probe = lis2hh12_spi_probe,
-	.remove = lis2hh12_spi_remove,
 	.id_table = lis2hh12_ids,
 };
 
