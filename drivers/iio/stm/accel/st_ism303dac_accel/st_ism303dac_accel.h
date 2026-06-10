@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2018 STMicroelectronics Inc.
+ * Copyright 2018, 2026 STMicroelectronics Inc.
  */
 
 #ifndef __ISM303DAC_H
@@ -14,6 +14,7 @@
 #include <linux/iio/iio.h>
 #include <linux/iio/trigger.h>
 #include <linux/platform_data/st_sensors_pdata.h>
+#include <linux/regmap.h>
 #include <linux/version.h>
 
 #include "../../common/st_linux_compat.h"
@@ -181,6 +182,8 @@
 #define RESET_BIT(a, b)				{a &= ~(1 << b);}
 #define CHECK_BIT(a, b)				(a & (1 << b))
 
+#define ISM303DAC_SHIFT_VAL(val, mask)		(((val) << __ffs(mask)) & (mask))
+
 enum {
 	ISM303DAC_ACCEL = 0,
 	ISM303DAC_TAP,
@@ -227,24 +230,9 @@ enum fifo_mode {
 	CONTINUOUS,
 };
 
-#define ISM303DAC_TX_MAX_LENGTH			12
-#define ISM303DAC_RX_MAX_LENGTH			8193
-#define ISM303DAC_EWMA_DIV			128
-
-struct ism303dac_transfer_buffer {
-	struct mutex buf_lock;
-	u8 rx_buf[ISM303DAC_RX_MAX_LENGTH];
-	u8 tx_buf[ISM303DAC_TX_MAX_LENGTH] ____cacheline_aligned;
-};
+#define ISM303DAC_EWMA_DIV                     128
 
 struct ism303dac_data;
-
-struct ism303dac_transfer_function {
-	int (*write)(struct ism303dac_data *cdata, u8 reg_addr, int len,
-		     u8 *data, bool b_lock);
-	int (*read)(struct ism303dac_data *cdata, u8 reg_addr, int len,
-		    u8 *data, bool b_lock);
-};
 
 struct ism303dac_sensor_data {
 	struct ism303dac_data *cdata;
@@ -267,6 +255,7 @@ struct ism303dac_data {
 	const char *name;
 	u8 drdy_int_pin;
 	bool spi_3wire;
+	struct regmap *regmap;
 	enum st_ism303dac_selftest_status selftest_status;
 	u8 hwfifo_enabled;
 	u8 hwfifo_watermark;
@@ -286,9 +275,44 @@ struct ism303dac_data {
 	struct iio_dev *iio_sensors_dev[ISM303DAC_SENSORS_NUMB];
 	struct iio_trigger *iio_trig[ISM303DAC_SENSORS_NUMB];
 	struct mutex regs_lock;
-	const struct ism303dac_transfer_function *tf;
-	struct ism303dac_transfer_buffer tb;
 };
+
+
+static inline int ism303dac_read_register(struct ism303dac_data *cdata,
+					  u8 reg_addr, int data_len, u8 *data,
+					  bool b_lock)
+{
+	int ret;
+
+	if (b_lock)
+		mutex_lock(&cdata->regs_lock);
+
+	ret = regmap_bulk_read(cdata->regmap, reg_addr, (void *)data, data_len);
+
+	if (b_lock)
+		mutex_unlock(&cdata->regs_lock);
+
+	return ret;
+}
+
+static inline int ism303dac_write_register(struct ism303dac_data *cdata,
+					   unsigned int reg_addr,
+					   unsigned int mask, unsigned int val,
+					   bool b_lock)
+{
+	unsigned int data = ISM303DAC_SHIFT_VAL(val, mask);
+	int ret;
+
+	if (b_lock)
+		mutex_lock(&cdata->regs_lock);
+
+	ret = regmap_update_bits(cdata->regmap, reg_addr, mask, data);
+
+	if (b_lock)
+		mutex_unlock(&cdata->regs_lock);
+
+	return ret;
+}
 
 static inline s64 ism303dac_get_time_ns(struct ism303dac_data *cdata)
 {

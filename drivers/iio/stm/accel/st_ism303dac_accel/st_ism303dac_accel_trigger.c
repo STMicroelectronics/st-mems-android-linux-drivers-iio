@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2018 STMicroelectronics Inc.
+ * Copyright 2018, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -24,7 +24,8 @@ static void ism303dac_event_management(struct ism303dac_data *cdata,
 	u8 status;
 
 	/* Must read TAP_SRC to remove irq bits */
-	cdata->tf->read(cdata, ISM303DAC_TAP_SRC_ADDR, 1, &status, true);
+	ism303dac_read_register(cdata, ISM303DAC_TAP_SRC_ADDR, 1,
+				&status, true);
 
 	if (CHECK_BIT(cdata->enabled_sensor, ISM303DAC_TAP) &&
 	    (int_reg_val & ISM303DAC_TAP_MASK))
@@ -81,14 +82,17 @@ static irqreturn_t ism303dac_irq_thread(int irq, void *private)
 			ism303dac_read_fifo(cdata, true);
 			mutex_unlock(&cdata->fifo_lock);
 		} else {
-			cdata->tf->read(cdata, ISM303DAC_STATUS_DUP_ADDR, 1, &status, true);
+			ism303dac_read_register(cdata,
+						ISM303DAC_STATUS_DUP_ADDR, 1,
+						&status, true);
 			if (status & (ISM303DAC_DRDY_MASK))
 				ism303dac_read_xyz(cdata);
 		}
 	}
 
 	if (cdata->enabled_sensor & ~(1 << ISM303DAC_ACCEL)) {
-		cdata->tf->read(cdata, ISM303DAC_STATUS_DUP_ADDR, 1, &status, true);
+		ism303dac_read_register(cdata, ISM303DAC_STATUS_DUP_ADDR, 1,
+					&status, true);
 		if (status & ISM303DAC_EVENT_MASK)
 			ism303dac_event_management(cdata, status);
 	}

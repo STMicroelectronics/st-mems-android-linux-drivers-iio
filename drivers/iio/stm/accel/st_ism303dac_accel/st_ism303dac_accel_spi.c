@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2018 STMicroelectronics Inc.
+ * Copyright 2018, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/module.h>
@@ -14,90 +14,23 @@
 
 #include "st_ism303dac_accel.h"
 
-#define ST_SENSORS_SPI_READ			0x80
-
-static int ism303dac_spi_read(struct ism303dac_data *cdata,
-			      u8 reg_addr, int len, u8 *data, bool b_lock)
-{
-	int err;
-
-	struct spi_transfer xfers[] = {
-		{
-			.tx_buf = cdata->tb.tx_buf,
-			.bits_per_word = 8,
-			.len = 1,
-		},
-		{
-			.rx_buf = cdata->tb.rx_buf,
-			.bits_per_word = 8,
-			.len = len,
-		}
-	};
-
-	if (b_lock)
-		mutex_lock(&cdata->regs_lock);
-
-	mutex_lock(&cdata->tb.buf_lock);
-	cdata->tb.tx_buf[0] = reg_addr | ST_SENSORS_SPI_READ;
-
-	err = spi_sync_transfer(to_spi_device(cdata->dev),
-				xfers, ARRAY_SIZE(xfers));
-	if (err)
-		goto acc_spi_read_error;
-
-	memcpy(data, cdata->tb.rx_buf, len*sizeof(u8));
-	mutex_unlock(&cdata->tb.buf_lock);
-	if (b_lock)
-		mutex_unlock(&cdata->regs_lock);
-
-	return len;
-
-acc_spi_read_error:
-	mutex_unlock(&cdata->tb.buf_lock);
-	if (b_lock)
-		mutex_unlock(&cdata->regs_lock);
-
-	return err;
-}
-
-static int ism303dac_spi_write(struct ism303dac_data *cdata,
-			       u8 reg_addr, int len, u8 *data, bool b_lock)
-{
-	int err;
-
-	struct spi_transfer xfers = {
-		.tx_buf = cdata->tb.tx_buf,
-		.bits_per_word = 8,
-		.len = len + 1,
-	};
-
-	if (len >= ISM303DAC_TX_MAX_LENGTH)
-		return -ENOMEM;
-
-	if (b_lock)
-		mutex_lock(&cdata->regs_lock);
-
-	mutex_lock(&cdata->tb.buf_lock);
-	cdata->tb.tx_buf[0] = reg_addr;
-
-	memcpy(&cdata->tb.tx_buf[1], data, len);
-
-	err = spi_sync_transfer(to_spi_device(cdata->dev), &xfers, 1);
-	mutex_unlock(&cdata->tb.buf_lock);
-	if (b_lock)
-		mutex_unlock(&cdata->regs_lock);
-
-	return err;
-}
-
-static const struct ism303dac_transfer_function ism303dac_tf_spi = {
-	.write = ism303dac_spi_write,
-	.read = ism303dac_spi_read,
+static const struct regmap_config ism303dac_spi_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 static int ism303dac_spi_probe(struct spi_device *spi)
 {
 	struct ism303dac_data *cdata;
+	struct regmap *regmap;
+	int err;
+
+	regmap = devm_regmap_init_spi(spi, &ism303dac_spi_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
+			(int)PTR_ERR(regmap));
+		return PTR_ERR(regmap);
+	}
 
 	cdata = devm_kzalloc(&spi->dev, sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
@@ -105,10 +38,12 @@ static int ism303dac_spi_probe(struct spi_device *spi)
 
 	cdata->dev = &spi->dev;
 	cdata->name = spi->modalias;
-	cdata->tf = &ism303dac_tf_spi;
+	cdata->regmap = regmap;
 	spi_set_drvdata(spi, cdata);
 
-	return ism303dac_common_probe(cdata, spi->irq);
+	err = ism303dac_common_probe(cdata, spi->irq);
+
+	return err < 0 ? err : 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

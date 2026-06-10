@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2018 STMicroelectronics Inc.
+ * Copyright 2018, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -279,29 +279,6 @@ static void st_ism303dac_show_configuration(struct ism303dac_data *cdata)
 	dev_info(cdata->dev, "- IIO LIMIT FIFO: disabled\n");
 #endif
 
-}
-
-int ism303dac_read_register(struct ism303dac_data *cdata, u8 reg_addr,
-			    int data_len, u8 *data, bool b_lock)
-{
-	return cdata->tf->read(cdata, reg_addr, data_len, data, b_lock);
-}
-
-static int ism303dac_write_register(struct ism303dac_data *cdata, u8 reg_addr,
-				    u8 mask, u8 data, bool b_lock)
-{
-	int err;
-	u8 new_data = 0x00, old_data = 0x00;
-
-	err = ism303dac_read_register(cdata, reg_addr, 1, &old_data, b_lock);
-	if (err < 0)
-		return err;
-
-	new_data = ((old_data & (~mask)) | ((data << __ffs(mask)) & mask));
-	if (new_data == old_data)
-		return 1;
-
-	return cdata->tf->write(cdata, reg_addr, 1, &new_data, b_lock);
 }
 
 static int ism303dac_set_fifo_mode(struct ism303dac_data *cdata, enum fifo_mode fm)
@@ -591,8 +568,7 @@ static int ism303dac_init_sensors(struct ism303dac_data *cdata)
 	if (cdata->spi_3wire) {
 		u8 data = ISM303DAC_ADD_INC_MASK | ISM303DAC_SIM_MASK;
 
-		err = cdata->tf->write(cdata, ISM303DAC_SIM_ADDR, 1, &data,
-				       false);
+		err = regmap_write(cdata->regmap, ISM303DAC_SIM_ADDR, data);
 		if (err < 0)
 			return err;
 	}
@@ -1447,8 +1423,7 @@ static int ism303dac_init_interface(struct ism303dac_data *cdata)
 		int err;
 
 		data = ISM303DAC_ADD_INC_MASK | ISM303DAC_SIM_MASK;
-		err = cdata->tf->write(cdata, ISM303DAC_SIM_ADDR, 1, &data,
-				       false);
+		err = regmap_write(cdata->regmap, ISM303DAC_SIM_ADDR, data);
 		if (err < 0)
 			return err;
 
@@ -1466,7 +1441,6 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 	struct ism303dac_sensor_data *sdata;
 
 	mutex_init(&cdata->regs_lock);
-	mutex_init(&cdata->tb.buf_lock);
 	mutex_init(&cdata->fifo_lock);
 
 	cdata->fifo_data = 0;
