@@ -142,12 +142,19 @@ int lis2hh12_allocate_rings(struct lis2hh12_data *cdata)
 {
 	int err, i;
 
-	for (i = 0; i < LIS2HH12_SENSORS_NUMB; i++) {
+	for (i = 0;
+	     i < ARRAY_SIZE(lis2hh12_main_sensor_list);
+	     i++) {
+		enum lis2hh12_sensor_id id = lis2hh12_main_sensor_list[i];
+
+		if (!cdata->iio_sensors_dev[id])
+			continue;
+
 		err = devm_iio_triggered_buffer_setup(cdata->dev,
-						    cdata->iio_sensors_dev[i],
-						    &lis2hh12_handler_empty,
-						    NULL,
-						    &lis2hh12_buffer_setup_ops);
+						cdata->iio_sensors_dev[id],
+						&lis2hh12_handler_empty,
+						NULL,
+						&lis2hh12_buffer_setup_ops);
 		if (err)
 			return err;
 	}

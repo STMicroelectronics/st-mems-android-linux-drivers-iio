@@ -48,38 +48,42 @@ int lis2hh12_allocate_triggers(struct lis2hh12_data *cdata,
 {
 	int err, i;
 
-	for (i = 0; i < LIS2HH12_SENSORS_NUMB; i++) {
-		if (!cdata->iio_sensors_dev[i])
+	for (i = 0;
+	     i < ARRAY_SIZE(lis2hh12_main_sensor_list);
+	     i++) {
+		enum lis2hh12_sensor_id id = lis2hh12_main_sensor_list[i];
+
+		if (!cdata->iio_sensors_dev[id])
 			continue;
 
-		cdata->iio_trig[i] = devm_iio_trigger_alloc(cdata->dev,
+		cdata->iio_trig[id] = devm_iio_trigger_alloc(cdata->dev,
 					       "%s-trigger%d",
-					       cdata->iio_sensors_dev[i]->name,
-					       i);
-		if (!cdata->iio_trig[i]) {
+					       cdata->iio_sensors_dev[id]->name,
+					       id);
+		if (!cdata->iio_trig[id]) {
 			dev_err(cdata->dev,
 				"failed to allocate iio trigger.\n");
 
 			return -ENOMEM;
 		}
 
-		iio_trigger_set_drvdata(cdata->iio_trig[i],
-					cdata->iio_sensors_dev[i]);
-		cdata->iio_trig[i]->ops = trigger_ops;
-		cdata->iio_trig[i]->dev.parent = cdata->dev;
+		iio_trigger_set_drvdata(cdata->iio_trig[id],
+					cdata->iio_sensors_dev[id]);
+		cdata->iio_trig[id]->ops = trigger_ops;
+		cdata->iio_trig[id]->dev.parent = cdata->dev;
 
 		err = devm_iio_trigger_register(cdata->dev,
-						cdata->iio_trig[i]);
+						cdata->iio_trig[id]);
 		if (err < 0) {
 			dev_err(cdata->dev,
 				"failed to register iio trigger %d\n",
-				i);
+				id);
 
 			return err;
 		}
 
-		cdata->iio_sensors_dev[i]->trig =
-					    iio_trigger_get(cdata->iio_trig[i]);
+		cdata->iio_sensors_dev[id]->trig =
+					   iio_trigger_get(cdata->iio_trig[id]);
 	}
 
 	err = devm_request_threaded_irq(cdata->dev, cdata->irq, NULL,

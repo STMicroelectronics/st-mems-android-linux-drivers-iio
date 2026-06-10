@@ -19,6 +19,8 @@
 #include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
 
+#define LIS2HH12_TEMP_L_ADDR			0x0b
+
 #define LIS2HH12_WHO_AM_I_ADDR			0x0f
 #define LIS2HH12_WHO_AM_I_DEF			0x41
 
@@ -74,6 +76,10 @@
 #define LIS2HH12_FS_4G_GAIN			IIO_G_TO_M_S_2(122)
 #define LIS2HH12_FS_8G_GAIN			IIO_G_TO_M_S_2(244)
 
+#define LIS2HH12_TEMP_GAIN			8
+#define LIS2HH12_FS_TEMP_GAIN			(1000000 / LIS2HH12_TEMP_GAIN)
+#define LIS2HH12_TEMP_OFFSET			(25 * LIS2HH12_TEMP_GAIN)
+
 #define LIS2HH12_INT_CFG_ADDR			LIS2HH12_CTRL3_ADDR
 #define LIS2HH12_INT_DRDY_MASK			0x01
 #define LIS2HH12_INT_FTH_MASK			0x02
@@ -108,7 +114,12 @@
 
 enum lis2hh12_sensor_id {
 	LIS2HH12_ACCEL = 0,
+	LIS2HH12_TEMP,
 	LIS2HH12_SENSORS_NUMB
+};
+
+static const enum lis2hh12_sensor_id lis2hh12_main_sensor_list[] = {
+	[0] = LIS2HH12_ACCEL,
 };
 
 #define LIS2HH12_DEV_NAME			"lis2hh12"
