@@ -3,7 +3,7 @@
 obj-y += st_acc33/
 obj-y += st_h3lis331dl/
 obj-y += st_iis2iclx/
-obj-y += st_ism303dac_accel/
+obj-y += st_ism303dac/
 obj-y += st_lis2ds12/
 obj-y += st_lis2du12/
 obj-y += st_lis2duxs12/

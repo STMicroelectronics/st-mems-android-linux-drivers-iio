@@ -164,7 +164,7 @@
 
 #define ISM303DAC_EN_BIT			0x01
 #define ISM303DAC_DIS_BIT			0x00
-#define ISM303DAC_ACCEL_ODR			1
+#define ISM303DAC_ODR			1
 #define ISM303DAC_TEMP_ODR			12
 #define ISM303DAC_DEFAULT_ACCEL_FS		2
 #define ISM303DAC_FF_ODR			25
@@ -177,7 +177,7 @@
 #define ISM303DAC_EVENT_CHANNEL_SPEC_SIZE	2
 #define ISM303DAC_MIN_DURATION_MS		1638
 
-#define ISM303DAC_DEV_NAME			"ism303dac_accel"
+#define ISM303DAC_DEV_NAME			"ism303dac"
 #define SET_BIT(a, b)				{a |= (1 << b);}
 #define RESET_BIT(a, b)				{a &= ~(1 << b);}
 #define CHECK_BIT(a, b)				(a & (1 << b))
@@ -185,7 +185,7 @@
 #define ISM303DAC_SHIFT_VAL(val, mask)		(((val) << __ffs(mask)) & (mask))
 
 enum {
-	ISM303DAC_ACCEL = 0,
+	ISM303DAC = 0,
 	ISM303DAC_TAP,
 	ISM303DAC_DOUBLE_TAP,
 	ISM303DAC_BUFFER_SENSOR,
@@ -316,7 +316,7 @@ static inline int ism303dac_write_register(struct ism303dac_data *cdata,
 
 static inline s64 ism303dac_get_time_ns(struct ism303dac_data *cdata)
 {
-	return iio_get_time_ns(cdata->iio_sensors_dev[ISM303DAC_ACCEL]);
+	return iio_get_time_ns(cdata->iio_sensors_dev[ISM303DAC]);
 }
 
 static inline int ism303dac_iio_dev_currentmode(struct iio_dev *indio_dev)
@@ -334,11 +334,11 @@ static inline int ism303dac_iio_dev_currentmode(struct iio_dev *indio_dev)
 
 static bool __maybe_unused ism303dac_skip_basic_features(int i)
 {
-#ifndef CONFIG_IIO_ST_ISM303DAC_ACCEL_EN_BASIC_FEATURES
+#ifndef CONFIG_IIO_ST_ISM303DAC_EN_BASIC_FEATURES
 	if (i >= ISM303DAC_TAP &&
 	    i <= ISM303DAC_DOUBLE_TAP)
 		return true;
-#endif /* CONFIG_IIO_ST_ISM303DAC_ACCEL_EN_BASIC_FEATURES */
+#endif /* CONFIG_IIO_ST_ISM303DAC_EN_BASIC_FEATURES */
 
 	return false;
 }

@@ -16,7 +16,7 @@
 #include <linux/iio/events.h>
 #include <linux/version.h>
 
-#include "st_ism303dac_accel.h"
+#include "st_ism303dac.h"
 
 static void ism303dac_event_management(struct ism303dac_data *cdata,
 				       u8 int_reg_val)
@@ -76,7 +76,7 @@ static irqreturn_t ism303dac_irq_thread(int irq, void *private)
 	u8 status;
 	struct ism303dac_data *cdata = private;
 
-	if (CHECK_BIT(cdata->enabled_sensor, ISM303DAC_ACCEL)) { 
+	if (CHECK_BIT(cdata->enabled_sensor, ISM303DAC)) {
 		if (cdata->hwfifo_enabled) {
 			mutex_lock(&cdata->fifo_lock);
 			ism303dac_read_fifo(cdata, true);
@@ -90,7 +90,7 @@ static irqreturn_t ism303dac_irq_thread(int irq, void *private)
 		}
 	}
 
-	if (cdata->enabled_sensor & ~(1 << ISM303DAC_ACCEL)) {
+	if (cdata->enabled_sensor & ~(1 << ISM303DAC)) {
 		ism303dac_read_register(cdata, ISM303DAC_STATUS_DUP_ADDR, 1,
 					&status, true);
 		if (status & ISM303DAC_EVENT_MASK)

@@ -2,7 +2,7 @@
 
 Required properties for all bus drivers:
 - compatible: must be one of:
-              "st,ism303dac_accel"
+              "st,ism303dac"
 
 Required properties for the i2c bindings:
 - reg: i2c slave address.
@@ -28,8 +28,8 @@ Optional properties for all bus drivers:
 
 Example for an spi device node:
 
-ism303dac-accel@0 {
-        compatible = "st,ism303dac_accel";
+ism303dac_accel@0 {
+        compatible = "st,ism303dac";
         reg = <0x0>;
         spi-max-frequency = <10000000>;
         interrupt-parent = <&gpio0>;
@@ -40,7 +40,7 @@ ism303dac-accel@0 {
 Example for an i2c device node:
 
 ism303dac_accel: ism303dac_accel@1d {
-        compatible = "st,ism303dac_accel";
+        compatible = "st,ism303dac";
         reg = <0x1d>;
         interrupt-parent = <&gpio>;
         interrupts = <0 IRQ_TYPE_LEVEL_HIGH>;

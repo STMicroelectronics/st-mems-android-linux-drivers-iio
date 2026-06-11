@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * STMicroelectronics ism303dac i2c driver
+ * STMicroelectronics ism303dac spi driver
  *
  * MEMS Software Solutions Team
  *
@@ -9,43 +9,39 @@
 
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/i2c.h>
-#include <linux/of.h>
-#include <linux/hrtimer.h>
+#include <linux/spi/spi.h>
 #include <linux/types.h>
-#include <linux/version.h>
 
-#include "st_ism303dac_accel.h"
+#include "st_ism303dac.h"
 
-static const struct regmap_config ism303dac_i2c_regmap_config = {
+static const struct regmap_config ism303dac_spi_regmap_config = {
 	.reg_bits = 8,
 	.val_bits = 8,
 };
 
-ST_I2C_PROBE(ism303dac_i2c_probe)
+static int ism303dac_spi_probe(struct spi_device *spi)
 {
 	struct ism303dac_data *cdata;
 	struct regmap *regmap;
 	int err;
 
-	regmap = devm_regmap_init_i2c(client, &ism303dac_i2c_regmap_config);
+	regmap = devm_regmap_init_spi(spi, &ism303dac_spi_regmap_config);
 	if (IS_ERR(regmap)) {
-		dev_err(&client->dev,
-			"Failed to register i2c regmap %d\n",
+		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
 			(int)PTR_ERR(regmap));
 		return PTR_ERR(regmap);
 	}
 
-	cdata = devm_kzalloc(&client->dev, sizeof(*cdata), GFP_KERNEL);
+	cdata = devm_kzalloc(&spi->dev, sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
 		return -ENOMEM;
 
-	cdata->dev = &client->dev;
-	cdata->name = client->name;
+	cdata->dev = &spi->dev;
+	cdata->name = spi->modalias;
 	cdata->regmap = regmap;
-	i2c_set_clientdata(client, cdata);
+	spi_set_drvdata(spi, cdata);
 
-	err = ism303dac_common_probe(cdata, client->irq);
+	err = ism303dac_common_probe(cdata, spi->irq);
 
 	return err < 0 ? err : 0;
 }
@@ -53,14 +49,14 @@ ST_I2C_PROBE(ism303dac_i2c_probe)
 #if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused ism303dac_suspend(struct device *dev)
 {
-	struct ism303dac_data *cdata = i2c_get_clientdata(to_i2c_client(dev));
+	struct ism303dac_data *cdata = spi_get_drvdata(to_spi_device(dev));
 
 	return ism303dac_common_suspend(cdata);
 }
 
 static int __maybe_unused ism303dac_resume(struct device *dev)
 {
-	struct ism303dac_data *cdata = i2c_get_clientdata(to_i2c_client(dev));
+	struct ism303dac_data *cdata = spi_get_drvdata(to_spi_device(dev));
 
 	return ism303dac_common_resume(cdata);
 }
@@ -74,23 +70,23 @@ static const struct dev_pm_ops ism303dac_pm_ops = {
 #define ISM303DAC_PM_OPS		NULL
 #endif /* CONFIG_PM */
 
-static const struct i2c_device_id ism303dac_ids[] = {
+static const struct spi_device_id ism303dac_ids[] = {
 	{ ISM303DAC_DEV_NAME, 0 },
 	{}
 };
 
-MODULE_DEVICE_TABLE(i2c, ism303dac_ids);
+MODULE_DEVICE_TABLE(spi, ism303dac_ids);
 
 #if IS_ENABLED(CONFIG_OF)
 static const struct of_device_id ism303dac_id_table[] = {
-	{.compatible = "st,ism303dac_accel",},
+	{ .compatible = "st,ism303dac", },
 	{},
 };
 
 MODULE_DEVICE_TABLE(of, ism303dac_id_table);
 #endif /* CONFIG_OF */
 
-static struct i2c_driver ism303dac_i2c_driver = {
+static struct spi_driver ism303dac_spi_driver = {
 	.driver = {
 		   .owner = THIS_MODULE,
 		   .name = ISM303DAC_DEV_NAME,
@@ -99,12 +95,12 @@ static struct i2c_driver ism303dac_i2c_driver = {
 		   .of_match_table = ism303dac_id_table,
 #endif /* CONFIG_OF */
 		   },
-	.probe = ism303dac_i2c_probe,
+	.probe = ism303dac_spi_probe,
 	.id_table = ism303dac_ids,
 };
 
-module_i2c_driver(ism303dac_i2c_driver);
+module_spi_driver(ism303dac_spi_driver);
 
-MODULE_DESCRIPTION("STMicroelectronics ism303dac i2c driver");
+MODULE_DESCRIPTION("STMicroelectronics ism303dac spi driver");
 MODULE_AUTHOR("MEMS Software Solutions Team");
 MODULE_LICENSE("GPL v2");

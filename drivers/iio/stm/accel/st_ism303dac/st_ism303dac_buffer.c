@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2018 STMicroelectronics Inc.
+ * Copyright 2018, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/module.h>
@@ -19,9 +19,9 @@
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
 
-#include "st_ism303dac_accel.h"
+#include "st_ism303dac.h"
 
-#define ISM303DAC_ACCEL_BUFFER_SIZE \
+#define ISM303DAC_BUFFER_SIZE \
 		ALIGN(ISM303DAC_FIFO_BYTE_FOR_SAMPLE + ISM303DAC_TIMESTAMP_SIZE, \
 		      ISM303DAC_TIMESTAMP_SIZE)
 
@@ -30,8 +30,8 @@ static void ism303dac_push_accel_data(struct ism303dac_data *cdata,
 {
 	size_t offset;
 	uint16_t i, j, k;
-	u8 buffer[ISM303DAC_ACCEL_BUFFER_SIZE], out_buf_index;
-	struct iio_dev *indio_dev = cdata->iio_sensors_dev[ISM303DAC_ACCEL];
+	u8 buffer[ISM303DAC_BUFFER_SIZE], out_buf_index;
+	struct iio_dev *indio_dev = cdata->iio_sensors_dev[ISM303DAC];
 	u32 delta_ts = div_s64(cdata->accel_deltatime, cdata->hwfifo_watermark);
 
 	for (i = 0; i < read_length; i += ISM303DAC_FIFO_BYTE_FOR_SAMPLE) {
@@ -82,10 +82,10 @@ void ism303dac_read_fifo(struct ism303dac_data *cdata, bool check_fifo_len)
 	u8 fifo_src[2];
 	u16 read_len;
 
-#if defined(CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO) && \
-	   (CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO > 0)
+#if defined(CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO) && \
+	   (CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO > 0)
 	u16 data_remaining, data_to_read, extra_bytes;
-#endif /* CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO */
+#endif /* CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO */
 
 	err = ism303dac_read_register(cdata, ISM303DAC_FIFO_SRC, 2,
 				      fifo_src, true);
@@ -99,18 +99,18 @@ void ism303dac_read_fifo(struct ism303dac_data *cdata, bool check_fifo_len)
 	if (read_len == 0)
 		return;
 
-#if !defined(CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO) || \
-	    (CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO == 0)
+#if !defined(CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO) || \
+	    (CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO == 0)
 	err = ism303dac_read_register(cdata, ISM303DAC_OUTX_L_ADDR, read_len,
 				      cdata->fifo_data, true);
 	if (err < 0)
 		return;
-#else /* CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO */
+#else /* CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO */
 	data_remaining = read_len;
 
 	do {
-		if (data_remaining > CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO)
-			data_to_read = CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO;
+		if (data_remaining > CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO)
+			data_to_read = CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO;
 		else
 			data_to_read = data_remaining;
 
@@ -129,7 +129,7 @@ void ism303dac_read_fifo(struct ism303dac_data *cdata, bool check_fifo_len)
 
 		data_remaining -= data_to_read;
 	} while (data_remaining > 0);
-#endif /* CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO */
+#endif /* CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO */
 
 	ism303dac_push_accel_data(cdata, cdata->fifo_data, read_len);
 }

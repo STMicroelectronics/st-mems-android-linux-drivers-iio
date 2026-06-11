@@ -25,7 +25,7 @@
 #include <linux/iio/events.h>
 #include <linux/version.h>
 
-#include "st_ism303dac_accel.h"
+#include "st_ism303dac.h"
 
 #define ISM303DAC_FS_LIST_NUM			4
 enum {
@@ -192,10 +192,10 @@ static const struct ism303dac_sensors_table {
 	const u8 iio_channel_size;
 	const struct iio_chan_spec iio_channel[ISM303DAC_MAX_CHANNEL_SPEC];
 } ism303dac_sensors_table[ISM303DAC_SENSORS_NUMB] = {
-	[ISM303DAC_ACCEL] = {
+	[ISM303DAC] = {
 		.name = "accel",
 		.description = "ST ISM303DAC Accelerometer Sensor",
-		.min_odr_hz = ISM303DAC_ACCEL_ODR,
+		.min_odr_hz = ISM303DAC_ODR,
 		.iio_channel = {
 			ISM303DAC_ADD_CHANNEL(IIO_ACCEL, 1, 0, IIO_MOD_X, IIO_LE,
 					16, 16, ISM303DAC_OUTX_L_ADDR, 's'),
@@ -268,13 +268,13 @@ static const struct {
 static void st_ism303dac_show_configuration(struct ism303dac_data *cdata)
 {
 	dev_info(cdata->dev, "- EN BASIC FEATURES: %s\n",
-		 IS_ENABLED(CONFIG_IIO_ST_ISM303DAC_ACCEL_EN_BASIC_FEATURES) ?
+		 IS_ENABLED(CONFIG_IIO_ST_ISM303DAC_EN_BASIC_FEATURES) ?
 		 "enabled" : "disabled");
 
-#if defined(CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO) && \
-	   (CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO > 0)
+#if defined(CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO) && \
+	   (CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO > 0)
 	dev_info(cdata->dev, "- IIO LIMIT FIFO watermark: %d\n",
-		 CONFIG_ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO);
+		 CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO);
 #else
 	dev_info(cdata->dev, "- IIO LIMIT FIFO: disabled\n");
 #endif
@@ -406,7 +406,7 @@ int ism303dac_update_drdy_irq(struct ism303dac_sensor_data *sdata, bool state)
 
 		break;
 
-	case ISM303DAC_ACCEL:
+	case ISM303DAC:
 		reg_addr = ISM303DAC_CTRL4_INT1_PAD_ADDR;
 		reg_mask = (sdata->cdata->hwfifo_enabled) ?
 				ISM303DAC_INT1_FTH_MASK:
@@ -499,7 +499,7 @@ int ism303dac_set_enable(struct ism303dac_sensor_data *sdata, bool state)
 
 		break;
 
-	case ISM303DAC_ACCEL:
+	case ISM303DAC:
 		break;
 
 	default:
@@ -547,7 +547,7 @@ static int ism303dac_init_sensors(struct ism303dac_data *cdata)
 		if (err < 0)
 			return err;
 
-		if (sdata->sindex == ISM303DAC_ACCEL) {
+		if (sdata->sindex == ISM303DAC) {
 			err = ism303dac_set_fs(sdata, ISM303DAC_DEFAULT_ACCEL_FS);
 			if (err < 0)
 				return err;
@@ -787,7 +787,7 @@ static int ism303dac_read_raw(struct iio_dev *indio_dev,
 			return IIO_VAL_INT;
 		} else if (ch->type == IIO_TEMP) {
 			struct ism303dac_data *cdata = sdata->cdata;
-			struct iio_dev *acc_indio_dev = cdata->iio_sensors_dev[ISM303DAC_ACCEL];
+			struct iio_dev *acc_indio_dev = cdata->iio_sensors_dev[ISM303DAC];
 			struct ism303dac_sensor_data *acc_data = iio_priv(acc_indio_dev);
 			bool acc_poweroff = false;
 
@@ -1369,7 +1369,7 @@ static const struct attribute_group ism303dac_temp_attribute_group = {
 };
 
 static const struct iio_info ism303dac_info[ISM303DAC_SENSORS_NUMB] = {
-	[ISM303DAC_ACCEL] = {
+	[ISM303DAC] = {
 		.attrs = &ism303dac_accel_attribute_group,
 		.read_raw = &ism303dac_read_raw,
 		.write_raw = &ism303dac_write_raw,

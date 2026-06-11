@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0
+
+ifneq ($(CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO),)
+ccflags-y += -DCONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO=$(CONFIG_ST_ISM303DAC_IIO_LIMIT_FIFO)
+endif
+
+ccflags-$(CONFIG_IIO_ST_ISM303DAC_EN_BASIC_FEATURES) += -DCONFIG_IIO_ST_ISM303DAC_EN_BASIC_FEATURES
+
+st_ism303dac-y := st_ism303dac_core.o st_ism303dac_buffer.o \
+		  st_ism303dac_trigger.o
+
+obj-$(CONFIG_IIO_ST_ISM303DAC) += st_ism303dac.o
+obj-$(CONFIG_IIO_ST_ISM303DAC_I2C) += st_ism303dac_i2c.o
+obj-$(CONFIG_IIO_ST_ISM303DAC_SPI) += st_ism303dac_spi.o
