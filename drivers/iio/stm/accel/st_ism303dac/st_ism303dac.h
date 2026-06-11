@@ -343,7 +343,8 @@ static bool __maybe_unused ism303dac_skip_basic_features(int i)
 	return false;
 }
 
-int ism303dac_common_probe(struct ism303dac_data *cdata, int irq);
+int ism303dac_probe(struct device *dev, int irq,
+		    char *name, struct regmap *regmap);
 
 #if IS_ENABLED(CONFIG_PM)
 int ism303dac_common_suspend(struct ism303dac_data *cdata);

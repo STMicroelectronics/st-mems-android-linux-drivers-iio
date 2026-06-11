@@ -7,22 +7,23 @@
  * Copyright 2018, 2026 STMicroelectronics Inc.
  */
 
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/slab.h>
-#include <linux/errno.h>
-#include <linux/types.h>
-#include <linux/mutex.h>
-#include <linux/interrupt.h>
-#include <linux/gpio.h>
-#include <linux/irq.h>
-#include <linux/iio/iio.h>
-#include <linux/of.h>
-#include <linux/iio/sysfs.h>
-#include <linux/iio/trigger.h>
 #include <linux/delay.h>
+#include <linux/errno.h>
+#include <linux/gpio.h>
+#include <linux/kernel.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/events.h>
+#include <linux/iio/iio.h>
+#include <linux/iio/sysfs.h>
+#include <linux/iio/trigger.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
+#include <linux/module.h>
+#include <linux/mutex.h>
+#include <linux/of.h>
+#include <linux/pm.h>
+#include <linux/slab.h>
+#include <linux/types.h>
 #include <linux/version.h>
 
 #include "st_ism303dac.h"
@@ -1433,15 +1434,27 @@ static int ism303dac_init_interface(struct ism303dac_data *cdata)
 	return 0;
 }
 
-int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
+int ism303dac_probe(struct device *dev, int irq,
+		    char *name, struct regmap *regmap)
 {
 	u8 wai = 0;
 	int32_t err, i, n;
 	struct iio_dev *piio_dev;
+	struct ism303dac_data *cdata;
 	struct ism303dac_sensor_data *sdata;
+
+	cdata = devm_kzalloc(dev, sizeof(*cdata), GFP_KERNEL);
+	if (!cdata)
+		return -ENOMEM;
+
+	dev_set_drvdata(dev, (void *)cdata);
 
 	mutex_init(&cdata->regs_lock);
 	mutex_init(&cdata->fifo_lock);
+
+	cdata->dev = dev;
+	cdata->name = name;
+	cdata->regmap = regmap;
 
 	cdata->fifo_data = 0;
 
@@ -1559,7 +1572,7 @@ int ism303dac_common_probe(struct ism303dac_data *cdata, int irq)
 
 	return 0;
 }
-EXPORT_SYMBOL(ism303dac_common_probe);
+EXPORT_SYMBOL(ism303dac_probe);
 
 #if IS_ENABLED(CONFIG_PM)
 int __maybe_unused ism303dac_common_suspend(struct ism303dac_data *cdata)

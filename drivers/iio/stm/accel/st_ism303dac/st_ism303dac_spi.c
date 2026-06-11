@@ -21,9 +21,7 @@ static const struct regmap_config ism303dac_spi_regmap_config = {
 
 static int ism303dac_spi_probe(struct spi_device *spi)
 {
-	struct ism303dac_data *cdata;
 	struct regmap *regmap;
-	int err;
 
 	regmap = devm_regmap_init_spi(spi, &ism303dac_spi_regmap_config);
 	if (IS_ERR(regmap)) {
@@ -32,18 +30,8 @@ static int ism303dac_spi_probe(struct spi_device *spi)
 		return PTR_ERR(regmap);
 	}
 
-	cdata = devm_kzalloc(&spi->dev, sizeof(*cdata), GFP_KERNEL);
-	if (!cdata)
-		return -ENOMEM;
-
-	cdata->dev = &spi->dev;
-	cdata->name = spi->modalias;
-	cdata->regmap = regmap;
-	spi_set_drvdata(spi, cdata);
-
-	err = ism303dac_common_probe(cdata, spi->irq);
-
-	return err < 0 ? err : 0;
+	return ism303dac_probe(&spi->dev, spi->irq,
+			       spi->modalias, regmap);
 }
 
 #if IS_ENABLED(CONFIG_PM)

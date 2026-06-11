@@ -24,9 +24,7 @@ static const struct regmap_config ism303dac_i2c_regmap_config = {
 
 ST_I2C_PROBE(ism303dac_i2c_probe)
 {
-	struct ism303dac_data *cdata;
 	struct regmap *regmap;
-	int err;
 
 	regmap = devm_regmap_init_i2c(client, &ism303dac_i2c_regmap_config);
 	if (IS_ERR(regmap)) {
@@ -36,18 +34,8 @@ ST_I2C_PROBE(ism303dac_i2c_probe)
 		return PTR_ERR(regmap);
 	}
 
-	cdata = devm_kzalloc(&client->dev, sizeof(*cdata), GFP_KERNEL);
-	if (!cdata)
-		return -ENOMEM;
-
-	cdata->dev = &client->dev;
-	cdata->name = client->name;
-	cdata->regmap = regmap;
-	i2c_set_clientdata(client, cdata);
-
-	err = ism303dac_common_probe(cdata, client->irq);
-
-	return err < 0 ? err : 0;
+	return ism303dac_probe(&client->dev, client->irq,
+			       client->name, regmap);
 }
 
 #if IS_ENABLED(CONFIG_PM)
