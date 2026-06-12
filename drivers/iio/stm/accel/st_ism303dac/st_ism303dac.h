@@ -232,6 +232,8 @@ enum fifo_mode {
 
 #define ISM303DAC_EWMA_DIV                     128
 
+extern const struct dev_pm_ops ism303dac_pm_ops;
+
 struct ism303dac_data;
 
 struct ism303dac_sensor_data {

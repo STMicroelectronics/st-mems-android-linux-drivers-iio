@@ -1574,19 +1574,28 @@ int ism303dac_probe(struct device *dev, int irq,
 }
 EXPORT_SYMBOL(ism303dac_probe);
 
-#if IS_ENABLED(CONFIG_PM)
-int __maybe_unused ism303dac_common_suspend(struct ism303dac_data *cdata)
+static int __maybe_unused ism303dac_suspend(struct device *dev)
 {
-	return 0;
-}
-EXPORT_SYMBOL(ism303dac_common_suspend);
+	struct ism303dac_data *cdata = dev_get_drvdata(dev);
 
-int __maybe_unused ism303dac_common_resume(struct ism303dac_data *cdata)
-{
+	dev_dbg(cdata->dev, "suspending device\n");
+
 	return 0;
 }
-EXPORT_SYMBOL(ism303dac_common_resume);
-#endif /* CONFIG_PM */
+
+static int __maybe_unused ism303dac_resume(struct device *dev)
+{
+	struct ism303dac_data *cdata = dev_get_drvdata(dev);
+
+	dev_dbg(cdata->dev, "resuming device\n");
+
+	return 0;
+}
+
+const struct dev_pm_ops ism303dac_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(ism303dac_suspend, ism303dac_resume)
+};
+EXPORT_SYMBOL(ism303dac_pm_ops);
 
 MODULE_DESCRIPTION("STMicroelectronics ism303dac core driver");
 MODULE_AUTHOR("MEMS Software Solutions Team");

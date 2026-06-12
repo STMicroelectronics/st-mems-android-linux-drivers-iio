@@ -34,30 +34,6 @@ static int ism303dac_spi_probe(struct spi_device *spi)
 			       spi->modalias, regmap);
 }
 
-#if IS_ENABLED(CONFIG_PM)
-static int __maybe_unused ism303dac_suspend(struct device *dev)
-{
-	struct ism303dac_data *cdata = spi_get_drvdata(to_spi_device(dev));
-
-	return ism303dac_common_suspend(cdata);
-}
-
-static int __maybe_unused ism303dac_resume(struct device *dev)
-{
-	struct ism303dac_data *cdata = spi_get_drvdata(to_spi_device(dev));
-
-	return ism303dac_common_resume(cdata);
-}
-
-static const struct dev_pm_ops ism303dac_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(ism303dac_suspend, ism303dac_resume)
-};
-
-#define ISM303DAC_PM_OPS		(&ism303dac_pm_ops)
-#else /* CONFIG_PM */
-#define ISM303DAC_PM_OPS		NULL
-#endif /* CONFIG_PM */
-
 static const struct spi_device_id ism303dac_ids[] = {
 	{ ISM303DAC_DEV_NAME, 0 },
 	{}
@@ -78,11 +54,11 @@ static struct spi_driver ism303dac_spi_driver = {
 	.driver = {
 		   .owner = THIS_MODULE,
 		   .name = ISM303DAC_DEV_NAME,
-		   .pm = ISM303DAC_PM_OPS,
+		   .pm = &ism303dac_pm_ops,
 #if IS_ENABLED(CONFIG_OF)
 		   .of_match_table = ism303dac_id_table,
 #endif /* CONFIG_OF */
-		   },
+	},
 	.probe = ism303dac_spi_probe,
 	.id_table = ism303dac_ids,
 };
