@@ -101,6 +101,7 @@ static const struct dev_pm_ops st_lsm6dsm_pm_ops = {
 
 static const struct i2c_device_id st_lsm6dsm_id_table[] = {
 	{ LSM6DSM_DEV_NAME },
+	{ LSM6DSL_DEV_NAME },
 	{ },
 };
 MODULE_DEVICE_TABLE(i2c, st_lsm6dsm_id_table);
