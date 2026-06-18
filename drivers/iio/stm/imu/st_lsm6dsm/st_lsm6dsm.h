@@ -323,8 +323,8 @@ static inline int st_lsm6dsm_write_data_with_mask(struct lsm6dsm_data *cdata,
 int st_lsm6dsm_push_data_with_timestamp(struct lsm6dsm_data *cdata,
 					u8 index, u8 *data, int64_t timestamp);
 
-int st_lsm6dsm_common_probe(struct lsm6dsm_data *cdata, int irq);
-void st_lsm6dsm_common_remove(struct lsm6dsm_data *cdata, int irq);
+int st_lsm6dsm_probe(struct device *dev, int irq,
+		     char *name, struct regmap *regmap);
 
 int st_lsm6dsm_set_enable(struct lsm6dsm_sensor_data *sdata,
 			  bool enable, bool buffer);
@@ -361,7 +361,6 @@ ssize_t st_lsm6dsm_get_module_id(struct device *dev,
 
 #if IS_ENABLED(CONFIG_IIO_BUFFER)
 int st_lsm6dsm_allocate_rings(struct lsm6dsm_data *cdata);
-void st_lsm6dsm_deallocate_rings(struct lsm6dsm_data *cdata);
 int st_lsm6dsm_trig_set_state(struct iio_trigger *trig, bool state);
 int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async);
 #define ST_LSM6DSM_TRIGGER_SET_STATE (&st_lsm6dsm_trig_set_state)
@@ -369,9 +368,6 @@ int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async);
 static inline int st_lsm6dsm_allocate_rings(struct lsm6dsm_data *cdata)
 {
 	return 0;
-}
-static inline void st_lsm6dsm_deallocate_rings(struct lsm6dsm_data *cdata)
-{
 }
 static inline int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 {
@@ -382,19 +378,13 @@ static inline int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 
 #if IS_ENABLED(CONFIG_IIO_TRIGGER)
 int st_lsm6dsm_allocate_triggers(struct lsm6dsm_data *cdata,
-				 const struct iio_trigger_ops *trigger_ops);
-void st_lsm6dsm_deallocate_triggers(struct lsm6dsm_data *cdata);
+				const struct iio_trigger_ops *trigger_ops);
 void st_lsm6dsm_flush_works(void);
 #else /* CONFIG_IIO_TRIGGER */
 static inline int st_lsm6dsm_allocate_triggers(struct lsm6dsm_data *cdata,
 			     const struct iio_trigger_ops *trigger_ops, int irq)
 {
 	return 0;
-}
-static inline void st_lsm6dsm_deallocate_triggers(struct lsm6dsm_data *cdata,
-						  int irq)
-{
-	return;
 }
 static inline void st_lsm6dsm_flush_works(void)
 {
@@ -411,7 +401,6 @@ int st_lsm6dsm_common_resume(struct lsm6dsm_data *cdata);
 int st_lsm6dsm_write_embedded_registers(struct lsm6dsm_data *cdata,
 					u8 reg_addr, u8 *data, int len);
 int st_lsm6dsm_i2c_master_probe(struct lsm6dsm_data *cdata);
-int st_lsm6dsm_i2c_master_exit(struct lsm6dsm_data *cdata);
 #else /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
 static inline int
 st_lsm6dsm_write_embedded_registers(struct lsm6dsm_data *cdata,
@@ -420,10 +409,6 @@ st_lsm6dsm_write_embedded_registers(struct lsm6dsm_data *cdata,
 	return 0;
 }
 static inline int st_lsm6dsm_i2c_master_probe(struct lsm6dsm_data *cdata)
-{
-	return 0;
-}
-static inline int st_lsm6dsm_i2c_master_exit(struct lsm6dsm_data *cdata)
 {
 	return 0;
 }
