@@ -4,20 +4,19 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #ifndef ST_LSM6DSM_H
 #define ST_LSM6DSM_H
 
-#include <linux/types.h>
 #include <linux/iio/trigger.h>
+#include <linux/regmap.h>
+#include <linux/types.h>
 #include <linux/version.h>
 
 #include "../../common/st_linux_compat.h"
 #include "../../common/stm_iio_types.h"
-
-#include <linux/i2c.h>
 
 #define LSM6DSM_DEV_NAME			"lsm6dsm"
 #define LSM6DSL_DEV_NAME			"lsm6dsl"
@@ -51,14 +50,18 @@ enum st_mask_id {
 #define ST_LSM6DSM_MAX_FIFO_SIZE		4096
 #define ST_LSM6DSM_MAX_FIFO_THRESHOLD		546
 #define ST_LSM6DSM_MAX_FIFO_LENGHT		(ST_LSM6DSM_MAX_FIFO_SIZE / \
-					ST_LSM6DSM_FIFO_ELEMENT_LEN_BYTE)
+						 ST_LSM6DSM_FIFO_ELEMENT_LEN_BYTE)
 
 #define ST_LSM6DSM_SELFTEST_NA_MS		"na"
 #define ST_LSM6DSM_SELFTEST_FAIL_MS		"fail"
 #define ST_LSM6DSM_SELFTEST_PASS_MS		"pass"
 
-#define ST_LSM6DSM_WAKE_UP_SENSORS	(BIT(ST_MASK_ID_SIGN_MOTION) | \
-					BIT(ST_MASK_ID_TILT) | BIT(ST_MASK_ID_WTILT))
+#define ST_LSM6DSM_WAKE_UP_SENSORS		(BIT(ST_MASK_ID_SIGN_MOTION) | \
+						 BIT(ST_MASK_ID_TILT) | \
+						 BIT(ST_MASK_ID_WTILT))
+
+#define ST_LSM6DSM_SHIFT_VAL(val, mask)		(((val) << __ffs(mask)) & (mask))
+
 
 #if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT)
 #define ST_LSM6DSM_NUM_CLIENTS			1
@@ -67,7 +70,7 @@ enum st_mask_id {
 #endif /* CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT */
 
 #define ST_LSM6DSM_LSM_CHANNELS(device_type, modif, index, mod, \
-						endian, sbits, rbits, addr, s) \
+				endian, sbits, rbits, addr, s) \
 { \
 	.type = device_type, \
 	.modified = modif, \
@@ -124,12 +127,6 @@ enum fifo_mode {
 	CONTINUOUS,
 };
 
-struct st_lsm6dsm_transfer_buffer {
-	struct mutex buf_lock;
-	u8 rx_buf[ST_LSM6DSM_RX_MAX_LENGTH];
-	u8 tx_buf[ST_LSM6DSM_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
 struct lsm6dsm_out_decimation {
 	short decimator;
 	short num_samples;
@@ -174,6 +171,7 @@ struct lsm6dsm_fifo_output {
  * @irq: irq number.
  * @timestamp: timestamp value from boot process.
  * @module_id: identify iio devices of the same sensor module.
+ * @regmap: regmap instance pointer.
  */
 struct lsm6dsm_data {
 	const char *name;
@@ -245,15 +243,7 @@ struct lsm6dsm_data {
 	int8_t ext0_selftest_status;
 	struct mutex i2c_transfer_lock;
 
-	const struct st_lsm6dsm_transfer_function *tf;
-	struct st_lsm6dsm_transfer_buffer tb;
-};
-
-struct st_lsm6dsm_transfer_function {
-	int (*write)(struct lsm6dsm_data *cdata,
-				u8 reg_addr, int len, u8 *data, bool b_lock);
-	int (*read)(struct lsm6dsm_data *cdata,
-				u8 reg_addr, int len, u8 *data, bool b_lock);
+	struct regmap *regmap;
 };
 
 struct lsm6dsm_sensor_data {
@@ -268,6 +258,7 @@ struct lsm6dsm_sensor_data {
 
 static bool __maybe_unused st_lsm6dsm_skip_basic_features(enum st_mask_id i)
 {
+
 #if !IS_ENABLED(CONFIG_IIO_ST_LSM6DSM_EN_BASIC_FEATURES)
 	if (i >= ST_MASK_ID_SIGN_MOTION &&
 	    i <= ST_MASK_ID_TAP_TAP)
@@ -277,8 +268,57 @@ static bool __maybe_unused st_lsm6dsm_skip_basic_features(enum st_mask_id i)
 	return false;
 }
 
-int st_lsm6dsm_write_data_with_mask(struct lsm6dsm_data *cdata,
-			u8 reg_addr, u8 mask, u8 data, bool b_lock);
+static inline int st_lsm6dsm_read_register(struct lsm6dsm_data *cdata,
+					   u8 reg_addr, int data_len,
+					   u8 *data, bool b_lock)
+{
+	int ret;
+
+	if (b_lock)
+		mutex_lock(&cdata->bank_registers_lock);
+
+	ret = regmap_bulk_read(cdata->regmap, reg_addr, (void *)data, data_len);
+
+	if (b_lock)
+		mutex_unlock(&cdata->bank_registers_lock);
+
+	return ret;
+}
+
+static inline int st_lsm6dsm_write_register(struct lsm6dsm_data *cdata,
+					    u8 reg_addr, u8 len,
+					    u8 *data, bool b_lock)
+{
+	int ret;
+
+	if (b_lock)
+		mutex_lock(&cdata->bank_registers_lock);
+
+	ret = regmap_bulk_write(cdata->regmap, reg_addr, data, len);
+
+	if (b_lock)
+		mutex_unlock(&cdata->bank_registers_lock);
+
+	return ret;
+}
+
+static inline int st_lsm6dsm_write_data_with_mask(struct lsm6dsm_data *cdata,
+						  u8 reg_addr, u8 mask,
+						  u8 val, bool b_lock)
+{
+	unsigned int data = ST_LSM6DSM_SHIFT_VAL(val, mask);
+	int ret;
+
+	if (b_lock)
+		mutex_lock(&cdata->bank_registers_lock);
+
+	ret = regmap_update_bits(cdata->regmap, reg_addr, mask, data);
+
+	if (b_lock)
+		mutex_unlock(&cdata->bank_registers_lock);
+
+	return ret;
+}
 
 int st_lsm6dsm_push_data_with_timestamp(struct lsm6dsm_data *cdata,
 					u8 index, u8 *data, int64_t timestamp);
@@ -286,27 +326,35 @@ int st_lsm6dsm_push_data_with_timestamp(struct lsm6dsm_data *cdata,
 int st_lsm6dsm_common_probe(struct lsm6dsm_data *cdata, int irq);
 void st_lsm6dsm_common_remove(struct lsm6dsm_data *cdata, int irq);
 
-int st_lsm6dsm_set_enable(struct lsm6dsm_sensor_data *sdata, bool enable, bool buffer);
+int st_lsm6dsm_set_enable(struct lsm6dsm_sensor_data *sdata,
+			  bool enable, bool buffer);
 int st_lsm6dsm_set_fifo_mode(struct lsm6dsm_data *cdata, enum fifo_mode fm);
 int st_lsm6dsm_enable_sensor_hub(struct lsm6dsm_data *cdata, bool enable,
-							enum st_mask_id id);
+				 enum st_mask_id id);
 int lsm6dsm_read_output_data(struct lsm6dsm_data *cdata, int sindex, bool push);
 int st_lsm6dsm_set_drdy_irq(struct lsm6dsm_sensor_data *sdata, bool state);
 
 ssize_t st_lsm6dsm_sysfs_get_hwfifo_enabled(struct device *dev,
-				struct device_attribute *attr, char *buf);
+					    struct device_attribute *attr,
+					    char *buf);
 ssize_t st_lsm6dsm_sysfs_set_hwfifo_enabled(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size);
+					    struct device_attribute *attr,
+					    const char *buf, size_t size);
 ssize_t st_lsm6dsm_sysfs_get_hwfifo_watermark(struct device *dev,
-				struct device_attribute *attr, char *buf);
+					      struct device_attribute *attr,
+					      char *buf);
 ssize_t st_lsm6dsm_sysfs_set_hwfifo_watermark(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size);
+					      struct device_attribute *attr,
+					      const char *buf, size_t size);
 ssize_t st_lsm6dsm_sysfs_get_hwfifo_watermark_max(struct device *dev,
-				struct device_attribute *attr, char *buf);
+						  struct device_attribute *attr,
+						  char *buf);
 ssize_t st_lsm6dsm_sysfs_get_hwfifo_watermark_min(struct device *dev,
-				struct device_attribute *attr, char *buf);
+						  struct device_attribute *attr,
+						  char *buf);
 ssize_t st_lsm6dsm_sysfs_flush_fifo(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size);
+				    struct device_attribute *attr,
+				    const char *buf, size_t size);
 ssize_t st_lsm6dsm_get_module_id(struct device *dev,
 				 struct device_attribute *attr,
 				 char *buf);
@@ -334,17 +382,17 @@ static inline int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 
 #if IS_ENABLED(CONFIG_IIO_TRIGGER)
 int st_lsm6dsm_allocate_triggers(struct lsm6dsm_data *cdata,
-				const struct iio_trigger_ops *trigger_ops);
+				 const struct iio_trigger_ops *trigger_ops);
 void st_lsm6dsm_deallocate_triggers(struct lsm6dsm_data *cdata);
 void st_lsm6dsm_flush_works(void);
 #else /* CONFIG_IIO_TRIGGER */
 static inline int st_lsm6dsm_allocate_triggers(struct lsm6dsm_data *cdata,
-			const struct iio_trigger_ops *trigger_ops, int irq)
+			     const struct iio_trigger_ops *trigger_ops, int irq)
 {
 	return 0;
 }
 static inline void st_lsm6dsm_deallocate_triggers(struct lsm6dsm_data *cdata,
-								int irq)
+						  int irq)
 {
 	return;
 }

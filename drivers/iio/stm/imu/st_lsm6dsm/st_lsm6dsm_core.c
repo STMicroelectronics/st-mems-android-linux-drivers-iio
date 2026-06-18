@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -486,25 +486,6 @@ static void st_lsm6dsm_show_configuration(struct lsm6dsm_data *cdata)
 		 "enabled" : "disabled");
 }
 
-int st_lsm6dsm_write_data_with_mask(struct lsm6dsm_data *cdata,
-				u8 reg_addr, u8 mask, u8 data, bool b_lock)
-{
-	int err;
-	u8 new_data = 0x00, old_data = 0x00;
-
-	err = cdata->tf->read(cdata, reg_addr, 1, &old_data, b_lock);
-	if (err < 0)
-		return err;
-
-	new_data = ((old_data & (~mask)) | ((data << __ffs(mask)) & mask));
-
-	if (new_data == old_data)
-		return 1;
-
-	return cdata->tf->write(cdata, reg_addr, 1, &new_data, b_lock);
-}
-EXPORT_SYMBOL(st_lsm6dsm_write_data_with_mask);
-
 static inline int st_lsm6dsm_enable_embedded_page_regs(struct lsm6dsm_data *cdata, bool enable)
 {
 	u8 value = 0x00;
@@ -512,7 +493,9 @@ static inline int st_lsm6dsm_enable_embedded_page_regs(struct lsm6dsm_data *cdat
 	if (enable)
 		value = ST_LSM6DSM_FUNC_CFG_REG2_MASK;
 
-	return cdata->tf->write(cdata, ST_LSM6DSM_FUNC_CFG_ACCESS_ADDR, 1, &value, false);
+	return st_lsm6dsm_write_register(cdata,
+					 ST_LSM6DSM_FUNC_CFG_ACCESS_ADDR, 1,
+					 &value, false);
 }
 
 #if IS_ENABLED(CONFIG_ST_LSM6DSM_IIO_MASTER_SUPPORT)
@@ -542,7 +525,7 @@ int st_lsm6dsm_write_embedded_registers(struct lsm6dsm_data *cdata,
 
 	udelay(100);
 
-	err = cdata->tf->write(cdata, reg_addr, len, data, false);
+	err = st_lsm6dsm_write_register(cdata, reg_addr, len, data, false);
 	if (err < 0)
 		goto restore_bank_regs;
 
@@ -632,14 +615,17 @@ static int lsm6dsm_set_watermark(struct lsm6dsm_data *cdata)
 		fifo_watermark = ST_LSM6DSM_FIFO_ELEMENT_LEN_BYTE / 2;
 
 	if (fifo_watermark != cdata->fifo_watermark) {
-		err = cdata->tf->read(cdata, ST_LSM6DSM_FIFO_THR_H_ADDR, 1, &reg_value, true);
+		err = st_lsm6dsm_read_register(cdata,
+					       ST_LSM6DSM_FIFO_THR_H_ADDR, 1,
+					       &reg_value, true);
 		if (err < 0)
 			return err;
 
 		fifo_watermark = (fifo_watermark & ST_LSM6DSM_FIFO_THR_MASK) |
 				 ((reg_value & ~ST_LSM6DSM_FIFO_THR_H_MASK) << 8);
 
-		err = cdata->tf->write(cdata, ST_LSM6DSM_FIFO_THR_L_ADDR, 2,
+		err = st_lsm6dsm_write_register(cdata,
+						ST_LSM6DSM_FIFO_THR_L_ADDR, 2,
 						(u8 *)&fifo_watermark, true);
 		if (err < 0)
 			return err;
@@ -666,7 +652,8 @@ int st_lsm6dsm_set_fifo_mode(struct lsm6dsm_data *cdata, enum fifo_mode fm)
 		return -EINVAL;
 	}
 
-	err = cdata->tf->write(cdata, ST_LSM6DSM_FIFO_MODE_ADDR, 1, &reg_value, true);
+	err = st_lsm6dsm_write_register(cdata, ST_LSM6DSM_FIFO_MODE_ADDR, 1,
+					&reg_value, true);
 	if (err < 0)
 		return err;
 
@@ -717,8 +704,9 @@ static int lsm6dsm_write_decimators(struct lsm6dsm_data *cdata,
 	decimators_reg[0] = value[0] | (value[1] << 3);
 	decimators_reg[1] = value[2];
 
-	return cdata->tf->write(cdata, ST_LSM6DSM_FIFO_DECIMATOR_ADDR,
-			ARRAY_SIZE(decimators_reg), decimators_reg, true);
+	return st_lsm6dsm_write_register(cdata, ST_LSM6DSM_FIFO_DECIMATOR_ADDR,
+					 ARRAY_SIZE(decimators_reg),
+					 decimators_reg, true);
 }
 
 static bool lsm6dsm_calculate_fifo_decimators(struct lsm6dsm_data *cdata,
@@ -2080,7 +2068,7 @@ static int st_lsm6dsm_read_raw(struct iio_dev *indio_dev,
 		if (sdata->sindex == ST_MASK_ID_GYRO)
 			msleep(120);
 
-		err = sdata->cdata->tf->read(sdata->cdata, ch->address,
+		err = st_lsm6dsm_read_register(sdata->cdata, ch->address,
 				ST_LSM6DSM_BYTE_FOR_CHANNEL, outdata, true);
 		if (err < 0) {
 			st_lsm6dsm_set_enable(sdata, false, false);
@@ -2141,8 +2129,8 @@ static int st_lsm6dsm_reset_steps(struct lsm6dsm_data *cdata)
 	int err;
 	u8 reg_value = 0x00;
 
-	err = cdata->tf->read(cdata,
-			ST_LSM6DSM_STEP_COUNTER_RES_ADDR, 1, &reg_value, true);
+	err = st_lsm6dsm_read_register(cdata, ST_LSM6DSM_STEP_COUNTER_RES_ADDR,
+				       1, &reg_value, true);
 	if (err < 0)
 		return err;
 
@@ -2175,7 +2163,7 @@ static int st_lsm6dsm_init_sensor(struct lsm6dsm_data *cdata)
 	int err;
 	u8 default_reg_value = ST_LSM6DSM_RESET_MASK;
 
-	err = cdata->tf->write(cdata, ST_LSM6DSM_RESET_ADDR, 1,
+	err = st_lsm6dsm_write_register(cdata, ST_LSM6DSM_RESET_ADDR, 1,
 					&default_reg_value, true);
 	if (err < 0)
 		return err;
@@ -2506,15 +2494,15 @@ static ssize_t st_lsm6dsm_sysfs_start_selftest_status(struct device *dev,
 		return -EINVAL;
 	}
 
-	err = sdata->cdata->tf->read(sdata->cdata,
-					reg_addr, 1, &reg_status, true);
+	err = st_lsm6dsm_read_register(sdata->cdata, reg_addr, 1,
+				       &reg_status, true);
 	if (err < 0) {
 		mutex_unlock(&sdata->cdata->odr_lock);
 		return err;
 	}
 
-	err = sdata->cdata->tf->write(sdata->cdata,
-					reg_addr, 1, &temp_reg_status, false);
+	err = st_lsm6dsm_write_register(sdata->cdata, reg_addr, 1,
+					&temp_reg_status, false);
 	if (err < 0) {
 		mutex_unlock(&sdata->cdata->odr_lock);
 		return err;
@@ -2524,8 +2512,9 @@ static ssize_t st_lsm6dsm_sysfs_start_selftest_status(struct device *dev,
 	msleep(100);
 
 	for (i = 0; i < 20; i++) {
-		err = sdata->cdata->tf->read(sdata->cdata,
-					sdata->data_out_reg, 6, outdata, true);
+		err = st_lsm6dsm_read_register(sdata->cdata,
+					       sdata->data_out_reg, 6,
+					       outdata, true);
 		if (err < 0) {
 			i--;
 			continue;
@@ -2548,8 +2537,9 @@ static ssize_t st_lsm6dsm_sysfs_start_selftest_status(struct device *dev,
 	msleep(100);
 
 	for (i = 0; i < 20; i++) {
-		err = sdata->cdata->tf->read(sdata->cdata,
-					sdata->data_out_reg, 6, outdata, true);
+		err = st_lsm6dsm_read_register(sdata->cdata,
+					       sdata->data_out_reg, 6,
+					       outdata, true);
 		if (err < 0) {
 			i--;
 			continue;
@@ -2562,8 +2552,8 @@ static ssize_t st_lsm6dsm_sysfs_start_selftest_status(struct device *dev,
 		mdelay(10);
 	}
 
-	err = sdata->cdata->tf->write(sdata->cdata,
-					reg_addr, 1, &reg_status, false);
+	err = st_lsm6dsm_write_register(sdata->cdata, reg_addr,
+					1, &reg_status, false);
 	if (err < 0) {
 		mutex_unlock(&sdata->cdata->odr_lock);
 		return err;
@@ -2948,8 +2938,9 @@ static ssize_t st_lsm6dsm_sysfs_upload_xl_data(struct device *dev,
 
 	sdata->cdata->last_injection_timestamp = timestamp;
 
-	err = sdata->cdata->tf->write(sdata->cdata, ST_LSM6DSM_INJECT_XL_X_ADDR,
-				       3, (u8 *)sample, false);
+	err = st_lsm6dsm_write_register(sdata->cdata,
+					ST_LSM6DSM_INJECT_XL_X_ADDR,
+					3, (u8 *)sample, false);
 	if (err < 0) {
 		st_iio_device_release_direct(indio_dev);
 		return err;
@@ -3246,7 +3237,6 @@ int st_lsm6dsm_common_probe(struct lsm6dsm_data *cdata, int irq)
 
 	mutex_init(&cdata->bank_registers_lock);
 	mutex_init(&cdata->fifo_lock);
-	mutex_init(&cdata->tb.buf_lock);
 	mutex_init(&cdata->odr_lock);
 
 	cdata->fifo_watermark = 0;
@@ -3307,7 +3297,8 @@ int st_lsm6dsm_common_probe(struct lsm6dsm_data *cdata, int irq)
 	cdata->injection_odr = 0;
 #endif /* CONFIG_ST_LSM6DSM_XL_DATA_INJECTION */
 
-	err = cdata->tf->read(cdata, ST_LSM6DSM_WAI_ADDRESS, 1, &wai, true);
+	err = st_lsm6dsm_read_register(cdata, ST_LSM6DSM_WAI_ADDRESS,
+				       1, &wai, true);
 	if (err < 0) {
 		dev_err(cdata->dev, "failed to read Who-Am-I register.\n");
 		goto free_fifo_data;

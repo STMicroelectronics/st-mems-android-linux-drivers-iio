@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/module.h>
@@ -262,8 +262,8 @@ int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 	u16 read_len = 0, byte_in_pattern, num_pattern;
 	int64_t temp_counter = 0, timestamp_diff, slower_deltatime;
 
-	err = cdata->tf->read(cdata, ST_LSM6DSM_FIFO_DIFF_L,
-						2, fifo_status, true);
+	err = st_lsm6dsm_read_register(cdata, ST_LSM6DSM_FIFO_DIFF_L,
+				       sizeof(fifo_status), fifo_status, true);
 	if (err < 0)
 		return err;
 
@@ -303,8 +303,8 @@ int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 		return 0;
 
 #if (CONFIG_ST_LSM6DSM_IIO_LIMIT_FIFO == 0)
-	err = cdata->tf->read(cdata, ST_LSM6DSM_FIFO_DATA_OUT_L,
-					read_len, cdata->fifo_data, true);
+	err = st_lsm6dsm_read_register(cdata, ST_LSM6DSM_FIFO_DATA_OUT_L,
+				       read_len, cdata->fifo_data, true);
 	if (err < 0)
 		return err;
 #else /* CONFIG_ST_LSM6DSM_IIO_LIMIT_FIFO */
@@ -316,9 +316,11 @@ int st_lsm6dsm_read_fifo(struct lsm6dsm_data *cdata, bool async)
 		else
 			data_to_read = data_remaining;
 
-		err = cdata->tf->read(cdata, ST_LSM6DSM_FIFO_DATA_OUT_L,
-				data_to_read,
-				&cdata->fifo_data[read_len - data_remaining], true);
+		err = st_lsm6dsm_read_register(cdata,
+				   ST_LSM6DSM_FIFO_DATA_OUT_L,
+				   data_to_read,
+				   &cdata->fifo_data[read_len - data_remaining],
+				   true);
 		if (err < 0)
 			return err;
 
@@ -407,8 +409,9 @@ int lsm6dsm_read_output_data(struct lsm6dsm_data *cdata, int sindex, bool push)
 	struct iio_dev *indio_dev = cdata->indio_dev[sindex];
 	struct lsm6dsm_sensor_data *sdata = iio_priv(indio_dev);
 
-	err = cdata->tf->read(cdata, sdata->data_out_reg,
-				ST_LSM6DSM_BYTE_FOR_CHANNEL * 3, data, true);
+	err = st_lsm6dsm_read_register(cdata, sdata->data_out_reg,
+				       ST_LSM6DSM_BYTE_FOR_CHANNEL * 3,
+				       data, true);
 	if (err < 0)
 		return err;
 
@@ -440,10 +443,10 @@ static irqreturn_t __maybe_unused st_lsm6dsm_step_counter_trigger_handler(int ir
 	u8 buff[ALIGN(ST_LSM6DSM_FIFO_ELEMENT_LEN_BYTE, sizeof(s64)) + sizeof(s64)];
 
 	if (!sdata->cdata->reset_steps) {
-		err = sdata->cdata->tf->read(sdata->cdata,
-					(u8)indio_dev->channels[0].address,
-					ST_LSM6DSM_BYTE_FOR_CHANNEL,
-					steps_data, true);
+		err = st_lsm6dsm_read_register(sdata->cdata,
+					     (u8)indio_dev->channels[0].address,
+					     ST_LSM6DSM_BYTE_FOR_CHANNEL,
+					     steps_data, true);
 		if (err < 0)
 			goto st_lsm6dsm_step_counter_done;
 
@@ -474,10 +477,10 @@ static irqreturn_t __maybe_unused st_lsm6dsm_wrist_tilt_trigger_handler(int irq,
 	struct lsm6dsm_sensor_data *sdata = iio_priv(indio_dev);
 	u8 buff[ALIGN(ST_LSM6DSM_FIFO_ELEMENT_LEN_BYTE, sizeof(s64)) + sizeof(s64)];
 
-	err = sdata->cdata->tf->read(sdata->cdata,
-				     (u8)indio_dev->channels[0].address,
-				     ST_LSM6DSM_BYTE_FOR_WRIST_TILT,
-				     &wrist_tilt_gesture, true);
+	err = st_lsm6dsm_read_register(sdata->cdata,
+				       (u8)indio_dev->channels[0].address,
+				       ST_LSM6DSM_BYTE_FOR_WRIST_TILT,
+				       &wrist_tilt_gesture, true);
 	if (err < 0)
 		goto st_lsm6dsm_wrist_tilt_done;
 
