@@ -36,30 +36,6 @@ static int st_lsm6dsm_spi_probe(struct spi_device *spi)
 				spi->modalias, regmap);
 }
 
-#if IS_ENABLED(CONFIG_PM)
-static int __maybe_unused st_lsm6dsm_suspend(struct device *dev)
-{
-	struct lsm6dsm_data *cdata = spi_get_drvdata(to_spi_device(dev));
-
-	return st_lsm6dsm_common_suspend(cdata);
-}
-
-static int __maybe_unused st_lsm6dsm_resume(struct device *dev)
-{
-	struct lsm6dsm_data *cdata = spi_get_drvdata(to_spi_device(dev));
-
-	return st_lsm6dsm_common_resume(cdata);
-}
-
-static const struct dev_pm_ops st_lsm6dsm_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(st_lsm6dsm_suspend, st_lsm6dsm_resume)
-};
-
-#define ST_LSM6DSM_PM_OPS		(&st_lsm6dsm_pm_ops)
-#else /* CONFIG_PM */
-#define ST_LSM6DSM_PM_OPS		NULL
-#endif /* CONFIG_PM */
-
 static const struct spi_device_id st_lsm6dsm_id_table[] = {
 	{ LSM6DSM_DEV_NAME },
 	{ LSM6DSL_DEV_NAME },
@@ -88,7 +64,7 @@ static struct spi_driver st_lsm6dsm_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "st-lsm6dsm-spi",
-		.pm = ST_LSM6DSM_PM_OPS,
+		.pm = &st_lsm6dsm_pm_ops,
 		.of_match_table = of_match_ptr(lsm6dsm_of_match),
 	},
 	.probe = st_lsm6dsm_spi_probe,
