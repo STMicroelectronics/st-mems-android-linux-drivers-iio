@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2019 STMicroelectronics Inc.
+ * Copyright 2019, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -1987,10 +1987,12 @@ st_asm330lhhx_get_wakeup_status(struct device *dev,
 	struct st_asm330lhhx_hw *hw = sensor->hw;
 	int len;
 
+	mutex_lock(&hw->lock);
 	len = scnprintf(buf, PAGE_SIZE, "%x\n", hw->wakeup_status);
 
 	/* reset status */
 	hw->wakeup_status = 0;
+	mutex_unlock(&hw->lock);
 
 	return len;
 }
