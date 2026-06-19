@@ -393,10 +393,7 @@ static inline void st_lsm6ds3_flush_works(void)
 }
 #endif /* CONFIG_IIO_TRIGGER */
 
-#if IS_ENABLED(CONFIG_PM)
-int st_lsm6ds3_common_suspend(struct lsm6ds3_data *cdata);
-int st_lsm6ds3_common_resume(struct lsm6ds3_data *cdata);
-#endif /* CONFIG_PM */
+extern const struct dev_pm_ops st_lsm6ds3_pm_ops;
 
 #if IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT)
 int st_lsm6ds3_write_embedded_registers(struct lsm6ds3_data *cdata,

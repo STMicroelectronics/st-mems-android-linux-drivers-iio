@@ -37,30 +37,6 @@ ST_I2C_PROBE(st_lsm6ds3_i2c_probe)
 				client->name, regmap);
 }
 
-#if IS_ENABLED(CONFIG_PM)
-static int __maybe_unused st_lsm6ds3_suspend(struct device *dev)
-{
-	struct lsm6ds3_data *cdata = i2c_get_clientdata(to_i2c_client(dev));
-
-	return st_lsm6ds3_common_suspend(cdata);
-}
-
-static int __maybe_unused st_lsm6ds3_resume(struct device *dev)
-{
-	struct lsm6ds3_data *cdata = i2c_get_clientdata(to_i2c_client(dev));
-
-	return st_lsm6ds3_common_resume(cdata);
-}
-
-static const struct dev_pm_ops st_lsm6ds3_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(st_lsm6ds3_suspend, st_lsm6ds3_resume)
-};
-
-#define ST_LSM6DS3_PM_OPS		(&st_lsm6ds3_pm_ops)
-#else /* CONFIG_PM */
-#define ST_LSM6DS3_PM_OPS		NULL
-#endif /* CONFIG_PM */
-
 static const struct i2c_device_id st_lsm6ds3_id_table[] = {
 	{ LSM6DS3_DEV_NAME },
 	{ LSM6DS33_DEV_NAME },
@@ -89,7 +65,7 @@ static struct i2c_driver st_lsm6ds3_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "st-lsm6ds3-i2c",
-		.pm = ST_LSM6DS3_PM_OPS,
+		.pm = &st_lsm6ds3_pm_ops,
 		.of_match_table = of_match_ptr(lsm6ds3_of_match),
 	},
 	.probe = st_lsm6ds3_i2c_probe,
