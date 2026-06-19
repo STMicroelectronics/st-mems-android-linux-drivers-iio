@@ -3170,12 +3170,12 @@ int st_lsm6ds3h_probe(struct device *dev, int irq,
 }
 EXPORT_SYMBOL(st_lsm6ds3h_probe);
 
-#if IS_ENABLED(CONFIG_PM)
-int __maybe_unused st_lsm6ds3h_common_suspend(struct lsm6ds3h_data *cdata)
+static int __maybe_unused st_lsm6ds3h_suspend(struct device *dev)
 {
-	int err, i;
-	u8 tmp_sensors_enabled;
+	struct lsm6ds3h_data *cdata = dev_get_drvdata(dev);
 	struct lsm6ds3h_sensor_data *sdata;
+	u8 tmp_sensors_enabled;
+	int err, i;
 
 	tmp_sensors_enabled = cdata->sensors_enabled;
 
@@ -3215,12 +3215,12 @@ int __maybe_unused st_lsm6ds3h_common_suspend(struct lsm6ds3h_data *cdata)
 
 	return 0;
 }
-EXPORT_SYMBOL(st_lsm6ds3h_common_suspend);
 
-int __maybe_unused st_lsm6ds3h_common_resume(struct lsm6ds3h_data *cdata)
+static int __maybe_unused st_lsm6ds3h_resume(struct device *dev)
 {
-	int err, i;
+	struct lsm6ds3h_data *cdata = dev_get_drvdata(dev);
 	struct lsm6ds3h_sensor_data *sdata;
+	int err, i;
 
 	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
 		if (st_lsm6ds3h_skip_basic_features(i))
@@ -3258,8 +3258,11 @@ int __maybe_unused st_lsm6ds3h_common_resume(struct lsm6ds3h_data *cdata)
 
 	return 0;
 }
-EXPORT_SYMBOL(st_lsm6ds3h_common_resume);
-#endif /* CONFIG_PM */
+
+const struct dev_pm_ops st_lsm6ds3h_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(st_lsm6ds3h_suspend, st_lsm6ds3h_resume)
+};
+EXPORT_SYMBOL(st_lsm6ds3h_pm_ops);
 
 MODULE_AUTHOR("MEMS Software Solutions Team");
 MODULE_DESCRIPTION("STMicroelectronics lsm6ds3h core driver");

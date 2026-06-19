@@ -391,10 +391,7 @@ static inline void st_lsm6ds3h_flush_works(void)
 }
 #endif /* CONFIG_IIO_TRIGGER */
 
-#if IS_ENABLED(CONFIG_PM)
-int st_lsm6ds3h_common_suspend(struct lsm6ds3h_data *cdata);
-int st_lsm6ds3h_common_resume(struct lsm6ds3h_data *cdata);
-#endif /* CONFIG_PM */
+extern const struct dev_pm_ops st_lsm6ds3h_pm_ops;
 
 #if IS_ENABLED(CONFIG_ST_LSM6DS3H_IIO_MASTER_SUPPORT)
 int st_lsm6ds3h_write_embedded_registers(struct lsm6ds3h_data *cdata,
