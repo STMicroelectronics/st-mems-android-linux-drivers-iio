@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2024 STMicroelectronics Inc.
+ * Copyright 2024, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -645,7 +645,7 @@ int st_asm330lhhx_event_handler(struct st_asm330lhhx_hw *hw)
 	if (!st_asm330lhhx_events_enabled(hw))
 		return IRQ_HANDLED;
 
-	err = regmap_bulk_read(hw->regmap,
+	err = st_asm330lhhx_read_locked(hw,
 			       ST_ASM330LHHX_REG_WAKE_UP_SRC_ADDR,
 			       reg_src, sizeof(reg_src));
 	if (err < 0)
