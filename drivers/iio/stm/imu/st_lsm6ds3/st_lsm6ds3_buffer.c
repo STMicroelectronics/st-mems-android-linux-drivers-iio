@@ -580,7 +580,8 @@ int st_lsm6ds3_allocate_rings(struct lsm6ds3_data *cdata)
 
 	sdata = iio_priv(cdata->indio_dev[ST_MASK_ID_ACCEL]);
 
-	err = iio_triggered_buffer_setup(cdata->indio_dev[ST_MASK_ID_ACCEL],
+	err = devm_iio_triggered_buffer_setup(cdata->dev,
+				cdata->indio_dev[ST_MASK_ID_ACCEL],
 				NULL, &st_lsm6ds3_outdata_trigger_handler,
 				&st_lsm6ds3_buffer_setup_ops);
 	if (err < 0)
@@ -588,76 +589,43 @@ int st_lsm6ds3_allocate_rings(struct lsm6ds3_data *cdata)
 
 	sdata = iio_priv(cdata->indio_dev[ST_MASK_ID_GYRO]);
 
-	err = iio_triggered_buffer_setup(cdata->indio_dev[ST_MASK_ID_GYRO],
+	err = devm_iio_triggered_buffer_setup(cdata->dev,
+				cdata->indio_dev[ST_MASK_ID_GYRO],
 				NULL, &st_lsm6ds3_outdata_trigger_handler,
 				&st_lsm6ds3_buffer_setup_ops);
 	if (err < 0)
-		goto buffer_cleanup_accel;
+		return err;
 
 #if IS_ENABLED(CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES)
-	err = iio_triggered_buffer_setup(
+	err = devm_iio_triggered_buffer_setup(cdata->dev,
 				cdata->indio_dev[ST_MASK_ID_SIGN_MOTION],
 				&st_lsm6ds3_handler_empty, NULL,
 				&st_lsm6ds3_buffer_setup_ops);
 	if (err < 0)
-		goto buffer_cleanup_gyro;
+		return err;
 
-	err = iio_triggered_buffer_setup(
+	err = devm_iio_triggered_buffer_setup(cdata->dev,
 				cdata->indio_dev[ST_MASK_ID_STEP_COUNTER],
 				NULL,
 				&st_lsm6ds3_step_counter_trigger_handler,
 				&st_lsm6ds3_buffer_setup_ops);
 	if (err < 0)
-		goto buffer_cleanup_sign_motion;
+		return err;
 
-	err = iio_triggered_buffer_setup(
+	err = devm_iio_triggered_buffer_setup(cdata->dev,
 				cdata->indio_dev[ST_MASK_ID_STEP_DETECTOR],
 				&st_lsm6ds3_handler_empty, NULL,
 				&st_lsm6ds3_buffer_setup_ops);
 	if (err < 0)
-		goto buffer_cleanup_step_counter;
+		return err;
 
-	err = iio_triggered_buffer_setup(
+	err = devm_iio_triggered_buffer_setup(cdata->dev,
 				cdata->indio_dev[ST_MASK_ID_TILT],
 				&st_lsm6ds3_handler_empty, NULL,
 				&st_lsm6ds3_buffer_setup_ops);
 	if (err < 0)
-		goto buffer_cleanup_step_detector;
+		return err;
 #endif /* CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES */
 
 	return 0;
-
-#if IS_ENABLED(CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES)
-buffer_cleanup_step_detector:
-	iio_triggered_buffer_cleanup(
-				cdata->indio_dev[ST_MASK_ID_STEP_DETECTOR]);
-buffer_cleanup_step_counter:
-	iio_triggered_buffer_cleanup(
-				cdata->indio_dev[ST_MASK_ID_STEP_COUNTER]);
-buffer_cleanup_sign_motion:
-	iio_triggered_buffer_cleanup(
-				cdata->indio_dev[ST_MASK_ID_SIGN_MOTION]);
-buffer_cleanup_gyro:
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_GYRO]);
-#endif /* CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES */
-
-buffer_cleanup_accel:
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_ACCEL]);
-	return err;
-}
-
-void st_lsm6ds3_deallocate_rings(struct lsm6ds3_data *cdata)
-{
-#if IS_ENABLED(CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES)
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_TILT]);
-	iio_triggered_buffer_cleanup(
-				cdata->indio_dev[ST_MASK_ID_STEP_DETECTOR]);
-	iio_triggered_buffer_cleanup(
-				cdata->indio_dev[ST_MASK_ID_STEP_COUNTER]);
-	iio_triggered_buffer_cleanup(
-				cdata->indio_dev[ST_MASK_ID_SIGN_MOTION]);
-#endif /* CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES */
-
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_ACCEL]);
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_GYRO]);
 }

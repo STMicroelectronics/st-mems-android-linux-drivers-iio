@@ -23,9 +23,7 @@ static const struct regmap_config st_lsm6ds3_spi_regmap_config = {
 
 static int st_lsm6ds3_spi_probe(struct spi_device *spi)
 {
-	struct lsm6ds3_data *cdata;
 	struct regmap *regmap;
-	int err;
 
 	regmap = devm_regmap_init_spi(spi, &st_lsm6ds3_spi_regmap_config);
 	if (IS_ERR(regmap)) {
@@ -34,46 +32,9 @@ static int st_lsm6ds3_spi_probe(struct spi_device *spi)
 		return PTR_ERR(regmap);
 	}
 
-	cdata = kmalloc(sizeof(*cdata), GFP_KERNEL);
-	if (!cdata)
-		return -ENOMEM;
-
-	cdata->dev = &spi->dev;
-	cdata->name = spi->modalias;
-	cdata->regmap = regmap;
-	cdata->spi_connection = true;
-	spi_set_drvdata(spi, cdata);
-
-	err = st_lsm6ds3_common_probe(cdata, spi->irq);
-	if (err < 0)
-		goto free_data;
-
-	return 0;
-
-free_data:
-	kfree(cdata);
-	return err;
+	return st_lsm6ds3_probe(&spi->dev, spi->irq,
+				spi->modalias, regmap);
 }
-
-#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
-static void st_lsm6ds3_spi_remove(struct spi_device *spi)
-{
-	struct lsm6ds3_data *cdata = spi_get_drvdata(spi);
-
-	st_lsm6ds3_common_remove(cdata, spi->irq);
-	kfree(cdata);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_lsm6ds3_spi_remove(struct spi_device *spi)
-{
-	struct lsm6ds3_data *cdata = spi_get_drvdata(spi);
-
-	st_lsm6ds3_common_remove(cdata, spi->irq);
-	kfree(cdata);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
 
 #if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_lsm6ds3_suspend(struct device *dev)
@@ -131,7 +92,6 @@ static struct spi_driver st_lsm6ds3_driver = {
 		.of_match_table = of_match_ptr(lsm6ds3_of_match),
 	},
 	.probe = st_lsm6ds3_spi_probe,
-	.remove = st_lsm6ds3_spi_remove,
 	.id_table = st_lsm6ds3_id_table,
 };
 module_spi_driver(st_lsm6ds3_driver);

@@ -2959,20 +2959,32 @@ static void st_lsm6ds3_get_properties(struct lsm6ds3_data *cdata)
 	}
 }
 
-int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
+int st_lsm6ds3_probe(struct device *dev, int irq,
+		     char *name, struct regmap *regmap)
 {
+	struct lsm6ds3_sensor_data *sdata;
+	struct lsm6ds3_data *cdata;
 	u8 wai = 0x00;
 	int i, n, err;
-	struct lsm6ds3_sensor_data *sdata;
+
+	cdata = devm_kzalloc(dev, sizeof(*cdata), GFP_KERNEL);
+	if (!cdata)
+		return -ENOMEM;
 
 	mutex_init(&cdata->bank_registers_lock);
 	mutex_init(&cdata->fifo_lock);
 	mutex_init(&cdata->odr_lock);
 
+	cdata->dev = dev;
+	cdata->name = name;
+	cdata->regmap = regmap;
+
 	cdata->fifo_watermark = 0;
 	cdata->fifo_status = BYPASS;
 	cdata->enable_digfunc_mask = 0;
 	cdata->enable_pedometer_mask = 0;
+
+	dev_set_drvdata(dev, (void *)cdata);
 
 	if (IS_ENABLED(CONFIG_ST_LSM6DS3_IIO_MASTER_SUPPORT))
 		cdata->enable_sensorhub_mask = 0;
@@ -3017,8 +3029,8 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 
 	cdata->trigger_odr = 0;
 
-	cdata->fifo_data = kmalloc(ST_LSM6DS3_MAX_FIFO_SIZE *
-						sizeof(u8), GFP_KERNEL);
+	cdata->fifo_data = devm_kzalloc(dev, ST_LSM6DS3_MAX_FIFO_SIZE *
+					sizeof(u8), GFP_KERNEL);
 	if (!cdata->fifo_data)
 		return -ENOMEM;
 
@@ -3035,14 +3047,14 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 				       1, &wai, true);
 	if (err < 0) {
 		dev_err(cdata->dev, "failed to read Who-Am-I register.\n");
-		goto free_fifo_data;
+		return err;
 	}
 	if (wai != ST_LSM6DS3_WAI_EXP) {
 		dev_err(cdata->dev,
 			"Who-Am-I value not valid. Expected %x, Found %x\n",
 						ST_LSM6DS3_WAI_EXP, wai);
 		err = -ENODEV;
-		goto free_fifo_data;
+		return err;
 	}
 
 	st_lsm6ds3_get_properties(cdata);
@@ -3054,7 +3066,7 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 		err = -EINVAL;
 		dev_err(cdata->dev,
 			"DRDY not available, current implementation needs irq!\n");
-		goto free_fifo_data;
+		return err;
 	}
 
 	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
@@ -3062,10 +3074,10 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 			continue;
 
 		cdata->indio_dev[i] = devm_iio_device_alloc(cdata->dev,
-					sizeof(struct lsm6ds3_sensor_data));
+					   sizeof(struct lsm6ds3_sensor_data));
 		if (!cdata->indio_dev[i]) {
 			err = -ENOMEM;
-			goto free_fifo_data;
+			return err;
 		}
 
 		sdata = iio_priv(cdata->indio_dev[i]);
@@ -3102,7 +3114,7 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 
 	cdata->indio_dev[ST_MASK_ID_ACCEL]->name =
 			kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
-					ST_LSM6DS3_ACCEL_SUFFIX_NAME);
+				  ST_LSM6DS3_ACCEL_SUFFIX_NAME);
 	cdata->indio_dev[ST_MASK_ID_ACCEL]->info = &st_lsm6ds3_accel_info;
 	cdata->indio_dev[ST_MASK_ID_ACCEL]->channels = st_lsm6ds3_accel_ch;
 	cdata->indio_dev[ST_MASK_ID_ACCEL]->num_channels =
@@ -3110,7 +3122,7 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 
 	cdata->indio_dev[ST_MASK_ID_GYRO]->name =
 			kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
-					ST_LSM6DS3_GYRO_SUFFIX_NAME);
+				  ST_LSM6DS3_GYRO_SUFFIX_NAME);
 	cdata->indio_dev[ST_MASK_ID_GYRO]->info = &st_lsm6ds3_gyro_info;
 	cdata->indio_dev[ST_MASK_ID_GYRO]->channels = st_lsm6ds3_gyro_ch;
 	cdata->indio_dev[ST_MASK_ID_GYRO]->num_channels =
@@ -3119,7 +3131,7 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 #if IS_ENABLED(CONFIG_IIO_ST_LSM6DS3_EN_BASIC_FEATURES)
 	cdata->indio_dev[ST_MASK_ID_SIGN_MOTION]->name =
 			kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
-					ST_LSM6DS3_SIGN_MOTION_SUFFIX_NAME);
+				  ST_LSM6DS3_SIGN_MOTION_SUFFIX_NAME);
 	cdata->indio_dev[ST_MASK_ID_SIGN_MOTION]->info =
 						&st_lsm6ds3_sign_motion_info;
 	cdata->indio_dev[ST_MASK_ID_SIGN_MOTION]->channels =
@@ -3129,7 +3141,7 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 
 	cdata->indio_dev[ST_MASK_ID_STEP_COUNTER]->name =
 			kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
-					ST_LSM6DS3_STEP_COUNTER_SUFFIX_NAME);
+				  ST_LSM6DS3_STEP_COUNTER_SUFFIX_NAME);
 	cdata->indio_dev[ST_MASK_ID_STEP_COUNTER]->info =
 						&st_lsm6ds3_step_c_info;
 	cdata->indio_dev[ST_MASK_ID_STEP_COUNTER]->channels =
@@ -3139,7 +3151,7 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 
 	cdata->indio_dev[ST_MASK_ID_STEP_DETECTOR]->name =
 			kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
-					ST_LSM6DS3_STEP_DETECTOR_SUFFIX_NAME);
+				  ST_LSM6DS3_STEP_DETECTOR_SUFFIX_NAME);
 	cdata->indio_dev[ST_MASK_ID_STEP_DETECTOR]->info =
 						&st_lsm6ds3_step_d_info;
 	cdata->indio_dev[ST_MASK_ID_STEP_DETECTOR]->channels =
@@ -3149,7 +3161,7 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 
 	cdata->indio_dev[ST_MASK_ID_TILT]->name =
 			kasprintf(GFP_KERNEL, "%s_%s", cdata->name,
-					ST_LSM6DS3_TILT_SUFFIX_NAME);
+				  ST_LSM6DS3_TILT_SUFFIX_NAME);
 	cdata->indio_dev[ST_MASK_ID_TILT]->info = &st_lsm6ds3_tilt_info;
 	cdata->indio_dev[ST_MASK_ID_TILT]->channels = st_lsm6ds3_tilt_ch;
 	cdata->indio_dev[ST_MASK_ID_TILT]->num_channels =
@@ -3158,26 +3170,27 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 
 	err = st_lsm6ds3_init_sensor(cdata);
 	if (err < 0)
-		goto free_fifo_data;
+		return err;
 
 	err = st_lsm6ds3_allocate_rings(cdata);
 	if (err < 0)
-		goto free_fifo_data;
+		return err;
 
 	if (irq > 0) {
 		err = st_lsm6ds3_allocate_triggers(cdata,
-							ST_LSM6DS3_TRIGGER_OPS);
+						   ST_LSM6DS3_TRIGGER_OPS);
 		if (err < 0)
-			goto deallocate_ring;
+			return err;
 	}
 
 	for (n = 0; n < ST_INDIO_DEV_NUM; n++) {
 		if (st_lsm6ds3_skip_basic_features(n))
 			continue;
 
-		err = iio_device_register(cdata->indio_dev[n]);
+		err = devm_iio_device_register(cdata->dev,
+					       cdata->indio_dev[n]);
 		if (err)
-			goto iio_device_unregister_and_trigger_deallocate;
+			return err;
 	}
 
 	if (strcmp(cdata->name, LSM6DS33_DEV_NAME) != 0)
@@ -3188,44 +3201,8 @@ int st_lsm6ds3_common_probe(struct lsm6ds3_data *cdata, int irq)
 	st_lsm6ds3_show_configuration(cdata);
 
 	return 0;
-
-iio_device_unregister_and_trigger_deallocate:
-	for (n--; n >= 0; n--)
-		iio_device_unregister(cdata->indio_dev[n]);
-
-	if (irq > 0)
-		st_lsm6ds3_deallocate_triggers(cdata);
-deallocate_ring:
-	st_lsm6ds3_deallocate_rings(cdata);
-free_fifo_data:
-	kfree(cdata->fifo_data);
-
-	return err;
 }
-EXPORT_SYMBOL(st_lsm6ds3_common_probe);
-
-void st_lsm6ds3_common_remove(struct lsm6ds3_data *cdata, int irq)
-{
-	int i;
-
-	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
-		if (st_lsm6ds3_skip_basic_features(i))
-			continue;
-
-		iio_device_unregister(cdata->indio_dev[i]);
-	}
-
-	if (irq > 0)
-		st_lsm6ds3_deallocate_triggers(cdata);
-
-	st_lsm6ds3_deallocate_rings(cdata);
-
-	kfree(cdata->fifo_data);
-
-	if (strcmp(cdata->name, LSM6DS33_DEV_NAME) != 0)
-		st_lsm6ds3_i2c_master_exit(cdata);
-}
-EXPORT_SYMBOL(st_lsm6ds3_common_remove);
+EXPORT_SYMBOL(st_lsm6ds3_probe);
 
 #if IS_ENABLED(CONFIG_PM)
 int __maybe_unused st_lsm6ds3_common_suspend(struct lsm6ds3_data *cdata)

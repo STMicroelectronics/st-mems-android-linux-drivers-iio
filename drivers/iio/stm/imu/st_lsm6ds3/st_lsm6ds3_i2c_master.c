@@ -1323,7 +1323,8 @@ disable_sensorhub:
 }
 
 static int st_lsm6ds3_i2c_master_read_raw(struct iio_dev *indio_dev,
-		struct iio_chan_spec const *ch, int *val, int *val2, long mask)
+					  struct iio_chan_spec const *ch,
+					  int *val, int *val2, long mask)
 {
 	struct lsm6ds3_sensor_data *sdata = iio_priv(indio_dev);
 	int err, ch_num_byte = ch->scan_type.storagebits >> 3;
@@ -1466,43 +1467,31 @@ static int st_lsm6ds3_i2c_master_allocate_trigger(struct lsm6ds3_data *cdata)
 {
 	int err;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)
-	cdata->trig[ST_MASK_ID_EXT0] = iio_trigger_alloc(cdata->dev,
+	cdata->trig[ST_MASK_ID_EXT0] = devm_iio_trigger_alloc(cdata->dev,
 				"%s-trigger",
 				cdata->indio_dev[ST_MASK_ID_EXT0]->name);
-#else /* LINUX_VERSION_CODE */
-	cdata->trig[ST_MASK_ID_EXT0] = iio_trigger_alloc("%s-trigger",
-				cdata->indio_dev[ST_MASK_ID_EXT0]->name);
-#endif /* LINUX_VERSION_CODE */
-
 	if (!cdata->trig[ST_MASK_ID_EXT0]) {
 		dev_err(cdata->dev, "failed to allocate iio trigger.\n");
 		return -ENOMEM;
 	}
 
 	iio_trigger_set_drvdata(cdata->trig[ST_MASK_ID_EXT0],
-					cdata->indio_dev[ST_MASK_ID_EXT0]);
+				cdata->indio_dev[ST_MASK_ID_EXT0]);
 	cdata->trig[ST_MASK_ID_EXT0]->ops = &st_lsm6ds3_i2c_master_trigger_ops;
 	cdata->trig[ST_MASK_ID_EXT0]->dev.parent = cdata->dev;
 
-	err = iio_trigger_register(cdata->trig[ST_MASK_ID_EXT0]);
+	err = devm_iio_trigger_register(cdata->dev,
+					cdata->trig[ST_MASK_ID_EXT0]);
 	if (err < 0) {
 		dev_err(cdata->dev, "failed to register iio trigger.\n");
-		goto deallocate_trigger;
+
+		return err;
 	}
 
-	cdata->indio_dev[ST_MASK_ID_EXT0]->trig = cdata->trig[ST_MASK_ID_EXT0];
+	cdata->indio_dev[ST_MASK_ID_EXT0]->trig =
+				iio_trigger_get(cdata->trig[ST_MASK_ID_EXT0]);
 
 	return 0;
-
-deallocate_trigger:
-	iio_trigger_free(cdata->trig[ST_MASK_ID_EXT0]);
-	return err;
-}
-
-static void st_lsm6ds3_i2c_master_deallocate_trigger(struct lsm6ds3_data *cdata)
-{
-	iio_trigger_unregister(cdata->trig[ST_MASK_ID_EXT0]);
 }
 
 static const struct iio_buffer_setup_ops st_lsm6ds3_i2c_master_buffer_setup_ops = {
@@ -1518,14 +1507,10 @@ static inline irqreturn_t st_lsm6ds3_i2c_master_handler_empty(int irq, void *p)
 
 static int st_lsm6ds3_i2c_master_allocate_buffer(struct lsm6ds3_data *cdata)
 {
-	return iio_triggered_buffer_setup(cdata->indio_dev[ST_MASK_ID_EXT0],
+	return devm_iio_triggered_buffer_setup(cdata->dev,
+				cdata->indio_dev[ST_MASK_ID_EXT0],
 				&st_lsm6ds3_i2c_master_handler_empty, NULL,
 				&st_lsm6ds3_i2c_master_buffer_setup_ops);
-}
-
-static void st_lsm6ds3_i2c_master_deallocate_buffer(struct lsm6ds3_data *cdata)
-{
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_EXT0]);
 }
 
 static int st_lsm6ds3_i2c_master_send_sensor_hub_parameters(
@@ -1615,7 +1600,6 @@ static int st_lsm6ds3_i2c_master_allocate_device(struct lsm6ds3_data *cdata)
 	int err;
 	struct lsm6ds3_sensor_data *sdata_ext;
 
-
 	sdata_ext = iio_priv(cdata->indio_dev[ST_MASK_ID_EXT0]);
 
 	sdata_ext->num_data_channels =
@@ -1646,27 +1630,14 @@ static int st_lsm6ds3_i2c_master_allocate_device(struct lsm6ds3_data *cdata)
 
 	err = st_lsm6ds3_i2c_master_allocate_trigger(cdata);
 	if (err < 0)
-		goto iio_deallocate_buffer;
+		return err;
 
-	err = iio_device_register(cdata->indio_dev[ST_MASK_ID_EXT0]);
+	err = devm_iio_device_register(cdata->dev,
+				       cdata->indio_dev[ST_MASK_ID_EXT0]);
 	if (err < 0)
-		goto iio_deallocate_trigger;
+		return err;
 
 	return 0;
-
-iio_deallocate_trigger:
-	st_lsm6ds3_i2c_master_deallocate_trigger(cdata);
-iio_deallocate_buffer:
-	st_lsm6ds3_i2c_master_deallocate_buffer(cdata);
-
-	return err;
-}
-
-static void st_lsm6ds3_i2c_master_deallocate_device(struct lsm6ds3_data *cdata)
-{
-	iio_device_unregister(cdata->indio_dev[ST_MASK_ID_EXT0]);
-	st_lsm6ds3_i2c_master_deallocate_trigger(cdata);
-	st_lsm6ds3_i2c_master_deallocate_buffer(cdata);
 }
 
 int st_lsm6ds3_i2c_master_probe(struct lsm6ds3_data *cdata)
@@ -1690,13 +1661,14 @@ int st_lsm6ds3_i2c_master_probe(struct lsm6ds3_data *cdata)
 #endif /* CONFIG_ST_LSM6DS3_ENABLE_INTERNAL_PULLUP */
 
 	err = st_lsm6ds3_write_data_with_mask(cdata,
-					ST_LSM6DS3_FUNC_MAX_RATE_ADDR,
-					ST_LSM6DS3_FUNC_MAX_RATE_MASK, 1, true);
+					      ST_LSM6DS3_FUNC_MAX_RATE_ADDR,
+					      ST_LSM6DS3_FUNC_MAX_RATE_MASK, 1,
+					      true);
 	if (err < 0)
 		return err;
 
 	cdata->indio_dev[ST_MASK_ID_EXT0] = devm_iio_device_alloc(cdata->dev,
-							sizeof(*sdata_ext));
+							   sizeof(*sdata_ext));
 	if (!cdata->indio_dev[ST_MASK_ID_EXT0])
 		return -ENOMEM;
 
@@ -1753,7 +1725,7 @@ int st_lsm6ds3_i2c_master_probe(struct lsm6ds3_data *cdata)
 		break;
 	}
 	if (i == 2)
-		goto ext0_sensor_not_available;
+		return err;
 
 	/* after wai check SLAVE0 is used for write, SLAVE1 for async read
 	   and SLAVE2 to read sensor output data */
@@ -1770,19 +1742,5 @@ int st_lsm6ds3_i2c_master_probe(struct lsm6ds3_data *cdata)
 	cdata->ext0_available = true;
 
 	return 0;
-
-ext0_sensor_not_available:
-	dev_err(cdata->dev, "external sensor 0 not available\n");
-
-	return err;
 }
 EXPORT_SYMBOL(st_lsm6ds3_i2c_master_probe);
-
-int st_lsm6ds3_i2c_master_exit(struct lsm6ds3_data *cdata)
-{
-	if (cdata->ext0_available)
-		st_lsm6ds3_i2c_master_deallocate_device(cdata);
-
-	return 0;
-}
-EXPORT_SYMBOL(st_lsm6ds3_i2c_master_exit);
