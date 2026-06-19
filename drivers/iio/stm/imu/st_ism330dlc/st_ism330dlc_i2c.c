@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -16,78 +16,26 @@
 #include <linux/iio/buffer.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(4, 11, 0) <= LINUX_VERSION_CODE
-#include <linux/iio/buffer_impl.h>
-#endif /* LINUX_VERSION_CODE */
-
 #include "st_ism330dlc.h"
 
-static int st_ism330dlc_i2c_read(struct ism330dlc_data *cdata,
-				 u8 reg_addr, int len, u8 *data, bool b_lock)
-{
-	int err = 0;
-	struct i2c_msg msg[2];
-	struct i2c_client *client = to_i2c_client(cdata->dev);
-
-	msg[0].addr = client->addr;
-	msg[0].flags = client->flags;
-	msg[0].len = 1;
-	msg[0].buf = &reg_addr;
-
-	msg[1].addr = client->addr;
-	msg[1].flags = client->flags | I2C_M_RD;
-	msg[1].len = len;
-	msg[1].buf = data;
-
-	if (b_lock) {
-		mutex_lock(&cdata->bank_registers_lock);
-		err = i2c_transfer(client->adapter, msg, 2);
-		mutex_unlock(&cdata->bank_registers_lock);
-	} else
-		err = i2c_transfer(client->adapter, msg, 2);
-
-	return err;
-}
-
-static int st_ism330dlc_i2c_write(struct ism330dlc_data *cdata,
-				  u8 reg_addr, int len, u8 *data, bool b_lock)
-{
-	struct i2c_client *client = to_i2c_client(cdata->dev);
-	struct i2c_msg msg;
-	int err = 0;
-	u8 send[8];
-
-	if (len >= ARRAY_SIZE(send))
-		return -ENOMEM;
-
-	send[0] = reg_addr;
-	memcpy(&send[1], data, len * sizeof(u8));
-	len++;
-
-	msg.addr = client->addr;
-	msg.flags = client->flags;
-	msg.len = len;
-	msg.buf = send;
-
-	if (b_lock) {
-		mutex_lock(&cdata->bank_registers_lock);
-		err = i2c_transfer(client->adapter, &msg, 1);
-		mutex_unlock(&cdata->bank_registers_lock);
-	} else
-		err = i2c_transfer(client->adapter, &msg, 1);
-
-	return err;
-}
-
-static const struct st_ism330dlc_transfer_function st_ism330dlc_tf_i2c = {
-	.write = st_ism330dlc_i2c_write,
-	.read = st_ism330dlc_i2c_read,
+static const struct regmap_config st_ism330dlc_i2c_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
 };
 
 ST_I2C_PROBE(st_ism330dlc_i2c_probe)
 {
-	int err;
 	struct ism330dlc_data *cdata;
+	struct regmap *regmap;
+	int err;
+
+	regmap = devm_regmap_init_i2c(client, &st_ism330dlc_i2c_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(&client->dev,
+			"Failed to register i2c regmap %d\n",
+			(int)PTR_ERR(regmap));
+		return PTR_ERR(regmap);
+	}
 
 	cdata = kmalloc(sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
@@ -95,9 +43,8 @@ ST_I2C_PROBE(st_ism330dlc_i2c_probe)
 
 	cdata->dev = &client->dev;
 	cdata->name = client->name;
+	cdata->regmap = regmap;
 	i2c_set_clientdata(client, cdata);
-
-	cdata->tf = &st_ism330dlc_tf_i2c;
 
 	err = st_ism330dlc_common_probe(cdata, client->irq);
 	if (err < 0)

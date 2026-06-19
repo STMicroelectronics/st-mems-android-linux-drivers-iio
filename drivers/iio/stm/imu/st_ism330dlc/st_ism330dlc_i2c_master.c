@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -601,8 +601,8 @@ static int st_ism330dlc_i2c_master_read(struct ism330dlc_data *cdata,
 
 	st_ism330dlc_master_wait_completed(cdata);
 
-	err = cdata->tf->read(cdata, ST_ISM330DLC_SLV0_OUT_ADDR +
-			      offset, len & 0x07, data, true);
+	err = st_ism330dlc_read_register(cdata, ST_ISM330DLC_SLV0_OUT_ADDR +
+					 offset, len & 0x07, data, true);
 	if (err < 0)
 		goto i2c_master_read_unlock_mutex;
 
@@ -982,8 +982,10 @@ static ssize_t st_ism330dlc_i2c_master_sysfs_start_selftest(struct device *dev,
 	msleep(100);
 
 	for (i = 0; i < 10; i++) {
-		err = sdata->cdata->tf->read(sdata->cdata, sdata->data_out_reg,
-			st_ism330dlc_exs_list[0].read_data_len, outdata, true);
+		err = st_ism330dlc_read_register(sdata->cdata,
+					sdata->data_out_reg,
+					st_ism330dlc_exs_list[0].read_data_len,
+					outdata, true);
 		if (err < 0) {
 			i--;
 			continue;
@@ -1007,8 +1009,10 @@ static ssize_t st_ism330dlc_i2c_master_sysfs_start_selftest(struct device *dev,
 	msleep(100);
 
 	for (i = 0; i < 10; i++) {
-		err = sdata->cdata->tf->read(sdata->cdata, sdata->data_out_reg,
-			st_ism330dlc_exs_list[0].read_data_len, outdata, true);
+		err = st_ism330dlc_read_register(sdata->cdata,
+					sdata->data_out_reg,
+					st_ism330dlc_exs_list[0].read_data_len,
+					outdata, true);
 		if (err < 0) {
 			i--;
 			continue;
@@ -1347,8 +1351,9 @@ static int st_ism330dlc_i2c_master_read_raw(struct iio_dev *indio_dev,
 
 		msleep((1000U / sdata->cdata->trigger_odr) + 2);
 
-		err = sdata->cdata->tf->read(sdata->cdata, sdata->data_out_reg,
-					     ch_num_byte, outdata, true);
+		err = st_ism330dlc_read_register(sdata->cdata,
+						 sdata->data_out_reg,
+						 ch_num_byte, outdata, true);
 		if (err < 0) {
 			st_ism330dlc_i2c_master_set_enable(sdata, false, false);
 			mutex_unlock(&sdata->cdata->odr_lock);
@@ -1718,8 +1723,9 @@ int st_ism330dlc_i2c_master_probe(struct ism330dlc_data *cdata)
 
 		st_ism330dlc_master_wait_completed(cdata);
 
-		err = cdata->tf->read(cdata, ST_ISM330DLC_SLV0_OUT_ADDR,
-				      1, &wai, true);
+		err = st_ism330dlc_read_register(cdata,
+						 ST_ISM330DLC_SLV0_OUT_ADDR,
+						 1, &wai, true);
 		if (err < 0) {
 			err = st_ism330dlc_enable_sensor_hub(cdata, false,
 					ST_MASK_ID_SENSOR_HUB_ASYNC_OP);

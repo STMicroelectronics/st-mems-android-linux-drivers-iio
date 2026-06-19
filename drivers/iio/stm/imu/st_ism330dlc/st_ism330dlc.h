@@ -4,14 +4,15 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #ifndef ST_ISM330DLC_H
 #define ST_ISM330DLC_H
 
-#include <linux/types.h>
 #include <linux/iio/trigger.h>
+#include <linux/regmap.h>
+#include <linux/types.h>
 #include <linux/version.h>
 
 #include "../../common/st_linux_compat.h"
@@ -33,9 +34,6 @@ enum st_mask_id {
 
 #define ST_INDIO_DEV_NUM			3
 
-#define ST_ISM330DLC_TX_MAX_LENGTH		12
-#define ST_ISM330DLC_RX_MAX_LENGTH		4097
-
 #define ST_ISM330DLC_BYTE_FOR_CHANNEL		2
 #define ST_ISM330DLC_FIFO_ELEMENT_LEN_BYTE	6
 
@@ -48,7 +46,9 @@ enum st_mask_id {
 #define ST_ISM330DLC_SELFTEST_FAIL_MS		"fail"
 #define ST_ISM330DLC_SELFTEST_PASS_MS		"pass"
 
-#define ST_ISM330DLC_WAKE_UP_SENSORS	BIT(ST_MASK_ID_TILT)
+#define ST_ISM330DLC_WAKE_UP_SENSORS		BIT(ST_MASK_ID_TILT)
+
+#define ST_ISM330DLC_SHIFT_VAL(val, mask)	(((val) << __ffs(mask)) & (mask))
 
 #if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)
 #define ST_ISM330DLC_NUM_CLIENTS		1
@@ -113,13 +113,6 @@ enum fifo_mode {
 	BYPASS = 0,
 	CONTINUOUS,
 };
-
-struct st_ism330dlc_transfer_buffer {
-	struct mutex buf_lock;
-	u8 rx_buf[ST_ISM330DLC_RX_MAX_LENGTH];
-	u8 tx_buf[ST_ISM330DLC_TX_MAX_LENGTH] ____cacheline_aligned;
-};
-
 struct ism330dlc_out_decimation {
 	short decimator;
 	short num_samples;
@@ -162,6 +155,7 @@ struct ism330dlc_fifo_output {
  * @irq: irq number.
  * @timestamp: timestamp value from boot process.
  * @module_id: identify iio devices of the same sensor module.
+ * @regmap: regmap instance pointer.
  */
 struct ism330dlc_data {
 	const char *name;
@@ -228,15 +222,7 @@ struct ism330dlc_data {
 	int8_t ext0_selftest_status;
 	struct mutex i2c_transfer_lock;
 
-	const struct st_ism330dlc_transfer_function *tf;
-	struct st_ism330dlc_transfer_buffer tb;
-};
-
-struct st_ism330dlc_transfer_function {
-	int (*write)(struct ism330dlc_data *cdata,
-		     u8 reg_addr, int len, u8 *data, bool b_lock);
-	int (*read)(struct ism330dlc_data *cdata,
-		    u8 reg_addr, int len, u8 *data, bool b_lock);
+	struct regmap *regmap;
 };
 
 struct ism330dlc_sensor_data {
@@ -259,8 +245,60 @@ static bool __maybe_unused st_ism330dlc_skip_basic_features(enum st_mask_id i)
 	return false;
 }
 
+static inline int st_ism330dlc_read_register(struct ism330dlc_data *cdata,
+					     u8 reg_addr, int data_len,
+					     u8 *data, bool b_lock)
+{
+	int ret;
+
+	if (b_lock)
+		mutex_lock(&cdata->bank_registers_lock);
+
+	ret = regmap_bulk_read(cdata->regmap, reg_addr,
+			       (void *)data, data_len);
+
+	if (b_lock)
+		mutex_unlock(&cdata->bank_registers_lock);
+
+	return ret;
+}
+
+static inline int st_ism330dlc_write_register(struct ism330dlc_data *cdata,
+					      u8 reg_addr, u8 len,
+					      u8 *data, bool b_lock)
+{
+	int ret;
+
+	if (b_lock)
+		mutex_lock(&cdata->bank_registers_lock);
+
+	ret = regmap_bulk_write(cdata->regmap, reg_addr,
+				(void *)data, len);
+
+	if (b_lock)
+		mutex_unlock(&cdata->bank_registers_lock);
+
+	return ret;
+}
+
+static inline
 int st_ism330dlc_write_data_with_mask(struct ism330dlc_data *cdata,
-			u8 reg_addr, u8 mask, u8 data, bool b_lock);
+				       u8 reg_addr, u8 mask,
+				       u8 val, bool b_lock)
+{
+	unsigned int data = ST_ISM330DLC_SHIFT_VAL(val, mask);
+	int ret;
+
+	if (b_lock)
+		mutex_lock(&cdata->bank_registers_lock);
+
+	ret = regmap_update_bits(cdata->regmap, reg_addr, mask, data);
+
+	if (b_lock)
+		mutex_unlock(&cdata->bank_registers_lock);
+
+	return ret;
+}
 
 int st_ism330dlc_push_data_with_timestamp(struct ism330dlc_data *cdata,
 					  u8 index, u8 *data,
@@ -280,19 +318,26 @@ int ism330dlc_read_output_data(struct ism330dlc_data *cdata, int sindex,
 int st_ism330dlc_set_drdy_irq(struct ism330dlc_sensor_data *sdata, bool state);
 
 ssize_t st_ism330dlc_sysfs_get_hwfifo_enabled(struct device *dev,
-				struct device_attribute *attr, char *buf);
+					      struct device_attribute *attr,
+					      char *buf);
 ssize_t st_ism330dlc_sysfs_set_hwfifo_enabled(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size);
+					      struct device_attribute *attr,
+					      const char *buf, size_t size);
 ssize_t st_ism330dlc_sysfs_get_hwfifo_watermark(struct device *dev,
-				struct device_attribute *attr, char *buf);
+						struct device_attribute *attr,
+						char *buf);
 ssize_t st_ism330dlc_sysfs_set_hwfifo_watermark(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size);
+						struct device_attribute *attr,
+						const char *buf, size_t size);
 ssize_t st_ism330dlc_sysfs_get_hwfifo_watermark_max(struct device *dev,
-				struct device_attribute *attr, char *buf);
+						struct device_attribute *attr,
+						char *buf);
 ssize_t st_ism330dlc_sysfs_get_hwfifo_watermark_min(struct device *dev,
-				struct device_attribute *attr, char *buf);
+						struct device_attribute *attr,
+						char *buf);
 ssize_t st_ism330dlc_sysfs_flush_fifo(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size);
+				      struct device_attribute *attr,
+				      const char *buf, size_t size);
 ssize_t st_ism330dlc_get_module_id(struct device *dev,
 				   struct device_attribute *attr,
 				   char *buf);

@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/module.h>
@@ -263,8 +263,9 @@ int st_ism330dlc_read_fifo(struct ism330dlc_data *cdata, bool async)
 	u16 read_len = 0, byte_in_pattern, num_pattern;
 	int64_t temp_counter = 0, timestamp_diff, slower_deltatime;
 
-	err = cdata->tf->read(cdata, ST_ISM330DLC_FIFO_DIFF_L,
-			      2, fifo_status, true);
+	err = st_ism330dlc_read_register(cdata, ST_ISM330DLC_FIFO_DIFF_L,
+					 sizeof(fifo_status), fifo_status,
+					 true);
 	if (err < 0)
 		return err;
 
@@ -304,8 +305,8 @@ int st_ism330dlc_read_fifo(struct ism330dlc_data *cdata, bool async)
 		return 0;
 
 #if (CONFIG_ST_ISM330DLC_IIO_LIMIT_FIFO == 0)
-	err = cdata->tf->read(cdata, ST_ISM330DLC_FIFO_DATA_OUT_L,
-			      read_len, cdata->fifo_data, true);
+	err = st_ism330dlc_read_register(cdata, ST_ISM330DLC_FIFO_DATA_OUT_L,
+					 read_len, cdata->fifo_data, true);
 	if (err < 0)
 		return err;
 #else /* CONFIG_ST_ISM330DLC_IIO_LIMIT_FIFO */
@@ -317,10 +318,11 @@ int st_ism330dlc_read_fifo(struct ism330dlc_data *cdata, bool async)
 		else
 			data_to_read = data_remaining;
 
-		err = cdata->tf->read(cdata, ST_ISM330DLC_FIFO_DATA_OUT_L,
-				      data_to_read,
-				      &cdata->fifo_data[read_len - data_remaining],
-				      true);
+		err = st_ism330dlc_read_register(cdata,
+				ST_ISM330DLC_FIFO_DATA_OUT_L,
+				data_to_read,
+				&cdata->fifo_data[read_len - data_remaining],
+				true);
 		if (err < 0)
 			return err;
 
@@ -410,8 +412,9 @@ int ism330dlc_read_output_data(struct ism330dlc_data *cdata, int sindex, bool pu
 	struct iio_dev *indio_dev = cdata->indio_dev[sindex];
 	struct ism330dlc_sensor_data *sdata = iio_priv(indio_dev);
 
-	err = cdata->tf->read(cdata, sdata->data_out_reg,
-			      ST_ISM330DLC_BYTE_FOR_CHANNEL * 3, data, true);
+	err = st_ism330dlc_read_register(cdata, sdata->data_out_reg,
+					 ST_ISM330DLC_BYTE_FOR_CHANNEL * 3,
+					 data, true);
 	if (err < 0)
 		return err;
 
