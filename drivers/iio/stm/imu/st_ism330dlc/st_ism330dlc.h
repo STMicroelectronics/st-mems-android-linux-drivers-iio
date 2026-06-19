@@ -376,10 +376,7 @@ static inline void st_ism330dlc_flush_works(void)
 }
 #endif /* CONFIG_IIO_TRIGGER */
 
-#if IS_ENABLED(CONFIG_PM)
-int st_ism330dlc_common_suspend(struct ism330dlc_data *cdata);
-int st_ism330dlc_common_resume(struct ism330dlc_data *cdata);
-#endif /* CONFIG_PM */
+extern const struct dev_pm_ops st_ism330dlc_pm_ops;
 
 #if IS_ENABLED(CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT)
 int st_ism330dlc_write_embedded_registers(struct ism330dlc_data *cdata,

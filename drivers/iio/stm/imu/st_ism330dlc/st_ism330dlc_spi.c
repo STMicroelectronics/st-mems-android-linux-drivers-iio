@@ -36,30 +36,6 @@ static int st_ism330dlc_spi_probe(struct spi_device *spi)
 				  spi->modalias, regmap);
 }
 
-#if IS_ENABLED(CONFIG_PM)
-static int __maybe_unused st_ism330dlc_suspend(struct device *dev)
-{
-	struct ism330dlc_data *cdata = spi_get_drvdata(to_spi_device(dev));
-
-	return st_ism330dlc_common_suspend(cdata);
-}
-
-static int __maybe_unused st_ism330dlc_resume(struct device *dev)
-{
-	struct ism330dlc_data *cdata = spi_get_drvdata(to_spi_device(dev));
-
-	return st_ism330dlc_common_resume(cdata);
-}
-
-static const struct dev_pm_ops st_ism330dlc_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(st_ism330dlc_suspend, st_ism330dlc_resume)
-};
-
-#define ST_ISM330DLC_PM_OPS		(&st_ism330dlc_pm_ops)
-#else /* CONFIG_PM */
-#define ST_ISM330DLC_PM_OPS		NULL
-#endif /* CONFIG_PM */
-
 static const struct spi_device_id st_ism330dlc_id_table[] = {
 	{ ISM330DLC_DEV_NAME },
 	{},
@@ -83,7 +59,7 @@ static struct spi_driver st_ism330dlc_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "st-ism330dlc-spi",
-		.pm = ST_ISM330DLC_PM_OPS,
+		.pm = &st_ism330dlc_pm_ops,
 		.of_match_table = of_match_ptr(ism330dlc_of_match),
 	},
 	.probe = st_ism330dlc_spi_probe,

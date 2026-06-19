@@ -2820,12 +2820,12 @@ int st_ism330dlc_probe(struct device *dev, int irq,
 }
 EXPORT_SYMBOL(st_ism330dlc_probe);
 
-#if IS_ENABLED(CONFIG_PM)
-int __maybe_unused st_ism330dlc_common_suspend(struct ism330dlc_data *cdata)
+static int __maybe_unused st_ism330dlc_suspend(struct device *dev)
 {
-	int err, i;
-	u8 tmp_sensors_enabled;
+	struct ism330dlc_data *cdata = dev_get_drvdata(dev);
 	struct ism330dlc_sensor_data *sdata;
+	u8 tmp_sensors_enabled;
+	int err, i;
 
 	tmp_sensors_enabled = cdata->sensors_enabled;
 
@@ -2847,12 +2847,12 @@ int __maybe_unused st_ism330dlc_common_suspend(struct ism330dlc_data *cdata)
 
 	return 0;
 }
-EXPORT_SYMBOL(st_ism330dlc_common_suspend);
 
-int __maybe_unused st_ism330dlc_common_resume(struct ism330dlc_data *cdata)
+static int __maybe_unused st_ism330dlc_resume(struct device *dev)
 {
-	int err, i;
+	struct ism330dlc_data *cdata = dev_get_drvdata(dev);
 	struct ism330dlc_sensor_data *sdata;
+	int err, i;
 
 	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
 		if (i == ST_MASK_ID_TILT)
@@ -2874,8 +2874,11 @@ int __maybe_unused st_ism330dlc_common_resume(struct ism330dlc_data *cdata)
 
 	return 0;
 }
-EXPORT_SYMBOL(st_ism330dlc_common_resume);
-#endif /* CONFIG_PM */
+
+const struct dev_pm_ops st_ism330dlc_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(st_ism330dlc_suspend, st_ism330dlc_resume)
+};
+EXPORT_SYMBOL(st_ism330dlc_pm_ops);
 
 MODULE_AUTHOR("MEMS Software Solutions Team");
 MODULE_DESCRIPTION("STMicroelectronics ism330dlc core driver");
