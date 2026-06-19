@@ -141,7 +141,7 @@ exit_irq:
 }
 
 int st_lsm6ds3h_allocate_triggers(struct lsm6ds3h_data *cdata,
-				const struct iio_trigger_ops *trigger_ops)
+				  const struct iio_trigger_ops *trigger_ops)
 {
 	int err, i, n;
 
@@ -149,78 +149,40 @@ int st_lsm6ds3h_allocate_triggers(struct lsm6ds3h_data *cdata,
 		if (st_lsm6ds3h_skip_basic_features(i))
 			continue;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)
-		cdata->trig[i] = iio_trigger_alloc(cdata->dev,
+		cdata->trig[i] = devm_iio_trigger_alloc(cdata->dev,
 						"%s-trigger",
 						cdata->indio_dev[i]->name);
-#else /* LINUX_VERSION_CODE */
-		cdata->trig[i] = iio_trigger_alloc("%s-trigger",
-						cdata->indio_dev[i]->name);
-#endif /* LINUX_VERSION_CODE */
-
 		if (!cdata->trig[i]) {
 			dev_err(cdata->dev,
 					"failed to allocate iio trigger.\n");
-			err = -ENOMEM;
-			goto deallocate_trigger;
+			return -ENOMEM;
 		}
+
 		iio_trigger_set_drvdata(cdata->trig[i], cdata->indio_dev[i]);
 		cdata->trig[i]->ops = trigger_ops;
 		cdata->trig[i]->dev.parent = cdata->dev;
 	}
 
-	err = request_threaded_irq(cdata->irq, NULL, lsm6ds3h_irq_management,
+	err = devm_request_threaded_irq(cdata->dev, cdata->irq, NULL,
+					lsm6ds3h_irq_management,
 					IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
 					cdata->name, cdata);
 	if (err)
-		goto deallocate_trigger;
+		return err;
 
 	for (n = 0; n < ST_INDIO_DEV_NUM; n++) {
 		if (st_lsm6ds3h_skip_basic_features(n))
 			continue;
 
-		err = iio_trigger_register(cdata->trig[n]);
+		err = devm_iio_trigger_register(cdata->dev, cdata->trig[n]);
 		if (err < 0) {
 			dev_err(cdata->dev,
 					"failed to register iio trigger.\n");
-			goto free_irq;
+			return err;
 		}
-		cdata->indio_dev[n]->trig = cdata->trig[n];
+		cdata->indio_dev[n]->trig = iio_trigger_get(cdata->trig[n]);
 	}
 
 	return 0;
-
-free_irq:
-	free_irq(cdata->irq, cdata);
-	for (n--; n >= 0; n--) {
-		if (st_lsm6ds3h_skip_basic_features(n))
-			continue;
-
-		iio_trigger_unregister(cdata->trig[n]);
-	}
-deallocate_trigger:
-	for (i--; i >= 0; i--) {
-		if (st_lsm6ds3h_skip_basic_features(i))
-			continue;
-
-		iio_trigger_free(cdata->trig[i]);
-	}
-
-	return err;
 }
 EXPORT_SYMBOL(st_lsm6ds3h_allocate_triggers);
-
-void st_lsm6ds3h_deallocate_triggers(struct lsm6ds3h_data *cdata)
-{
-	int i;
-
-	free_irq(cdata->irq, cdata);
-
-	for (i = 0; i < ST_INDIO_DEV_NUM; i++) {
-		if (st_lsm6ds3h_skip_basic_features(i))
-			continue;
-
-		iio_trigger_unregister(cdata->trig[i]);
-	}
-}
-EXPORT_SYMBOL(st_lsm6ds3h_deallocate_triggers);
