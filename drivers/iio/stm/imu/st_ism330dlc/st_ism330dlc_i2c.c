@@ -25,9 +25,7 @@ static const struct regmap_config st_ism330dlc_i2c_regmap_config = {
 
 ST_I2C_PROBE(st_ism330dlc_i2c_probe)
 {
-	struct ism330dlc_data *cdata;
 	struct regmap *regmap;
-	int err;
 
 	regmap = devm_regmap_init_i2c(client, &st_ism330dlc_i2c_regmap_config);
 	if (IS_ERR(regmap)) {
@@ -37,45 +35,9 @@ ST_I2C_PROBE(st_ism330dlc_i2c_probe)
 		return PTR_ERR(regmap);
 	}
 
-	cdata = kmalloc(sizeof(*cdata), GFP_KERNEL);
-	if (!cdata)
-		return -ENOMEM;
-
-	cdata->dev = &client->dev;
-	cdata->name = client->name;
-	cdata->regmap = regmap;
-	i2c_set_clientdata(client, cdata);
-
-	err = st_ism330dlc_common_probe(cdata, client->irq);
-	if (err < 0)
-		goto free_data;
-
-	return 0;
-
-free_data:
-	kfree(cdata);
-	return err;
+	return st_ism330dlc_probe(&client->dev, client->irq,
+				  client->name, regmap);
 }
-
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void st_ism330dlc_i2c_remove(struct i2c_client *client)
-{
-	struct ism330dlc_data *cdata = i2c_get_clientdata(client);
-
-	st_ism330dlc_common_remove(cdata, client->irq);
-	kfree(cdata);
-}
-#else /* LINUX_VERSION_CODE */
-static int st_ism330dlc_i2c_remove(struct i2c_client *client)
-{
-	struct ism330dlc_data *cdata = i2c_get_clientdata(client);
-
-	st_ism330dlc_common_remove(cdata, client->irq);
-	kfree(cdata);
-
-	return 0;
-}
-#endif /* LINUX_VERSION_CODE */
 
 #if IS_ENABLED(CONFIG_PM)
 static int __maybe_unused st_ism330dlc_suspend(struct device *dev)
@@ -128,7 +90,6 @@ static struct i2c_driver st_ism330dlc_driver = {
 		.of_match_table = of_match_ptr(ism330dlc_of_match),
 	},
 	.probe = st_ism330dlc_i2c_probe,
-	.remove = st_ism330dlc_i2c_remove,
 	.id_table = st_ism330dlc_id_table,
 };
 module_i2c_driver(st_ism330dlc_driver);

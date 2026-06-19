@@ -516,7 +516,8 @@ int st_ism330dlc_allocate_rings(struct ism330dlc_data *cdata)
 
 	sdata = iio_priv(cdata->indio_dev[ST_MASK_ID_ACCEL]);
 
-	err = iio_triggered_buffer_setup(cdata->indio_dev[ST_MASK_ID_ACCEL],
+	err = devm_iio_triggered_buffer_setup(cdata->dev,
+				cdata->indio_dev[ST_MASK_ID_ACCEL],
 				NULL, &st_ism330dlc_outdata_trigger_handler,
 				&st_ism330dlc_buffer_setup_ops);
 	if (err < 0)
@@ -524,40 +525,21 @@ int st_ism330dlc_allocate_rings(struct ism330dlc_data *cdata)
 
 	sdata = iio_priv(cdata->indio_dev[ST_MASK_ID_GYRO]);
 
-	err = iio_triggered_buffer_setup(cdata->indio_dev[ST_MASK_ID_GYRO],
+	err = devm_iio_triggered_buffer_setup(cdata->dev,
+				cdata->indio_dev[ST_MASK_ID_GYRO],
 				NULL, &st_ism330dlc_outdata_trigger_handler,
 				&st_ism330dlc_buffer_setup_ops);
 	if (err < 0)
-		goto buffer_cleanup_accel;
+		return err;
 
 #if IS_ENABLED(CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES)
-	err = iio_triggered_buffer_setup(
+	err = devm_iio_triggered_buffer_setup(cdata->dev,
 				cdata->indio_dev[ST_MASK_ID_TILT],
 				&st_ism330dlc_handler_empty, NULL,
 				&st_ism330dlc_buffer_setup_ops);
 	if (err < 0)
-		goto buffer_cleanup_gyro;
+		return err;
 #endif /* CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
 
 	return 0;
-
-#if IS_ENABLED(CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES)
-buffer_cleanup_gyro:
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_GYRO]);
-#endif /* CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
-
-buffer_cleanup_accel:
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_ACCEL]);
-	return err;
-}
-
-void st_ism330dlc_deallocate_rings(struct ism330dlc_data *cdata)
-{
-
-#if IS_ENABLED(CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES)
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_TILT]);
-#endif /* CONFIG_IIO_ST_ISM330DLC_EN_BASIC_FEATURES */
-
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_ACCEL]);
-	iio_triggered_buffer_cleanup(cdata->indio_dev[ST_MASK_ID_GYRO]);
 }

@@ -304,8 +304,8 @@ int st_ism330dlc_push_data_with_timestamp(struct ism330dlc_data *cdata,
 					  u8 index, u8 *data,
 					  int64_t timestamp);
 
-int st_ism330dlc_common_probe(struct ism330dlc_data *cdata, int irq);
-void st_ism330dlc_common_remove(struct ism330dlc_data *cdata, int irq);
+int st_ism330dlc_probe(struct device *dev, int irq,
+		       char *name, struct regmap *regmap);
 
 int st_ism330dlc_set_enable(struct ism330dlc_sensor_data *sdata,
 			    bool enable, bool buffer);
@@ -344,7 +344,6 @@ ssize_t st_ism330dlc_get_module_id(struct device *dev,
 
 #if IS_ENABLED(CONFIG_IIO_BUFFER)
 int st_ism330dlc_allocate_rings(struct ism330dlc_data *cdata);
-void st_ism330dlc_deallocate_rings(struct ism330dlc_data *cdata);
 int st_ism330dlc_trig_set_state(struct iio_trigger *trig, bool state);
 int st_ism330dlc_read_fifo(struct ism330dlc_data *cdata, bool async);
 #define ST_ISM330DLC_TRIGGER_SET_STATE (&st_ism330dlc_trig_set_state)
@@ -352,9 +351,6 @@ int st_ism330dlc_read_fifo(struct ism330dlc_data *cdata, bool async);
 static inline int st_ism330dlc_allocate_rings(struct ism330dlc_data *cdata)
 {
 	return 0;
-}
-static inline void st_ism330dlc_deallocate_rings(struct ism330dlc_data *cdata)
-{
 }
 static inline int st_ism330dlc_read_fifo(struct ism330dlc_data *cdata,
 					 bool async)
@@ -367,18 +363,12 @@ static inline int st_ism330dlc_read_fifo(struct ism330dlc_data *cdata,
 #if IS_ENABLED(CONFIG_IIO_TRIGGER)
 int st_ism330dlc_allocate_triggers(struct ism330dlc_data *cdata,
 				   const struct iio_trigger_ops *trigger_ops);
-void st_ism330dlc_deallocate_triggers(struct ism330dlc_data *cdata);
 void st_ism330dlc_flush_works(void);
 #else /* CONFIG_IIO_TRIGGER */
 static inline int st_ism330dlc_allocate_triggers(struct ism330dlc_data *cdata,
 			const struct iio_trigger_ops *trigger_ops, int irq)
 {
 	return 0;
-}
-static inline void st_ism330dlc_deallocate_triggers(struct ism330dlc_data *cdata,
-						    int irq)
-{
-	return;
 }
 static inline void st_ism330dlc_flush_works(void)
 {
@@ -395,7 +385,6 @@ int st_ism330dlc_common_resume(struct ism330dlc_data *cdata);
 int st_ism330dlc_write_embedded_registers(struct ism330dlc_data *cdata,
 					  u8 reg_addr, u8 *data, int len);
 int st_ism330dlc_i2c_master_probe(struct ism330dlc_data *cdata);
-int st_ism330dlc_i2c_master_exit(struct ism330dlc_data *cdata);
 #else /* CONFIG_ST_ISM330DLC_IIO_MASTER_SUPPORT */
 static inline int
 st_ism330dlc_write_embedded_registers(struct ism330dlc_data *cdata,
@@ -404,10 +393,6 @@ st_ism330dlc_write_embedded_registers(struct ism330dlc_data *cdata,
 	return 0;
 }
 static inline int st_ism330dlc_i2c_master_probe(struct ism330dlc_data *cdata)
-{
-	return 0;
-}
-static inline int st_ism330dlc_i2c_master_exit(struct ism330dlc_data *cdata)
 {
 	return 0;
 }
