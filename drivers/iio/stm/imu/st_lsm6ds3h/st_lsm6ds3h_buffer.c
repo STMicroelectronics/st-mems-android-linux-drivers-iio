@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/module.h>
@@ -269,13 +269,13 @@ int st_lsm6ds3h_read_fifo(struct lsm6ds3h_data *cdata, bool async)
 	u16 read_len = 0, byte_in_pattern, num_pattern;
 	int64_t temp_counter = 0, timestamp_diff, slower_deltatime;
 
-	err = cdata->tf->read(cdata, ST_LSM6DS3H_FIFO_DIFF_L,
-						2, fifo_status, true);
+	err = st_lsm6ds3h_read_register(cdata, ST_LSM6DS3H_FIFO_DIFF_L,
+					sizeof(fifo_status), fifo_status,
+					true);
 	if (err < 0)
 		return err;
 
-	timestamp_diff =
-					iio_get_time_ns(cdata->indio_dev[ST_MASK_ID_ACCEL]);
+	timestamp_diff = iio_get_time_ns(cdata->indio_dev[ST_MASK_ID_ACCEL]);
 
 	if (fifo_status[1] & ST_LSM6DS3H_FIFO_DATA_OVR) {
 		st_lsm6ds3h_set_fifo_mode(cdata, BYPASS);
@@ -311,7 +311,7 @@ int st_lsm6ds3h_read_fifo(struct lsm6ds3h_data *cdata, bool async)
 		return 0;
 
 #if (CONFIG_ST_LSM6DS3H_IIO_LIMIT_FIFO == 0)
-	err = cdata->tf->read(cdata, ST_LSM6DS3H_FIFO_DATA_OUT_L,
+	err = st_lsm6ds3h_read_register(cdata, ST_LSM6DS3H_FIFO_DATA_OUT_L,
 					read_len, cdata->fifo_data, true);
 	if (err < 0)
 		return err;
@@ -324,9 +324,11 @@ int st_lsm6ds3h_read_fifo(struct lsm6ds3h_data *cdata, bool async)
 		else
 			data_to_read = data_remaining;
 
-		err = cdata->tf->read(cdata, ST_LSM6DS3H_FIFO_DATA_OUT_L,
+		err = st_lsm6ds3h_read_register(cdata,
+				ST_LSM6DS3H_FIFO_DATA_OUT_L,
 				data_to_read,
-				&cdata->fifo_data[read_len - data_remaining], true);
+				&cdata->fifo_data[read_len - data_remaining],
+				true);
 		if (err < 0)
 			return err;
 
@@ -416,14 +418,15 @@ int lsm6ds3h_read_output_data(struct lsm6ds3h_data *cdata, int sindex, bool push
 	struct iio_dev *indio_dev = cdata->indio_dev[sindex];
 	struct lsm6ds3h_sensor_data *sdata = iio_priv(indio_dev);
 
-	err = cdata->tf->read(cdata, sdata->data_out_reg,
-				ST_LSM6DS3H_BYTE_FOR_CHANNEL * 3, data, true);
+	err = st_lsm6ds3h_read_register(cdata, sdata->data_out_reg,
+					ST_LSM6DS3H_BYTE_FOR_CHANNEL * 3,
+					data, true);
 	if (err < 0)
 		return err;
 
 	if (push)
 		st_lsm6ds3h_push_data_with_timestamp(cdata, sindex,
-							data, cdata->timestamp);
+						     data, cdata->timestamp);
 
 	return 0;
 }
@@ -449,7 +452,7 @@ st_lsm6ds3h_step_counter_trigger_handler(int irq, void *p)
 	struct lsm6ds3h_sensor_data *sdata = iio_priv(indio_dev);
 
 	if (!sdata->cdata->reset_steps) {
-		err = sdata->cdata->tf->read(sdata->cdata,
+		err = st_lsm6ds3h_read_register(sdata->cdata,
 					(u8)indio_dev->channels[0].address,
 					ST_LSM6DS3H_BYTE_FOR_CHANNEL,
 					steps_data, true);

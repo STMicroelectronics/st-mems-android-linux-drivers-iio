@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -49,8 +49,9 @@ static irqreturn_t lsm6ds3h_irq_management(int irq, void *private)
 	if ((cdata->sensors_enabled & ~cdata->sensors_use_fifo) &
 			(BIT(ST_MASK_ID_ACCEL) | BIT(ST_MASK_ID_GYRO) |
 						BIT(ST_MASK_ID_EXT0))) {
-		err = cdata->tf->read(cdata, ST_LSM6DS3H_ACCEL_DATA_AVL_ADDR,
-						1, &src_accel_gyro, true);
+		err = st_lsm6ds3h_read_register(cdata,
+					ST_LSM6DS3H_ACCEL_DATA_AVL_ADDR,
+					1, &src_accel_gyro, true);
 		if (err < 0)
 			goto read_fifo_status;
 
@@ -104,8 +105,8 @@ read_fifo_status:
 	if (cdata->sensors_use_fifo)
 		st_lsm6ds3h_read_fifo(cdata, false);
 
-	err = cdata->tf->read(cdata, ST_LSM6DS3H_SRC_FUNC_ADDR,
-						1, &src_dig_func, true);
+	err = st_lsm6ds3h_read_register(cdata, ST_LSM6DS3H_SRC_FUNC_ADDR,
+					1, &src_dig_func, true);
 	if (err < 0)
 		goto exit_irq;
 
