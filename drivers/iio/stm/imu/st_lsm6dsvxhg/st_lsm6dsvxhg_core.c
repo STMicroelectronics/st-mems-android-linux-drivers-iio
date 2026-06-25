@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2025 STMicroelectronics Inc.
+ * Copyright 2025, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -65,10 +65,10 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 					.addr = ST_LSM6DSVXHG_CTRL8_ADDR,
 					.mask = GENMASK(1, 0),
 				},
-				.fs_avl[0] = { IIO_G_TO_M_S_2(61000),  0x0 },
-				.fs_avl[1] = { IIO_G_TO_M_S_2(122000), 0x1 },
-				.fs_avl[2] = { IIO_G_TO_M_S_2(244000), 0x2 },
-				.fs_avl[3] = { IIO_G_TO_M_S_2(488000), 0x3 },
+				.fs_avl[0] = { IIO_G_TO_M_S_2(61000),  0x0,  2 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(122000), 0x1,  4 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(244000), 0x2,  8 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(488000), 0x3, 16 },
 			},
 			[ST_LSM6DSVXHG_ID_GYRO] = {
 				.size = 5,
@@ -76,25 +76,25 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 					.addr = ST_LSM6DSVXHG_CTRL6_ADDR,
 					.mask = GENMASK(3, 0),
 				},
-				.fs_avl[0] = { IIO_DEGREE_TO_RAD(8750000),   0x1 },
-				.fs_avl[1] = { IIO_DEGREE_TO_RAD(17500000),  0x2 },
-				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000),  0x3 },
-				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000),  0x4 },
-				.fs_avl[4] = { IIO_DEGREE_TO_RAD(140000000), 0x5 },
+				.fs_avl[0] = { IIO_DEGREE_TO_RAD(8750000),   0x1,  250 },
+				.fs_avl[1] = { IIO_DEGREE_TO_RAD(17500000),  0x2,  500 },
+				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000),  0x3, 1000 },
+				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000),  0x4, 2000 },
+				.fs_avl[4] = { IIO_DEGREE_TO_RAD(140000000), 0x5, 4000 },
 			},
 			[ST_LSM6DSVXHG_ID_TEMP] = {
 				.size = 1,
-				.fs_avl[0] = { (1000000 / ST_LSM6DSVXHG_TEMP_GAIN), 0x0 },
+				.fs_avl[0] = { (1000000 / ST_LSM6DSVXHG_TEMP_GAIN), 0x0, 85 },
 			},
-			[ST_LSM6DSVXHG_ID_HIG_ACC] = {
+			[ST_LSM6DSVXHG_ID_HG_ACC] = {
 				.size = 3,
 				.reg = {
 					.addr = ST_LSM6DSVXHG_CTRL1_XL_HG_ADDR,
 					.mask = ST_LSM6DSVXHG_FS_XL_HG_MASK,
 				},
-				.fs_avl[0] = { IIO_G_TO_M_S_2(976000),  0x0 },
-				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000), 0x1 },
-				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000), 0x2 },
+				.fs_avl[0] = { IIO_G_TO_M_S_2(976000),  0x0, 32 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000), 0x1, 64 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000), 0x2, 80 },
 			},
 		},
 	},
@@ -113,10 +113,10 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 					.addr = ST_LSM6DSVXHG_CTRL8_ADDR,
 					.mask = GENMASK(1, 0),
 				},
-				.fs_avl[0] = { IIO_G_TO_M_S_2(61000),  0x0 },
-				.fs_avl[1] = { IIO_G_TO_M_S_2(122000), 0x1 },
-				.fs_avl[2] = { IIO_G_TO_M_S_2(244000), 0x2 },
-				.fs_avl[3] = { IIO_G_TO_M_S_2(488000), 0x3 },
+				.fs_avl[0] = { IIO_G_TO_M_S_2(61000),  0x0,  2 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(122000), 0x1,  4 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(244000), 0x2,  8 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(488000), 0x3, 16 },
 			},
 			[ST_LSM6DSVXHG_ID_GYRO] = {
 				.size = 5,
@@ -124,27 +124,27 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 					.addr = ST_LSM6DSVXHG_CTRL6_ADDR,
 					.mask = GENMASK(3, 0),
 				},
-				.fs_avl[0] = { IIO_DEGREE_TO_RAD(8750000),   0x1 },
-				.fs_avl[1] = { IIO_DEGREE_TO_RAD(17500000),  0x2 },
-				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000),  0x3 },
-				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000),  0x4 },
-				.fs_avl[4] = { IIO_DEGREE_TO_RAD(140000000), 0x5 },
+				.fs_avl[0] = { IIO_DEGREE_TO_RAD(8750000),   0x1,  250 },
+				.fs_avl[1] = { IIO_DEGREE_TO_RAD(17500000),  0x2,  500 },
+				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000),  0x3, 1000 },
+				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000),  0x4, 2000 },
+				.fs_avl[4] = { IIO_DEGREE_TO_RAD(140000000), 0x5, 4000 },
 			},
 			[ST_LSM6DSVXHG_ID_TEMP] = {
 				.size = 1,
-				.fs_avl[0] = { (1000000 / ST_LSM6DSVXHG_TEMP_GAIN), 0x0 },
+				.fs_avl[0] = { (1000000 / ST_LSM6DSVXHG_TEMP_GAIN), 0x0, 85 },
 			},
-			[ST_LSM6DSVXHG_ID_HIG_ACC] = {
+			[ST_LSM6DSVXHG_ID_HG_ACC] = {
 				.size = 5,
 				.reg = {
 					.addr = ST_LSM6DSVXHG_CTRL1_XL_HG_ADDR,
 					.mask = ST_LSM6DSVXHG_FS_XL_HG_MASK,
 				},
-				.fs_avl[0] = { IIO_G_TO_M_S_2(976000),   0x0 },
-				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000),  0x1 },
-				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000),  0x2 },
-				.fs_avl[3] = { IIO_G_TO_M_S_2(7808000),  0x3 },
-				.fs_avl[4] = { IIO_G_TO_M_S_2(10417000), 0x4 },
+				.fs_avl[0] = { IIO_G_TO_M_S_2(976000),   0x0,  32 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000),  0x1,  64 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000),  0x2, 128 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(7808000),  0x3, 256 },
+				.fs_avl[4] = { IIO_G_TO_M_S_2(10417000), 0x4, 320 },
 			},
 		},
 	},
@@ -163,10 +163,10 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 					.addr = ST_LSM6DSVXHG_CTRL8_ADDR,
 					.mask = GENMASK(1, 0),
 				},
-				.fs_avl[0] = { IIO_G_TO_M_S_2(61000),  0x0 },
-				.fs_avl[1] = { IIO_G_TO_M_S_2(122000), 0x1 },
-				.fs_avl[2] = { IIO_G_TO_M_S_2(244000), 0x2 },
-				.fs_avl[3] = { IIO_G_TO_M_S_2(488000), 0x3 },
+				.fs_avl[0] = { IIO_G_TO_M_S_2(61000),  0x0,  2 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(122000), 0x1,  4 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(244000), 0x2,  8 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(488000), 0x3, 16 },
 			},
 			[ST_LSM6DSVXHG_ID_GYRO] = {
 				.size = 5,
@@ -174,26 +174,26 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 					.addr = ST_LSM6DSVXHG_CTRL6_ADDR,
 					.mask = GENMASK(3, 0),
 				},
-				.fs_avl[0] = { IIO_DEGREE_TO_RAD(8750000),   0x1 },
-				.fs_avl[1] = { IIO_DEGREE_TO_RAD(17500000),  0x2 },
-				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000),  0x3 },
-				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000),  0x4 },
-				.fs_avl[4] = { IIO_DEGREE_TO_RAD(140000000), 0x5 },
+				.fs_avl[0] = { IIO_DEGREE_TO_RAD(8750000),   0x1,  250 },
+				.fs_avl[1] = { IIO_DEGREE_TO_RAD(17500000),  0x2,  500 },
+				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000),  0x3, 1000 },
+				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000),  0x4, 2000 },
+				.fs_avl[4] = { IIO_DEGREE_TO_RAD(140000000), 0x5, 4000 },
 			},
 			[ST_LSM6DSVXHG_ID_TEMP] = {
 				.size = 1,
-				.fs_avl[0] = { (1000000 / ST_LSM6DSVXHG_TEMP_GAIN), 0x0 },
+				.fs_avl[0] = { (1000000 / ST_LSM6DSVXHG_TEMP_GAIN), 0x0, 85 },
 			},
-			[ST_LSM6DSVXHG_ID_HIG_ACC] = {
+			[ST_LSM6DSVXHG_ID_HG_ACC] = {
 				.size = 4,
 				.reg = {
 					.addr = ST_LSM6DSVXHG_CTRL1_XL_HG_ADDR,
 					.mask = ST_LSM6DSVXHG_FS_XL_HG_MASK,
 				},
-				.fs_avl[0] = { IIO_G_TO_M_S_2(976000),   0x0 },
-				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000),  0x1 },
-				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000),  0x2 },
-				.fs_avl[3] = { IIO_G_TO_M_S_2(10417000), 0x3 },
+				.fs_avl[0] = { IIO_G_TO_M_S_2(976000),   0x0,  32 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000),  0x1,  64 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000),  0x2, 128 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(10417000), 0x3, 256 },
 			},
 		},
 	},
@@ -234,7 +234,7 @@ static struct {
 		.hz2nsamples[6] = { 480,   2100 },
 		.hz2nsamples[7] = { 960,   1050 },
 	},
-	[ST_LSM6DSVXHG_ID_HIG_ACC] = {
+	[ST_LSM6DSVXHG_ID_HG_ACC] = {
 		.size = 2,
 
 		/* delay calculated based on table 23 of AN6119 */
@@ -487,7 +487,7 @@ st_lsm6dsvxhg_odr_table[] = {
 		.odr_avl[2] = { 15,      0, 0x00, 0x02 },
 		.odr_avl[3] = { 60,      0, 0x00, 0x03 },
 	},
-	[ST_LSM6DSVXHG_ID_HIG_ACC] = {
+	[ST_LSM6DSVXHG_ID_HG_ACC] = {
 		.size = 3,
 		.reg = {
 			.addr = ST_LSM6DSVXHG_CTRL1_XL_HG_ADDR,
@@ -620,7 +620,7 @@ static const struct iio_chan_spec st_lsm6dsvxhg_sflp_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
-static const struct iio_chan_spec st_lsm6dsvxhg_hig_acc_channels[] = {
+static const struct iio_chan_spec st_lsm6dsvxhg_hg_acc_channels[] = {
 	ST_LSM6DSVXHG_DATA_CHANNEL(IIO_ACCEL,
 				   ST_LSM6DSVXHG_UI_OUTX_L_A_OIS_HG_ADDR,
 				   1, IIO_MOD_X, 0, 16, 16, 's',
@@ -634,6 +634,7 @@ static const struct iio_chan_spec st_lsm6dsvxhg_hig_acc_channels[] = {
 				   1, IIO_MOD_Z, 2, 16, 16, 's',
 				   st_lsm6dsvxhg_chan_spec_ext_info),
 	ST_LSM6DSVXHG_EVENT_CHANNEL(IIO_ACCEL, flush),
+	ST_LSM6DSVXHG_EVENT_CHANNEL(IIO_ACCEL, hg_wakeup),
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 };
 
@@ -921,6 +922,45 @@ st_lsm6dsvxhg_check_gyro_odr_dependency(struct st_lsm6dsvxhg_sensor *sensor,
 	return 0;
 }
 
+static int
+st_lsm6dsvxhg_check_hg_acc_odr_dependency(struct st_lsm6dsvxhg_sensor *sensor,
+					  bool is_event, int req_hw_odr,
+					  int req_hw_uodr, int *odr, int *uodr)
+{
+	enum st_lsm6dsvxhg_sensor_id id = ST_LSM6DSVXHG_ID_HG_ACC;
+	struct st_lsm6dsvxhg_hw *hw = sensor->hw;
+	struct st_lsm6dsvxhg_sensor *prim_sensor;
+	int hw_odr = 0;
+	int ret;
+
+	prim_sensor = iio_priv(hw->iio_devs[ST_LSM6DSVXHG_ID_HG_ACC]);
+
+	/* manage event status */
+	if (is_event) {
+		/* xl on */
+		if (hw->enable_mask & BIT_ULL(id))
+			hw_odr = max_t(u16, prim_sensor->odr, req_hw_odr);
+		else
+			hw_odr = req_hw_odr;
+	} else {
+		if (hw->enable_ev_mask &
+		    (BIT_ULL(ST_SM6DSVXHG_EVENT_HG_WAKEUP) |
+		     BIT_ULL(ST_SM6DSVXHG_EVENT_HG_SHOCK)))
+			hw_odr = max_t(u16, prim_sensor->event_hg_hw_odr, req_hw_odr);
+		else
+			hw_odr = req_hw_odr;
+	}
+
+	ret = st_lsm6dsvxhg_get_odr_val(id, hw_odr, 0, odr, uodr, NULL);
+	if (ret < 0)
+		return ret;
+
+	if (is_event)
+		prim_sensor->event_hg_hw_odr = req_hw_odr;
+
+	return 0;
+}
+
 int st_lsm6dsvxhg_set_odr(struct st_lsm6dsvxhg_sensor *sensor, bool is_event,
 			  int req_odr, int req_uodr)
 {
@@ -985,10 +1025,16 @@ int st_lsm6dsvxhg_set_odr(struct st_lsm6dsvxhg_sensor *sensor, bool is_event,
 		return st_lsm6dsvxhg_set_hw_sensor_odr(hw,
 						       ST_LSM6DSVXHG_ID_GYRO,
 						       odr, uodr);
-	case ST_LSM6DSVXHG_ID_HIG_ACC:
+	case ST_LSM6DSVXHG_ID_HG_ACC:
+		err = st_lsm6dsvxhg_check_hg_acc_odr_dependency(sensor, is_event,
+								req_odr, req_uodr,
+								&odr, &uodr);
+		if (err < 0)
+			return err;
+
 		return st_lsm6dsvxhg_set_hw_sensor_odr(hw,
-						       ST_LSM6DSVXHG_ID_HIG_ACC,
-						       req_odr, req_uodr);
+						       ST_LSM6DSVXHG_ID_HG_ACC,
+						       odr, uodr);
 	default:
 		break;
 	}
@@ -1217,8 +1263,10 @@ static int st_lsm6dsvxhg_write_raw(struct iio_dev *iio_dev,
 		err = st_lsm6dsvxhg_set_full_scale(sensor, val2);
 
 		/* some events depends on xl full scale */
-		if (chan->type == IIO_ACCEL)
+		if (sensor->id == ST_LSM6DSVXHG_ID_ACC)
 			err = st_lsm6dsvxhg_update_threshold_events(sensor->hw);
+		if (sensor->id == ST_LSM6DSVXHG_ID_HG_ACC)
+			err = st_lsm6dsvxhg_update_hg_threshold_events(sensor->hw);
 		st_iio_device_release_direct(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
@@ -1252,8 +1300,10 @@ static int st_lsm6dsvxhg_write_raw(struct iio_dev *iio_dev,
 						break;
 
 					/* some events depends on xl odr */
-					if (chan->type == IIO_ACCEL)
+					if (sensor->id == ST_LSM6DSVXHG_ID_ACC)
 						err = st_lsm6dsvxhg_update_duration_events(sensor->hw);
+					if (sensor->id == ST_LSM6DSVXHG_ID_HG_ACC)
+						err = st_lsm6dsvxhg_update_hg_duration_events(sensor->hw);
 					break;
 				default:
 					break;
@@ -1978,7 +2028,7 @@ static const struct iio_info st_lsm6dsvxhg_temp_info = {
 	.write_raw = st_lsm6dsvxhg_write_raw,
 };
 
-static struct attribute *st_lsm6dsvxhg_hig_acc_attributes[] = {
+static struct attribute *st_lsm6dsvxhg_hg_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
 	&iio_dev_attr_in_accel_scale_available.dev_attr.attr,
 	&iio_dev_attr_hwfifo_watermark_max.dev_attr.attr,
@@ -1988,15 +2038,19 @@ static struct attribute *st_lsm6dsvxhg_hig_acc_attributes[] = {
 	NULL,
 };
 
-static const struct attribute_group st_lsm6dsvxhg_hig_acc_attribute_group = {
-	.attrs = st_lsm6dsvxhg_hig_acc_attributes,
+static const struct attribute_group st_lsm6dsvxhg_hg_acc_attribute_group = {
+	.attrs = st_lsm6dsvxhg_hg_acc_attributes,
 };
 
-static const struct iio_info st_lsm6dsvxhg_hig_acc_info = {
-	.attrs = &st_lsm6dsvxhg_hig_acc_attribute_group,
+static const struct iio_info st_lsm6dsvxhg_hg_acc_info = {
+	.attrs = &st_lsm6dsvxhg_hg_acc_attribute_group,
 	.read_raw = st_lsm6dsvxhg_read_raw,
 	.write_raw_get_fmt = st_lsm6dsvxhg_write_raw_get_fmt,
 	.write_raw = st_lsm6dsvxhg_write_raw,
+	.read_event_config = st_lsm6dsvxhg_read_hg_event_config,
+	.write_event_config = st_lsm6dsvxhg_write_hg_event_config,
+	.write_event_value = st_lsm6dsvxhg_write_hg_event_value,
+	.read_event_value = st_lsm6dsvxhg_read_hg_event_value,
 };
 
 static struct attribute *st_lsm6dsvxhg_sflp_attributes[] = {
@@ -2156,12 +2210,12 @@ st_lsm6dsvxhg_alloc_iiodev(struct st_lsm6dsvxhg_hw *hw,
 		sensor->gain = hw->fs_table[id].fs_avl[1].gain;
 		sensor->offset = ST_LSM6DSVXHG_TEMP_OFFSET;
 		break;
-	case ST_LSM6DSVXHG_ID_HIG_ACC:
-		iio_dev->channels = st_lsm6dsvxhg_hig_acc_channels;
-		iio_dev->num_channels = ARRAY_SIZE(st_lsm6dsvxhg_hig_acc_channels);
+	case ST_LSM6DSVXHG_ID_HG_ACC:
+		iio_dev->channels = st_lsm6dsvxhg_hg_acc_channels;
+		iio_dev->num_channels = ARRAY_SIZE(st_lsm6dsvxhg_hg_acc_channels);
 		scnprintf(sensor->name, sizeof(sensor->name),
-			 "%s_hig_accel", hw->settings->id.name);
-		iio_dev->info = &st_lsm6dsvxhg_hig_acc_info;
+			 "%s_hg_accel", hw->settings->id.name);
+		iio_dev->info = &st_lsm6dsvxhg_hg_acc_info;
 		iio_dev->available_scan_masks = st_lsm6dsvxhg_available_scan_masks;
 
 		sensor->batch_reg.addr = ST_LSM6DSVXHG_COUNTER_BDR_REG1_ADDR;
@@ -2344,6 +2398,10 @@ int st_lsm6dsvxhg_probe(struct device *dev, int irq,
 			return err;
 
 		err = st_lsm6dsvxhg_event_init(hw);
+		if (err < 0)
+			return err;
+
+		err = st_lsm6dsvxhg_hg_event_init(hw);
 		if (err < 0)
 			return err;
 	}

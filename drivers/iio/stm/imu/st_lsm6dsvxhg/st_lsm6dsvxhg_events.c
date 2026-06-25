@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2025 STMicroelectronics Inc.
+ * Copyright 2025, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -29,19 +29,19 @@ static struct st_lsm6dsvxhg_event_t {
 	u8 irq_mask;
 	int req_odr;
 	} st_lsm6dsvxhg_events[] = {
-	[ST_LSM6DSVXHG_EVENT_FF] = {
+	[0] = {
 		.id = ST_LSM6DSVXHG_EVENT_FF,
 		.name = "free_fall",
 		.irq_mask = ST_LSM6DSVXHG_INT_FF_MASK,
 		.req_odr = ST_LSM6DSVXHG_MIN_ODR_IN_FREEFALL,
 	},
-	[ST_LSM6DSVXHG_EVENT_WAKEUP] = {
+	[1] = {
 		.id = ST_LSM6DSVXHG_EVENT_WAKEUP,
 		.name = "wake_up",
 		.irq_mask = ST_LSM6DSVXHG_INT_WU_MASK,
 		.req_odr = ST_LSM6DSVXHG_MIN_ODR_IN_WAKEUP,
 	},
-	[ST_LSM6DSVXHG_EVENT_6D] = {
+	[2] = {
 		.id = ST_LSM6DSVXHG_EVENT_6D,
 		.name = "sixD",
 		.irq_mask = ST_LSM6DSVXHG_INT_6D_MASK,
@@ -49,13 +49,13 @@ static struct st_lsm6dsvxhg_event_t {
 	},
 
 #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-	[ST_LSM6DSVXHG_EVENT_TAP] = {
+	[3] = {
 		.id = ST_LSM6DSVXHG_EVENT_TAP,
 		.name = "tap",
 		.irq_mask = ST_LSM6DSVXHG_INT_SINGLE_TAP_MASK,
 		.req_odr = ST_LSM6DSVXHG_MIN_ODR_IN_TAP,
 	},
-	[ST_LSM6DSVXHG_EVENT_DTAP] = {
+	[4] = {
 		.id = ST_LSM6DSVXHG_EVENT_DTAP,
 		.name = "dtap",
 		.irq_mask = ST_LSM6DSVXHG_INT_DOUBLE_TAP_MASK,
@@ -99,7 +99,7 @@ st_lsm6dsvxhg_events_enabled(struct st_lsm6dsvxhg_hw *hw)
 
 static int st_lsm6dsvxhg_get_xl_fs(struct st_lsm6dsvxhg_hw *hw, u8 *xl_fs)
 {
-	u8 fs_xl_g[] = { 2, 4, 8, 16 }, fs_xl, mul = 1;
+	u8 fs_xl;
 	int err;
 
 	err = st_lsm6dsvxhg_read_with_mask(hw,
@@ -109,7 +109,7 @@ static int st_lsm6dsvxhg_get_xl_fs(struct st_lsm6dsvxhg_hw *hw, u8 *xl_fs)
 	if (err < 0)
 		return err;
 
-	*xl_fs = mul * fs_xl_g[fs_xl];
+	*xl_fs = hw->odr_table[ST_LSM6DSVXHG_ID_ACC].odr_avl[fs_xl].hz;
 
 	return err;
 }

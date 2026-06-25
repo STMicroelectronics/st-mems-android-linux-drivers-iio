@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2025 STMicroelectronics Inc.
+ * Copyright 2025, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/iio/buffer.h>
@@ -34,7 +34,7 @@ enum {
 	ST_LSM6DSVXHG_EXT1_TAG = 0x10,
 	ST_LSM6DSVXHG_STEPC_TAG = 0x12,
 	ST_LSM6DSVXHG_GAMEROT_TAG = 0x13,
-	ST_LSM6DSVXHG_HIG_TAG = 0x1d,
+	ST_LSM6DSVXHG_HG_TAG = 0x1d,
 };
 
 #define ST_LSM6DSVXHG_EWMA_LEVEL		120
@@ -175,7 +175,7 @@ __st_lsm6dsvxhg_set_sensor_batching_odr(struct st_lsm6dsvxhg_sensor *sensor,
 					      ST_LSM6DSVXHG_EMB_FUNC_REG_ACCESS_MASK,
 					      0);
 		return err;
-	case ST_LSM6DSVXHG_ID_HIG_ACC:
+	case ST_LSM6DSVXHG_ID_HG_ACC:
 		break;
 	default:
 		return -ENODEV;
@@ -286,8 +286,8 @@ st_lsm6dsvxhg_get_iiodev_from_tag(struct st_lsm6dsvxhg_hw *hw, u8 tag)
 	case ST_LSM6DSVXHG_TEMP_TAG:
 		iio_dev = hw->iio_devs[ST_LSM6DSVXHG_ID_TEMP];
 		break;
-	case ST_LSM6DSVXHG_HIG_TAG:
-		iio_dev = hw->iio_devs[ST_LSM6DSVXHG_ID_HIG_ACC];
+	case ST_LSM6DSVXHG_HG_TAG:
+		iio_dev = hw->iio_devs[ST_LSM6DSVXHG_ID_HG_ACC];
 		break;
 	case ST_LSM6DSVXHG_STEPC_TAG:
 		iio_dev = hw->iio_devs[ST_LSM6DSVXHG_ID_STEP_COUNTER];
@@ -727,6 +727,7 @@ static irqreturn_t st_lsm6dsvxhg_handler_thread(int irq, void *private)
 	mutex_unlock(&hw->fifo_lock);
 
 	st_lsm6dsvxhg_event_handler(hw);
+	st_lsm6dsvxhg_hg_event_handler(hw);
 	st_lsm6dsvxhg_embfunc_handler_thread(hw);
 
 	return IRQ_HANDLED;

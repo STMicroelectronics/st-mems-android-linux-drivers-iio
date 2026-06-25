@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2025 STMicroelectronics Inc.
+ * Copyright 2025, 2026 STMicroelectronics Inc.
  */
 
 #ifndef ST_LSM6DSVXHG_H
@@ -179,6 +179,10 @@
 #define ST_LSM6DSVXHG_FUNCTIONS_ENABLE_ADDR	0x50
 #define ST_LSM6DSVXHG_TIMESTAMP_EN_MASK		BIT(6)
 #define ST_LSM6DSVXHG_INTERRUPTS_ENABLE_MASK	BIT(7)
+
+#define ST_LSM6DSVXHG_INACTIVITY_THS_ADDR	0x55
+#define ST_LSM6DSVXHG_INT2_HG_SHOCK_CHANGE_MASK	BIT(7)
+#define ST_LSM6DSVXHG_INT1_HG_SHOCK_CHANGE_MASK	BIT(6)
 
 #define ST_LSM6DSVXHG_TAP_CFG0_ADDR		0x56
 #define ST_LSM6DSVXHG_LIR_MASK			BIT(0)
@@ -444,8 +448,16 @@ static const struct iio_event_spec st_lsm6dsvxhg_dtap_event = {
 };
 #endif /* LINUX_VERSION_CODE */
 
+static const struct iio_event_spec st_lsm6dsvxhg_hg_wakeup_event = {
+	.type = IIO_EV_TYPE_THRESH,
+	.dir = IIO_EV_DIR_RISING,
+	.mask_separate = BIT(IIO_EV_INFO_VALUE) |
+			 BIT(IIO_EV_INFO_ENABLE) |
+			 BIT(IIO_EV_INFO_PERIOD),
+};
+
 enum st_lsm6dsvxhg_event_id {
-	ST_LSM6DSVXHG_EVENT_FF,
+	 ST_LSM6DSVXHG_EVENT_FF,
 	ST_LSM6DSVXHG_EVENT_WAKEUP,
 	ST_LSM6DSVXHG_EVENT_6D,
 
@@ -456,6 +468,10 @@ enum st_lsm6dsvxhg_event_id {
 
 	ST_LSM6DSVXHG_EVENT_STEPC,
 	ST_LSM6DSVXHG_EVENT_SIGNMOT,
+
+	/* high-g events */
+	ST_SM6DSVXHG_EVENT_HG_WAKEUP,
+	ST_SM6DSVXHG_EVENT_HG_SHOCK,
 
 	ST_LSM6DSVXHG_EVENT_MAX
 };
@@ -546,6 +562,7 @@ struct st_lsm6dsvxhg_odr_table_entry {
 struct st_lsm6dsvxhg_fs {
 	u32 gain;
 	u8 val;
+	u32 fs;
 };
 
 #define ST_LSM6DSVXHG_FS_LIST_SIZE		6
@@ -607,8 +624,8 @@ enum st_lsm6dsvxhg_sensor_id {
 	ST_LSM6DSVXHG_ID_GYRO,
 	ST_LSM6DSVXHG_ID_ACC,
 	ST_LSM6DSVXHG_ID_TEMP,
-	ST_LSM6DSVXHG_ID_HIG_ACC,
-	ST_LSM6DSVXHG_ID_HW = ST_LSM6DSVXHG_ID_HIG_ACC,
+	ST_LSM6DSVXHG_ID_HG_ACC,
+	ST_LSM6DSVXHG_ID_HW = ST_LSM6DSVXHG_ID_HG_ACC,
 	ST_LSM6DSVXHG_ID_EXT0,
 	ST_LSM6DSVXHG_ID_EXT1,
 	ST_LSM6DSVXHG_ID_6X_GAME,
@@ -663,7 +680,7 @@ static const enum st_lsm6dsvxhg_sensor_id st_lsm6dsvxhg_main_sensor_list[] = {
 	[0] = ST_LSM6DSVXHG_ID_GYRO,
 	[1] = ST_LSM6DSVXHG_ID_ACC,
 	[2] = ST_LSM6DSVXHG_ID_TEMP,
-	[3] = ST_LSM6DSVXHG_ID_HIG_ACC,
+	[3] = ST_LSM6DSVXHG_ID_HG_ACC,
 	[4] = ST_LSM6DSVXHG_ID_6X_GAME,
 };
 
@@ -713,7 +730,7 @@ static const enum st_lsm6dsvxhg_sensor_id st_lsm6dsvxhg_buffered_sensor_list[] =
 	[0] = ST_LSM6DSVXHG_ID_GYRO,
 	[1] = ST_LSM6DSVXHG_ID_ACC,
 	[2] = ST_LSM6DSVXHG_ID_TEMP,
-	[3] = ST_LSM6DSVXHG_ID_HIG_ACC,
+	[3] = ST_LSM6DSVXHG_ID_HG_ACC,
 	[4] = ST_LSM6DSVXHG_ID_EXT0,
 	[5] = ST_LSM6DSVXHG_ID_EXT1,
 	[6] = ST_LSM6DSVXHG_ID_6X_GAME,
@@ -773,7 +790,7 @@ enum {
 /* sensor devices that can wake-up the target */
 #define  ST_LSM6DSVXHG_WAKE_UP_SENSORS (BIT(ST_LSM6DSVXHG_ID_GYRO)    | \
 					BIT(ST_LSM6DSVXHG_ID_ACC)     | \
-					BIT(ST_LSM6DSVXHG_ID_HIG_ACC) | \
+					BIT(ST_LSM6DSVXHG_ID_HG_ACC) | \
 					ST_LSM6DSVXHG_ID_ALL_FSM_MLC)
 
 /* this is the minimal ODR for event sensors and dependencies */
@@ -822,7 +839,9 @@ struct st_lsm6dsvxhg_sensor {
 
 	int odr;
 	int uodr;
+	int fs;
 	int event_hw_odr;
+	int event_hg_hw_odr;
 
 	union {
 		struct {
@@ -908,6 +927,8 @@ struct st_lsm6dsvxhg_sensor {
  * @tap_quiet_time: tap quiet time in ms.
  * @tap_shock_time: tap shock time in ms.
  * @dtap_duration: tap duration time in ms.
+ * @wk_hg_th_mg: wake-up threshold for high-g xl in mg.
+ * @shock_hg_dur_ms: shock duration for high-g xl in ms.
  */
 struct st_lsm6dsvxhg_hw {
 	struct device *dev;
@@ -967,6 +988,8 @@ struct st_lsm6dsvxhg_hw {
 	u32 tap_quiet_time;
 	u32 tap_shock_time;
 	u32 dtap_duration;
+	u32 wk_hg_th_mg;
+	u32 shock_hg_dur_ms;
 };
 
 /**
@@ -998,7 +1021,7 @@ static inline int st_lsm6dsvxhg_manipulate_bit(int int_reg, int irq_mask,
 	int bit_mask = 1 << bit_position;
 
 	int_reg &= ~bit_mask;
-	int_reg |= (en << bit_position);
+	int_reg |= (!!en << bit_position);
 
 	return int_reg;
 }
@@ -1096,7 +1119,7 @@ st_lsm6dsvxhg_is_fifo_enabled(struct st_lsm6dsvxhg_hw *hw)
 {
 	return hw->enable_mask & (BIT(ST_LSM6DSVXHG_ID_GYRO)    |
 				  BIT(ST_LSM6DSVXHG_ID_ACC)     |
-				  BIT(ST_LSM6DSVXHG_ID_HIG_ACC) |
+				  BIT(ST_LSM6DSVXHG_ID_HG_ACC) |
 				  BIT(ST_LSM6DSVXHG_ID_EXT0)    |
 				  BIT(ST_LSM6DSVXHG_ID_EXT1));
 }
@@ -1201,10 +1224,40 @@ int st_lsm6dsvxhg_write_event_value(struct iio_dev *iio_dev,
 				    enum iio_event_direction dir,
 				    enum iio_event_info info,
 				    int val, int val2);
+
 int st_lsm6dsvxhg_event_init(struct st_lsm6dsvxhg_hw *hw);
 int st_lsm6dsvxhg_event_handler(struct st_lsm6dsvxhg_hw *hw);
+
 int st_lsm6dsvxhg_update_threshold_events(struct st_lsm6dsvxhg_hw *hw);
 int st_lsm6dsvxhg_update_duration_events(struct st_lsm6dsvxhg_hw *hw);
+
+/* high-g xl events */
+int st_lsm6dsvxhg_read_hg_event_config(struct iio_dev *iio_dev,
+				       const struct iio_chan_spec *chan,
+				       enum iio_event_type type,
+				       enum iio_event_direction dir);
+int st_lsm6dsvxhg_write_hg_event_config(struct iio_dev *iio_dev,
+					const struct iio_chan_spec *chan,
+					enum iio_event_type type,
+					enum iio_event_direction dir,
+					ST_IIO_EVENT_EN_TYPE enable);
+int st_lsm6dsvxhg_read_hg_event_value(struct iio_dev *iio_dev,
+				      const struct iio_chan_spec *chan,
+				      enum iio_event_type type,
+				      enum iio_event_direction dir,
+				      enum iio_event_info info,
+				      int *val, int *val2);
+int st_lsm6dsvxhg_write_hg_event_value(struct iio_dev *iio_dev,
+				       const struct iio_chan_spec *chan,
+				       enum iio_event_type type,
+				       enum iio_event_direction dir,
+				       enum iio_event_info info,
+				       int val, int val2);
+
+int st_lsm6dsvxhg_hg_event_handler(struct st_lsm6dsvxhg_hw *hw);
+int st_lsm6dsvxhg_update_hg_threshold_events(struct st_lsm6dsvxhg_hw *hw);
+int st_lsm6dsvxhg_update_hg_duration_events(struct st_lsm6dsvxhg_hw *hw);
+int st_lsm6dsvxhg_hg_event_init(struct st_lsm6dsvxhg_hw *hw);
 
 int st_lsm6dsvxhg_embfunc_probe(struct st_lsm6dsvxhg_hw *hw);
 int st_lsm6dsvxhg_embfunc_handler_thread(struct st_lsm6dsvxhg_hw *hw);
