@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2021 STMicroelectronics Inc.
+ * Copyright 2021, 2026 STMicroelectronics Inc.
  */
 #include <linux/module.h>
 #include <linux/iio/iio.h>
@@ -114,7 +114,9 @@ static enum hrtimer_restart st_ism330dhcx_timer_fn(struct hrtimer *timer)
 	struct st_ism330dhcx_hw *hw;
 
 	hw = container_of(timer, struct st_ism330dhcx_hw, timesync_timer);
+	spin_lock(&hw->hwtimestamp_lock);
 	hrtimer_forward(timer, hrtimer_cb_get_time(timer), hw->timesync_ktime);
+	spin_unlock(&hw->hwtimestamp_lock);
 	queue_work(hw->timesync_workqueue, &hw->timesync_work);
 
 	return HRTIMER_RESTART;

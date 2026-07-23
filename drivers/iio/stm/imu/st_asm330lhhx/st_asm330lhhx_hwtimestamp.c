@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2021 STMicroelectronics Inc.
+ * Copyright 2021, 2026 STMicroelectronics Inc.
  */
 #include <linux/module.h>
 #include <linux/iio/iio.h>
@@ -34,10 +34,8 @@ static void st_asm330lhhx_read_hw_timestamp(struct st_asm330lhhx_hw *hw)
 	__le32 tmp;
 	int err;
 
-	err = regmap_bulk_read(hw->regmap,
-			       ST_ASM330LHHX_REG_TIMESTAMP0_ADDR,
-			       (u8 *)&_timestamp_hw,
-			       sizeof(_timestamp_hw));
+	err = st_asm330lhhx_read_locked(hw, ST_ASM330LHHX_REG_TIMESTAMP0_ADDR,
+					&_timestamp_hw, sizeof(_timestamp_hw));
 	if (err < 0)
 		return;
 
@@ -124,7 +122,9 @@ static enum hrtimer_restart st_asm330lhhx_timer_fn(struct hrtimer *timer)
 	struct st_asm330lhhx_hw *hw;
 
 	hw = container_of(timer, struct st_asm330lhhx_hw, timesync_timer);
+	spin_lock(&hw->hwtimestamp_lock);
 	hrtimer_forward(timer, hrtimer_cb_get_time(timer), hw->timesync_ktime);
+	spin_unlock(&hw->hwtimestamp_lock);
 	queue_work(hw->timesync_workqueue, &hw->timesync_work);
 
 	return HRTIMER_RESTART;
