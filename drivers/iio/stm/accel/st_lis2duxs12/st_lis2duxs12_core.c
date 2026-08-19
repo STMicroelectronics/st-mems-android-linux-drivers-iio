@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2022 STMicroelectronics Inc.
+ * Copyright 2022, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -385,9 +385,11 @@ st_lis2duxs12_set_full_scale(struct st_lis2duxs12_sensor *sensor,
 					 st_lis2duxs12_fs_table[id].reg.mask));
 		if (err < 0)
 			return err;
-	}
 
-	sensor->gain = gain;
+		sensor->gain = gain;
+	} else {
+		return -EINVAL;
+	}
 
 	return 0;
 }
