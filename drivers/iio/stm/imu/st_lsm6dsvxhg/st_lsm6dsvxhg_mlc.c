@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2025 STMicroelectronics Inc.
+ * Copyright 2025, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/delay.h>
@@ -27,15 +27,15 @@
 #define ST_LSM6DSVXHG_MLC_MAX_NUMBER		8
 #define ST_LSM6DSVXHG_FSM_MAX_NUMBER		8
 
-#if IS_ENABLED(CONFIG_IIO_LSM6DSVXHG_MLC_BUILTIN_FIRMWARE)
+#define ST_LSM6DSVXHG_MLC_FIRMWARE_NAME		"st_lsm6dsvxhg_mlc.bin"
+
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVXHG_MLC_BUILTIN_FIRMWARE)
 static const u8 st_lsm6dsvxhg_mlc_fw[] = {
 	#include "st_lsm6dsvxhg_mlc.fw"
 };
-DECLARE_BUILTIN_FIRMWARE(LSM6DSVXHG_MLC_FIRMWARE_NAME,
+DECLARE_BUILTIN_FIRMWARE(ST_LSM6DSVXHG_MLC_FIRMWARE_NAME,
 			 st_lsm6dsvxhg_mlc_fw);
-#else /* CONFIG_IIO_LSM6DSVXHG_MLC_BUILTIN_FIRMWARE */
-#define LSM6DSVXHG_MLC_FIRMWARE_NAME		"st_lsm6dsvxhg_mlc.bin"
-#endif /* CONFIG_IIO_LSM6DSVXHG_MLC_BUILTIN_FIRMWARE */
+#endif /* CONFIG_IIO_ST_LSM6DSVXHG_MLC_BUILTIN_FIRMWARE */
 
 #if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVXHG_MLC_PRELOAD)
 #include "st_lsm6dsvxhg_preload_mlc.h"
@@ -516,7 +516,7 @@ st_lsm6dsvxhg_mlc_upload_firmware(struct device *dev,
 	int err;
 
 	err = request_firmware_nowait(THIS_MODULE, true,
-				      LSM6DSVXHG_MLC_FIRMWARE_NAME,
+				      ST_LSM6DSVXHG_MLC_FIRMWARE_NAME,
 				      dev, GFP_KERNEL,
 				      sensor->hw,
 				      st_lsm6dsvxhg_mlc_update);

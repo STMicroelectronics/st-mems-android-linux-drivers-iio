@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2021 STMicroelectronics Inc.
+ * Copyright 2021, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -29,14 +29,14 @@
 #define ST_LSM6DSRX_MLC_MAX_NUMBER		8
 #define ST_LSM6DSRX_FSM_MAX_NUMBER		16
 
-#if IS_ENABLED(CONFIG_IIO_LSM6DSRX_MLC_BUILTIN_FIRMWARE)
+#define ST_LSM6DSRX_MLC_FIRMWARE_NAME		"st_lsm6dsrx_mlc.bin"
+
+#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSRX_MLC_BUILTIN_FIRMWARE)
 static const u8 st_lsm6dsrx_mlc_fw[] = {
 	#include "st_lsm6dsrx_mlc.fw"
 };
-DECLARE_BUILTIN_FIRMWARE(LSM6DSRX_MLC_FIRMWARE_NAME, st_lsm6dsrx_mlc_fw);
-#else /* CONFIG_IIO_LSM6DSRX_MLC_BUILTIN_FIRMWARE */
-#define LSM6DSRX_MLC_FIRMWARE_NAME		"st_lsm6dsrx_mlc.bin"
-#endif /* CONFIG_IIO_LSM6DSRX_MLC_BUILTIN_FIRMWARE */
+DECLARE_BUILTIN_FIRMWARE(ST_LSM6DSRX_MLC_FIRMWARE_NAME, st_lsm6dsrx_mlc_fw);
+#endif /* CONFIG_IIO_ST_LSM6DSRX_MLC_BUILTIN_FIRMWARE */
 
 #if IS_ENABLED(CONFIG_IIO_ST_LSM6DSRX_MLC_PRELOAD)
 #include "st_lsm6dsrx_preload_mlc.h"
@@ -510,7 +510,7 @@ static ssize_t st_lsm6dsrx_mlc_upload_firmware(struct device *dev,
 	int err;
 
 	err = request_firmware_nowait(THIS_MODULE, true,
-				      LSM6DSRX_MLC_FIRMWARE_NAME,
+				      ST_LSM6DSRX_MLC_FIRMWARE_NAME,
 				      dev, GFP_KERNEL,
 				      sensor->hw,
 				      st_lsm6dsrx_mlc_update);

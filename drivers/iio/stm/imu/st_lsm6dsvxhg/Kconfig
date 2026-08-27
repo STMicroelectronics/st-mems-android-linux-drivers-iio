@@ -43,3 +43,10 @@ config IIO_ST_LSM6DSVXHG_ASYNC_HW_TIMESTAMP
 	depends on IIO_ST_LSM6DSVXHG
 	help
 	  Enable async task that sends over hw timestamp events.
+
+config IIO_ST_LSM6DSVXHG_MLC_BUILTIN_FIRMWARE
+	bool
+	depends on IIO_ST_LSM6DSVXHG
+	help
+	 Say yes here to build support for the built-in firmware for the internal LSM6DSVXHG MLC/FSM block.
+	 If say yes, the firmware file will be called st_lsm6dsvxhg_mlc.fw and located into driver source directory.

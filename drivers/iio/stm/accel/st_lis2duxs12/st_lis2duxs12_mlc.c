@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2022 STMicroelectronics Inc.
+ * Copyright 2022, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/delay.h>
@@ -30,6 +30,7 @@
 #define ST_LIS2DUXS12_FSM_MAX_NUMBER		8
 
 #define ST_LIS2DUXS12_LOADER_CMD_WAIT		0xff
+#define LIS2DUXS12_MLC_FIRMWARE_NAME		"st_lis2duxs12_mlc.bin"
 
 #if IS_ENABLED(CONFIG_IIO_LIS2DUXS12_MLC_BUILTIN_FIRMWARE)
 static const u8 st_lis2duxs12_mlc_fw[] = {
@@ -37,8 +38,6 @@ static const u8 st_lis2duxs12_mlc_fw[] = {
 };
 DECLARE_BUILTIN_FIRMWARE(LIS2DUXS12_MLC_FIRMWARE_NAME,
 			 st_lis2duxs12_mlc_fw);
-#else /* CONFIG_IIO_LIS2DUXS12_MLC_BUILTIN_FIRMWARE */
-#define LIS2DUXS12_MLC_FIRMWARE_NAME		"st_lis2duxs12_mlc.bin"
 #endif /* CONFIG_IIO_LIS2DUXS12_MLC_BUILTIN_FIRMWARE */
 
 static const u8 mlcdata[] = {
