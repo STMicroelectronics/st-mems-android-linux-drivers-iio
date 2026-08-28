@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2023 STMicroelectronics Inc.
+ * Copyright 2023, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -355,7 +355,7 @@ static const struct iio_chan_spec st_iis2iclx_acc_channels[] = {
 	IIO_CHAN_HW_TIMESTAMP(2),
 	IIO_CHAN_SOFT_TIMESTAMP(3),
 #else /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
-	IIO_CHAN_SOFT_TIMESTAMP(1),
+	IIO_CHAN_SOFT_TIMESTAMP(2),
 #endif /* CONFIG_IIO_ST_IIS2ICLX_ASYNC_HW_TIMESTAMP */
 
 };
