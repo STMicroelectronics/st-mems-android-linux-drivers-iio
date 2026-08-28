@@ -708,15 +708,6 @@ struct st_lis2duxs12_sensor {
 			uint8_t outreg_addr;
 			enum st_lis2duxs12_fsm_mlc_enable_id status;
 		};
-		/* sensor specific data configuration */
-		struct {
-			u32 conf[6];
-			/* Ensure natural alignment of timestamp */
-			struct {
-				u8 event;
-				s64 ts __aligned(8);
-			} scan;
-		};
 	};
 };
 
