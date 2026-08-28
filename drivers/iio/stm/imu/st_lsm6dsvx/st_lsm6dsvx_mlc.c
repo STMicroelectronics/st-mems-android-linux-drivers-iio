@@ -21,13 +21,13 @@
 
 #include "st_lsm6dsvx.h"
 
-#define ST_LSM6DSVX_MLC_LOADER_VERSION		"0.3"
+/* put firmware st_lsm6dsvx_mlc.bin to /lib/firmware/ path */
+#define ST_LSM6DSVX_MLC_FIRMWARE_NAME		"st_lsm6dsvx_mlc.bin"
+#define ST_LSM6DSVX_MLC_LOADER_VERSION		"1.0"
 
 /* number of machine learning core available on device hardware */
 #define ST_LSM6DSVX_MLC_MAX_NUMBER		4
 #define ST_LSM6DSVX_FSM_MAX_NUMBER		8
-
-#define ST_LSM6DSVX_MLC_FIRMWARE_NAME		"st_lsm6dsvx_mlc.bin"
 
 #if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_MLC_BUILTIN_FIRMWARE)
 static const u8 st_lsm6dsvx_mlc_fw[] = {
@@ -37,9 +37,7 @@ DECLARE_BUILTIN_FIRMWARE(ST_LSM6DSVX_MLC_FIRMWARE_NAME,
 			 st_lsm6dsvx_mlc_fw);
 #endif /* CONFIG_IIO_ST_LSM6DSVX_MLC_BUILTIN_FIRMWARE */
 
-#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD)
 #include "st_lsm6dsvx_preload_mlc.h"
-#endif /* CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD */
 
 /* converts MLC odr to main sensor trigger odr (acc) */
 static const uint16_t mlc_odr_data[] = {
@@ -221,16 +219,19 @@ st_lsm6dsvx_mlc_read_event_config(struct iio_dev *iio_dev,
  * Before to load a MLC/FSM configuration check the MLC/FSM HW block
  * available for this hw device id.
  */
-static int st_lsm6dsvx_verify_mlc_fsm_support(const struct firmware *fw,
-					      struct st_lsm6dsvx_hw *hw)
+static int
+st_lsm6dsvx_verify_mlc_fsm_support(const struct mems_conf_op_list *fw,
+				   struct st_lsm6dsvx_hw *hw)
 {
+	const struct mems_conf_op *mems_conf;
 	bool stmc_page = false;
 	u8 reg, val;
 	int i = 0;
 
-	while (i < fw->size) {
-		reg = fw->data[i++];
-		val = fw->data[i++];
+	mems_conf = fw[0].list;
+	while (i < fw[0].len) {
+		reg = mems_conf[i].address;
+		val = mems_conf[i].data;
 
 		if (reg == ST_LSM6DSVX_REG_FUNC_CFG_ACCESS_ADDR &&
 		    (val & ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK)) {
@@ -254,23 +255,30 @@ static int st_lsm6dsvx_verify_mlc_fsm_support(const struct firmware *fw,
 				break;
 			}
 		}
+
+		i++;
 	}
 
 	return 0;
 }
 
 /* parse and program mlc fragments */
-static int st_lsm6dsvx_program_mlc(const struct firmware *fw,
+static int st_lsm6dsvx_program_mlc(const struct mems_conf_op_list *fw,
 				   struct st_lsm6dsvx_hw *hw)
 {
 	u8 mlc_int = 0, mlc_num = 0, fsm_num = 0, skip = 0;
-	u8 fsm_int = 0, reg, val, req_odr = 0;
+	const struct mems_conf_op *mems_conf;
+	u8 fsm_int = 0, req_odr = 0;
 	bool stmc_page = false;
+	u8 reg, val, op;
 	int ret, i = 0;
 
-	while (i < fw->size) {
-		reg = fw->data[i++];
-		val = fw->data[i++];
+	mems_conf = fw[0].list;
+	mutex_lock(&hw->page_lock);
+	while (i < fw[0].len) {
+		op = mems_conf[i].type;
+		reg = mems_conf[i].address;
+		val = mems_conf[i].data;
 
 		if (reg == ST_LSM6DSVX_REG_FUNC_CFG_ACCESS_ADDR &&
 		    (val & ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK)) {
@@ -278,6 +286,9 @@ static int st_lsm6dsvx_program_mlc(const struct firmware *fw,
 		} else if (reg == ST_LSM6DSVX_REG_FUNC_CFG_ACCESS_ADDR &&
 			   (val & ~ST_LSM6DSVX_EMB_FUNC_REG_ACCESS_MASK)) {
 			stmc_page = false;
+		} else if (op == MEMS_CONF_OP_TYPE_DELAY) {
+			msleep(val);
+			skip = 1;
 		} else if (stmc_page) {
 			switch (reg) {
 			case ST_LSM6DSVX_REG_MLC_INT1_ADDR:
@@ -319,9 +330,11 @@ static int st_lsm6dsvx_program_mlc(const struct firmware *fw,
 		if (mlc_num >= ST_LSM6DSVX_MLC_MAX_NUMBER ||
 		    fsm_num >= ST_LSM6DSVX_FSM_MAX_NUMBER)
 			break;
+
+		i++;
 	}
 
-	hw->mlc_config->bin_len = fw->size;
+	hw->mlc_config->bin_len = fw[0].len;
 
 	if (mlc_num) {
 		hw->mlc_config->mlc_int_mask = mlc_int;
@@ -348,7 +361,8 @@ static int st_lsm6dsvx_program_mlc(const struct firmware *fw,
 	return fsm_num + mlc_num;
 }
 
-static void st_lsm6dsvx_mlc_update(const struct firmware *fw, void *context)
+static int st_lsm6dsvx_mlc_update(const struct mems_conf_op_list *fw,
+				  void *context)
 {
 	struct st_lsm6dsvx_hw *hw = context;
 	enum st_lsm6dsvx_sensor_id id;
@@ -357,14 +371,14 @@ static void st_lsm6dsvx_mlc_update(const struct firmware *fw, void *context)
 	if (!fw) {
 		dev_err(hw->dev, "could not get binary firmware\n");
 
-		return;
+		return -ENOMEM;
 	}
 
 	ret = st_lsm6dsvx_verify_mlc_fsm_support(fw, hw);
 	if (ret) {
 		dev_err(hw->dev, "invalid file format for device\n");
 
-		return;
+		return -EINVAL;
 	}
 
 	ret = st_lsm6dsvx_program_mlc(fw, hw);
@@ -381,11 +395,11 @@ static void st_lsm6dsvx_mlc_update(const struct firmware *fw, void *context)
 				id = st_lsm6dsvx_mlc_sensor_list[i];
 				hw->iio_devs[id] = st_lsm6dsvx_mlc_alloc_iio_dev(hw, id);
 				if (!hw->iio_devs[id])
-					goto release;
+					return -ENODEV;
 
 				ret = iio_device_register(hw->iio_devs[id]);
 				if (ret)
-					goto release;
+					return ret;
 			}
 		}
 
@@ -394,26 +408,49 @@ static void st_lsm6dsvx_mlc_update(const struct firmware *fw, void *context)
 				id = st_lsm6dsvx_fsm_sensor_list[i];
 				hw->iio_devs[id] = st_lsm6dsvx_mlc_alloc_iio_dev(hw, id);
 				if (!hw->iio_devs[id])
-					goto release;
+					return -ENODEV;
 
 				ret = iio_device_register(hw->iio_devs[id]);
 				if (ret)
-					goto release;
+					return ret;
 			}
 		}
 	}
 
-release:
-	/*
-	 * internal firmware don't release it because stored in
-	 * const segment
-	 */
-	if (hw->preload_mlc) {
+	if (hw->preload_mlc)
 		hw->preload_mlc = 0;
 
-		return;
+	return 0;
+}
+
+static void st_lsm6dsvx_mlc_update_fw(const struct firmware *fw,
+				      void *context)
+{
+	struct mems_conf_op_list mems_conf_op_list_fw;
+	struct st_lsm6dsvx_hw *hw = context;
+	size_t fw_ops_len;
+
+	if (!fw) {
+		dev_err(hw->dev, "could not get binary firmware\n");
+
+		goto release;
 	}
 
+	if (!fw->size || fw->size % sizeof(struct mems_conf_op)) {
+		dev_err(hw->dev,
+			"invalid firmware size %zu (op size %zu)\n",
+			fw->size, sizeof(struct mems_conf_op));
+
+		goto release;
+	}
+
+	/* convert firmware struct to mems_conf_op_list */
+	fw_ops_len = fw->size / sizeof(struct mems_conf_op);
+	mems_conf_op_list_fw.len = (uint32_t)fw_ops_len;
+	mems_conf_op_list_fw.list = (const struct mems_conf_op *)fw->data;
+	st_lsm6dsvx_mlc_update(&mems_conf_op_list_fw, context);
+
+release:
 	release_firmware(fw);
 }
 
@@ -500,7 +537,7 @@ st_lsm6dsvx_mlc_upload_firmware(struct device *dev,
 				      ST_LSM6DSVX_MLC_FIRMWARE_NAME,
 				      dev, GFP_KERNEL,
 				      sensor->hw,
-				      st_lsm6dsvx_mlc_update);
+				      st_lsm6dsvx_mlc_update_fw);
 
 	return err < 0 ? err : size;
 }
@@ -783,12 +820,15 @@ int st_lsm6dsvx_mlc_check_status(struct st_lsm6dsvx_hw *hw)
 
 int st_lsm6dsvx_mlc_init_preload(struct st_lsm6dsvx_hw *hw)
 {
-#if IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD)
-	hw->preload_mlc = 1;
-	st_lsm6dsvx_mlc_update(&st_lsm6dsvx_mlc_preload, hw);
-#endif /* CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD */
+	int ret = 0;
 
-	return 0;
+	if (IS_ENABLED(CONFIG_IIO_ST_LSM6DSVX_MLC_PRELOAD)) {
+		hw->preload_mlc = 1;
+		ret = st_lsm6dsvx_mlc_update((struct mems_conf_op_list *)
+					     &mlc_fsm_data_confs[0], hw);
+	}
+
+	return ret;
 }
 
 int st_lsm6dsvx_mlc_probe(struct st_lsm6dsvx_hw *hw)

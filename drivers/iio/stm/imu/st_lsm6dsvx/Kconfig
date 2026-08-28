@@ -34,25 +34,47 @@ config IIO_ST_LSM6DSVX_QVAR_IN_FIFO
 	help
 	  Enable support to QVAR sensor on internal HW FIFO
 
-config IIO_ST_LSM6DSVX_MLC_PRELOAD
-	bool "Preload some examples on MLC/FSM core"
-	depends on IIO_ST_LSM6DSVX
-	help
-	  Select yes if you want to preload some examples on machine learning core
-	  and finite state machine.
-
-	  The examples code is a motion intensity recognition and is hardcoded in the
-	  driver in the mlcdata structure.
-
 config IIO_ST_LSM6DSVX_ASYNC_HW_TIMESTAMP
 	bool "Enable async hw timestamp read"
 	depends on IIO_ST_LSM6DSVX
 	help
 	  Enable async task that sends over hw timestamp events.
 
-config IIO_ST_LSM6DSVX_MLC_BUILTIN_FIRMWARE
-	bool
+choice
+	prompt "LSM6DSVX MLC firmware source"
 	depends on IIO_ST_LSM6DSVX
+	default IIO_ST_LSM6DSVX_MLC_NONE
 	help
-	 Say yes here to build support for the built-in firmware for the internal LSM6DSVX MLC/FSM block.
-	 If say yes, the firmware file will be called st_lsm6dsvx_mlc.fw and located into driver source directory.
+	  Please select the source for the Machine Learning Core (MLC) and
+	  Finite State Machine (FSM) firmware blocks. This option allows
+	  you to choose between loading a default preloaded sample, using
+	  a custom built-in firmware image, or disabling it entirely.
+
+config IIO_ST_LSM6DSVX_MLC_NONE
+	bool "No MLC firmware source"
+	help
+	  Select this option to leave MLC/FSM firmware loading disabled.
+	  No external configuration or sample firmware will be loaded into
+	  the sensor during the driver initialization phase. Choose this if
+	  you intend to configure the MLC/FSM registers from user space.
+
+config IIO_ST_LSM6DSVX_MLC_PRELOAD
+	bool "MLC preload sample configuration"
+	help
+	  If this option is enabled, the driver will load a sample
+	  configuration into the MLC/FSM block during device probing.
+	  The example file was created using the official configuration
+	  repository published by STMicroelectronics for machine learning.
+
+config IIO_ST_LSM6DSVX_MLC_BUILTIN_FIRMWARE
+	bool "Built-in MLC firmware"
+	help
+	  Say yes here to build support for the built-in firmware for the
+	  internal LSM6DSVX MLC/FSM block. This option compiles the
+	  firmware directly into the kernel image or module, enabling the
+	  driver to automatically program the sensor during the probe
+	  routine without relying on external hotplug firmware loading.
+
+	  The firmware file should be called st_lsm6dsvx_mlc.fw and must
+	  be located into the local driver source directory.
+endchoice

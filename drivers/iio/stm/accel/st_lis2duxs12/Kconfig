@@ -30,9 +30,41 @@ config IIO_ST_LIS2DUXS12_I3C
 	select REGMAP_I3C
 	depends on IIO_ST_LIS2DUXS12
 
-config IIO_LIS2DUXS12_MLC_BUILTIN_FIRMWARE
-	bool
+choice
+	prompt "LIS2DUXS12 MLC firmware source"
 	depends on IIO_ST_LIS2DUXS12
+	default IIO_ST_LIS2DUXS12_MLC_NONE
 	help
-	 Say yes here to build support for the built-in firmware for the internal LIS2DUXS12 MLC/FSM block.
-	 If say yes, the firmware file will be called st_lis2duxs12_mlc.fw and located into driver source directory.
+	  Please select the source for the Machine Learning Core (MLC) and
+	  Finite State Machine (FSM) firmware blocks. This option allows
+	  you to choose between loading a default preloaded sample, using
+	  a custom built-in firmware image, or disabling it entirely.
+
+config IIO_ST_LIS2DUXS12_MLC_NONE
+	bool "No MLC firmware source"
+	help
+	  Select this option to leave MLC/FSM firmware loading disabled.
+	  No external configuration or sample firmware will be loaded into
+	  the sensor during the driver initialization phase. Choose this if
+	  you intend to configure the MLC/FSM registers from user space.
+
+config IIO_ST_LIS2DUXS12_MLC_PRELOAD
+	bool "MLC preload sample configuration"
+	help
+	  If this option is enabled, the driver will load a sample
+	  configuration into the MLC/FSM block during device probing.
+	  The example file was created using the official configuration
+	  repository published by STMicroelectronics for machine learning.
+
+config IIO_ST_LIS2DUXS12_MLC_BUILTIN_FIRMWARE
+	bool "Built-in MLC firmware"
+	help
+	  Say yes here to build support for the built-in firmware for the
+	  internal LIS2DUXS12 MLC/FSM block. This option compiles the
+	  firmware directly into the kernel image or module, enabling the
+	  driver to automatically program the sensor during the probe
+	  routine without relying on external hotplug firmware loading.
+
+	  The firmware file should be called st_lis2duxs12_mlc.fw and must
+	  be located into the local driver source directory.
+endchoice

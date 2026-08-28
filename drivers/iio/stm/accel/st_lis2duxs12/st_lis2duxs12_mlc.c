@@ -23,80 +23,23 @@
 
 #include "st_lis2duxs12.h"
 
-#define ST_LIS2DUXS12_MLC_LOADER_VERSION	"0.4"
+/* put firmware st_lis2duxs12_mlc.bin to /lib/firmware/ path */
+#define ST_LIS2DUXS12_MLC_FIRMWARE_NAME		"st_lis2duxs12_mlc.bin"
+#define ST_LIS2DUXS12_MLC_LOADER_VERSION	"1.0"
 
 /* number of machine learning core available on device hardware */
 #define ST_LIS2DUXS12_MLC_MAX_NUMBER		4
 #define ST_LIS2DUXS12_FSM_MAX_NUMBER		8
 
-#define ST_LIS2DUXS12_LOADER_CMD_WAIT		0xff
-#define LIS2DUXS12_MLC_FIRMWARE_NAME		"st_lis2duxs12_mlc.bin"
-
-#if IS_ENABLED(CONFIG_IIO_LIS2DUXS12_MLC_BUILTIN_FIRMWARE)
+#if IS_ENABLED(CONFIG_IIO_ST_LIS2DUXS12_MLC_BUILTIN_FIRMWARE)
 static const u8 st_lis2duxs12_mlc_fw[] = {
 	#include "st_lis2duxs12_mlc.fw"
 };
-DECLARE_BUILTIN_FIRMWARE(LIS2DUXS12_MLC_FIRMWARE_NAME,
+DECLARE_BUILTIN_FIRMWARE(ST_LIS2DUXS12_MLC_FIRMWARE_NAME,
 			 st_lis2duxs12_mlc_fw);
-#endif /* CONFIG_IIO_LIS2DUXS12_MLC_BUILTIN_FIRMWARE */
+#endif /* CONFIG_IIO_ST_LIS2DUXS12_MLC_BUILTIN_FIRMWARE */
 
-static const u8 mlcdata[] = {
-	/* lis2duxs12_mlc_fsm_hpd.ucf */
-	0x14, 0x00, 0x13, 0x10, 0xff, 0x05, 0x3f, 0x80, 0x04, 0x00,
-	0x05, 0x00, 0x39, 0x4b, 0x1a, 0x01, 0x0a, 0x00, 0x0b, 0x01,
-	0x0e, 0x00, 0x0f, 0x00, 0x17, 0x40, 0x02, 0x01, 0x08, 0x54,
-	0x09, 0x00, 0x09, 0x00, 0x09, 0x01, 0x09, 0x01, 0x09, 0x00,
-	0x09, 0x02, 0x02, 0x21, 0x08, 0x00, 0x09, 0x24, 0x09, 0x08,
-	0x09, 0x18, 0x09, 0x00, 0x09, 0x0f, 0x09, 0x00, 0x09, 0x01,
-	0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00,
-	0x09, 0xee, 0x09, 0x02, 0x09, 0x04, 0x09, 0x0f, 0x09, 0x66,
-	0x09, 0x99, 0x09, 0x33, 0x09, 0xf1, 0x09, 0x44, 0x09, 0x77,
-	0x09, 0x22, 0x09, 0x00, 0x04, 0x00, 0x05, 0x11, 0x17, 0x80,
-	0x3f, 0x00, 0x1f, 0x01, 0x14, 0x92, 0x14, 0x00, 0x13, 0x10,
-	0xff, 0x05, 0x3f, 0x80, 0x04, 0x00, 0x05, 0x00, 0x39, 0x4b,
-	0x1a, 0x01, 0x0a, 0x00, 0x0b, 0x01, 0x0e, 0x00, 0x0f, 0x00,
-	0x17, 0x40, 0x02, 0x01, 0x08, 0x54, 0x09, 0x00, 0x09, 0x00,
-	0x09, 0x01, 0x09, 0x01, 0x09, 0x00, 0x09, 0x02, 0x02, 0x21,
-	0x08, 0x00, 0x09, 0x24, 0x09, 0x08, 0x09, 0x18, 0x09, 0x00,
-	0x09, 0x0f, 0x09, 0x00, 0x09, 0x01, 0x09, 0x00, 0x09, 0x00,
-	0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x09, 0xee, 0x09, 0x02,
-	0x09, 0x04, 0x09, 0x0f, 0x09, 0x66, 0x09, 0x99, 0x09, 0x33,
-	0x09, 0xf1, 0x09, 0x44, 0x09, 0x77, 0x09, 0x22, 0x09, 0x00,
-	0x04, 0x00, 0x05, 0x11, 0x17, 0x80, 0x3f, 0x00, 0x1f, 0x01,
-	0x14, 0x92, 0x13, 0x10, 0xff, 0x05, 0x14, 0x00, 0x3f, 0x80,
-	0x04, 0x00, 0x05, 0x00, 0x17, 0x40, 0x02, 0x01, 0x08, 0xb6,
-	0x09, 0x00, 0x09, 0x3c, 0x09, 0xfe, 0x09, 0x00, 0x09, 0x18,
-	0x09, 0x01, 0x09, 0x01, 0x09, 0x00, 0x09, 0x14, 0x09, 0x01,
-	0x09, 0x0a, 0x02, 0x01, 0x08, 0xc8, 0x09, 0xdc, 0x09, 0x00,
-	0x09, 0x1a, 0x09, 0x01, 0x09, 0x26, 0x09, 0x01, 0x02, 0x01,
-	0x08, 0xdc, 0x09, 0x1c, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00,
-	0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00,
-	0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00,
-	0x09, 0xa2, 0x09, 0x1d, 0x09, 0xaf, 0x09, 0x21, 0x09, 0xa2,
-	0x09, 0x1d, 0x09, 0x1d, 0x09, 0xbf, 0x09, 0x68, 0x09, 0x3a,
-	0x09, 0x3f, 0x09, 0x00, 0x09, 0x03, 0x09, 0x2c, 0x09, 0x00,
-	0x09, 0xfc, 0x09, 0x00, 0x09, 0x7c, 0x09, 0x1f, 0x09, 0x00,
-	0x02, 0x11, 0x08, 0x1a, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00,
-	0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x09, 0x00,
-	0x09, 0x00, 0x09, 0x00, 0x09, 0x00, 0x3f, 0x00, 0x3f, 0x80,
-	0x17, 0x40, 0x02, 0x11, 0x08, 0x26, 0x09, 0x00, 0x09, 0x58,
-	0x09, 0x40, 0x09, 0xe0, 0x3f, 0x80, 0x17, 0x00, 0x04, 0x00,
-	0x05, 0x10, 0x02, 0x01, 0x3f, 0x00, 0x1f, 0x01, 0x3f, 0x80,
-	0x3a, 0x41, 0x17, 0x80, 0x04, 0x00, 0x05, 0x11, 0x02, 0x01,
-	0x3f, 0x00, 0x0c, 0x00, 0x0e, 0x00, 0x10, 0x10, 0x11, 0x00,
-	0x12, 0x00, 0x13, 0x10, 0x14, 0x92, 0x15, 0x00, 0x16, 0x00,
-	0x17, 0x00, 0x18, 0x00, 0x1c, 0x00, 0x1d, 0x00, 0x1e, 0x00,
-	0x1f, 0x01, 0x20, 0x00, 0x31, 0x9a, 0x32, 0x00, 0x33, 0x00,
-	0x3d, 0x00, 0x3f, 0x00, 0x47, 0x00, 0x6f, 0x00, 0x70, 0x00,
-	0x71, 0x00, 0x72, 0x00, 0x73, 0x00, 0x74, 0x00, 0x75, 0x00,
-	0x3f, 0x80, 0x17, 0x80, 0x04, 0x00, 0x05, 0x11, 0x02, 0x01,
-	0x3f, 0x00,
-};
-
-static const struct firmware st_lis2duxs12_mlc_preload = {
-		.size = sizeof(mlcdata),
-		.data = mlcdata
-};
+#include "st_lis2dux12_preload_mlc.h"
 
 static struct
 iio_dev *st_lis2duxs12_mlc_alloc_iio_dev(struct st_lis2duxs12_hw *hw,
@@ -233,16 +176,19 @@ st_lis2duxs12_get_mlc_odr_val(struct st_lis2duxs12_hw *hw, u8 val_odr)
 }
 
 /* checks mlc/fsm program consistence with hw device id */
-static int st_lis2duxs12_check_valid_mlc(const struct firmware *fw,
+static int st_lis2duxs12_check_valid_mlc(const struct mems_conf_op_list *fw,
 					 struct st_lis2duxs12_hw *hw)
 {
+	const struct mems_conf_op *mems_conf;
 	bool stmc_page = false;
-	u8 reg, val;
+	u8 reg, val, op;
 	int i = 0;
 
-	while (i < fw->size) {
-		reg = fw->data[i++];
-		val = fw->data[i++];
+	mems_conf = fw[0].list;
+	while (i < fw[0].len) {
+		op = mems_conf[i].type;
+		reg = mems_conf[i].address;
+		val = mems_conf[i].data;
 		if ((reg == ST_LIS2DUXS12_FUNC_CFG_ACCESS_ADDR) &&
 		    (val & ST_LIS2DUXS12_EMB_FUNC_REG_ACCESS_MASK)) {
 			stmc_page = true;
@@ -250,12 +196,16 @@ static int st_lis2duxs12_check_valid_mlc(const struct firmware *fw,
 			   (val & ST_LIS2DUXS12_EMB_FUNC_REG_ACCESS_MASK) == 0) {
 			stmc_page = false;
 		} else if (stmc_page) {
+			i++;
+
 			continue;
 		} else if (reg == ST_LIS2DUXS12_AH_QVAR_CFG_ADDR) {
 			if (!hw->settings->st_qvar_support)
 				return -EINVAL;
 			break;
 		}
+
+		i++;
 	}
 
 	return 0;
@@ -278,26 +228,31 @@ static int st_lis2duxs12_embedded_function_enable(struct st_lis2duxs12_hw *hw)
 }
 
 /* parse and program mlc fragments */
-static int st_lis2duxs12_program_mlc(const struct firmware *fw,
+static int st_lis2duxs12_program_mlc(const struct mems_conf_op_list *fw,
 				     struct st_lis2duxs12_hw *hw)
 {
 	u8 mlc_int = 0, mlc_num = 0, fsm_num = 0, skip = 0;
-	u8 fsm_int = 0, reg, val, req_odr = 0;
+	const struct mems_conf_op *mems_conf;
+	u8 fsm_int = 0, req_odr = 0;
 	bool stmc_page = false;
+	u8 reg, val, op;
 	int ret, i = 0;
 
+	mems_conf = fw[0].list;
 	mutex_lock(&hw->page_lock);
-	while (i < fw->size) {
-		reg = fw->data[i++];
-		val = fw->data[i++];
+	while (i < fw[0].len) {
+		op = mems_conf[i].type;
+		reg = mems_conf[i].address;
+		val = mems_conf[i].data;
 		if ((reg == ST_LIS2DUXS12_FUNC_CFG_ACCESS_ADDR) &&
 		    (val & ST_LIS2DUXS12_EMB_FUNC_REG_ACCESS_MASK)) {
 			stmc_page = true;
 		} else if ((reg == ST_LIS2DUXS12_FUNC_CFG_ACCESS_ADDR) &&
 			   (val & ST_LIS2DUXS12_EMB_FUNC_REG_ACCESS_MASK) == 0) {
 			stmc_page = false;
-		} else if (reg == ST_LIS2DUXS12_LOADER_CMD_WAIT) {
+		} else if (op == MEMS_CONF_OP_TYPE_DELAY) {
 			msleep(val);
+			skip = 1;
 		} else if (stmc_page) {
 			switch (reg) {
 			case ST_LIS2DUXS12_MLC_INT1_ADDR:
@@ -363,9 +318,12 @@ static int st_lis2duxs12_program_mlc(const struct firmware *fw,
 		if (mlc_num >= ST_LIS2DUXS12_MLC_MAX_NUMBER ||
 		    fsm_num >= ST_LIS2DUXS12_FSM_MAX_NUMBER)
 			break;
+		i++;
 	}
 
-	hw->mlc_config->bin_len = fw->size;
+	hw->mlc_config->bin_len = min_t(size_t,
+					(size_t)fw->len * sizeof(*mems_conf),
+					U16_MAX);
 
 	if (mlc_num) {
 		hw->mlc_config->mlc_int_mask = mlc_int;
@@ -394,16 +352,17 @@ static int st_lis2duxs12_program_mlc(const struct firmware *fw,
 	return fsm_num + mlc_num;
 }
 
-static void st_lis2duxs12_mlc_update(const struct firmware *fw, void *context)
+static int st_lis2duxs12_mlc_update(struct mems_conf_op_list *fw,
+				    void *context)
 {
 	struct st_lis2duxs12_hw *hw = context;
 	enum st_lis2duxs12_sensor_id id;
 	int ret, i;
 
 	if (!fw) {
-		dev_err(hw->dev, "could not get binary firmware\n");
+		dev_err(hw->dev, "could not get firmware\n");
 
-		return;
+		return -ENOMEM;
 	}
 
 	ret = st_lis2duxs12_check_valid_mlc(fw, hw);
@@ -411,7 +370,7 @@ static void st_lis2duxs12_mlc_update(const struct firmware *fw, void *context)
 		dev_err(hw->dev, "unsupported mlc version for hw_id %d\n",
 			hw->settings->id.hw_id);
 
-		return;
+		return -EINVAL;
 	}
 
 	ret = st_lis2duxs12_program_mlc(fw, hw);
@@ -426,13 +385,13 @@ static void st_lis2duxs12_mlc_update(const struct firmware *fw, void *context)
 			if (mlc_mask & BIT(i)) {
 				id = st_lis2duxs12_mlc_sensor_list[i];
 				hw->iio_devs[id] =
-					st_lis2duxs12_mlc_alloc_iio_dev(hw, id);
+				       st_lis2duxs12_mlc_alloc_iio_dev(hw, id);
 				if (!hw->iio_devs[id])
-					goto release;
+					return -ENODEV;
 
 				ret = iio_device_register(hw->iio_devs[id]);
 				if (ret)
-					goto release;
+					return ret;
 			}
 		}
 
@@ -440,24 +399,51 @@ static void st_lis2duxs12_mlc_update(const struct firmware *fw, void *context)
 			if (fsm_mask & BIT(i)) {
 				id = st_lis2duxs12_fsm_sensor_list[i];
 				hw->iio_devs[id] =
-					st_lis2duxs12_mlc_alloc_iio_dev(hw, id);
+				       st_lis2duxs12_mlc_alloc_iio_dev(hw, id);
 				if (!hw->iio_devs[id])
-					goto release;
+					return -ENODEV;
 
 				ret = iio_device_register(hw->iio_devs[id]);
 				if (ret)
-					goto release;
+					return ret;
 			}
 		}
 	}
 
-release:
-	if (hw->preload_mlc) {
+	if (hw->preload_mlc)
 		hw->preload_mlc = 0;
 
-		return;
+	return 0;
+}
+
+static void st_lis2duxs12_mlc_update_fw(const struct firmware *fw,
+					void *context)
+{
+	struct mems_conf_op_list mems_conf_op_list_fw;
+	struct st_lis2duxs12_hw *hw = context;
+	size_t fw_ops_len;
+
+	if (!fw) {
+		dev_err(hw->dev, "could not get binary firmware\n");
+
+		goto release;
 	}
 
+	if (!fw->size || fw->size % sizeof(struct mems_conf_op)) {
+		dev_err(hw->dev,
+			"invalid firmware size %zu (op size %zu)\n",
+			fw->size, sizeof(struct mems_conf_op));
+
+		goto release;
+	}
+
+	/* convert firmware struct to mems_conf_op_list */
+	fw_ops_len = fw->size / sizeof(struct mems_conf_op);
+	mems_conf_op_list_fw.len = (uint32_t)fw_ops_len;
+	mems_conf_op_list_fw.list = (const struct mems_conf_op *)fw->data;
+	st_lis2duxs12_mlc_update(&mems_conf_op_list_fw, context);
+
+release:
 	release_firmware(fw);
 }
 
@@ -528,10 +514,10 @@ static ssize_t st_lis2duxs12_mlc_upload(struct device *dev,
 	int err;
 
 	err = request_firmware_nowait(THIS_MODULE, true,
-				      LIS2DUXS12_MLC_FIRMWARE_NAME,
+				      ST_LIS2DUXS12_MLC_FIRMWARE_NAME,
 				      dev, GFP_KERNEL,
 				      sensor->hw,
-				      st_lis2duxs12_mlc_update);
+				      st_lis2duxs12_mlc_update_fw);
 
 	return err < 0 ? err : size;
 }
@@ -813,10 +799,16 @@ int st_lis2duxs12_mlc_check_status(struct st_lis2duxs12_hw *hw)
 
 int st_lis2duxs12_mlc_init_preload(struct st_lis2duxs12_hw *hw)
 {
-	hw->preload_mlc = 1;
-	st_lis2duxs12_mlc_update(&st_lis2duxs12_mlc_preload, hw);
+	int ret = 0;
 
-	return 0;
+	if (IS_ENABLED(CONFIG_IIO_ST_LIS2DUXS12_MLC_PRELOAD)) {
+		hw->preload_mlc = 1;
+
+		ret = st_lis2duxs12_mlc_update((struct mems_conf_op_list *)
+					       &mlc_fsm_data_confs[0], hw);
+	}
+
+	return ret;
 }
 
 int st_lis2duxs12_mlc_probe(struct st_lis2duxs12_hw *hw)
@@ -831,7 +823,6 @@ int st_lis2duxs12_mlc_probe(struct st_lis2duxs12_hw *hw)
 				      GFP_KERNEL);
 	if (!hw->mlc_config)
 		return -ENOMEM;
-
 
 	/* enable embedded page access */
 	return st_lis2duxs12_embedded_function_enable(hw);

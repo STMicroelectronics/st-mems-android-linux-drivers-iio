@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2023 STMicroelectronics Inc.
+ * Copyright 2023, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -22,21 +22,23 @@
 
 #include "st_iis2iclx.h"
 
-#define ST_IIS2ICLX_MLC_LOADER_VERSION		"0.8"
+/* put firmware st_iis2iclx_mlc.bin to /lib/firmware/ path */
+#define ST_IIS2ICLX_MLC_FIRMWARE_NAME		"st_iis2iclx_mlc.bin"
+#define ST_IIS2ICLX_MLC_LOADER_VERSION		"1.0"
 
 /* number of machine learning core available on device hardware */
 #define ST_IIS2ICLX_MLC_NUMBER			8
 #define ST_IIS2ICLX_FSM_NUMBER			16
-#define ST_IIS2ICLX_MLC_FIRMWARE_NAME		"st_iis2iclx_mlc.bin"
 
-#if IS_ENABLED(CONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD)
+#if IS_ENABLED(CONFIG_IIO_ST_IIS2ICLX_MLC_BUILTIN_FIRMWARE)
+static const u8 st_iis2iclx_mlc_fw[] = {
+	#include "st_iis2iclx_mlc.fw"
+};
+DECLARE_BUILTIN_FIRMWARE(ST_IIS2ICLX_MLC_FIRMWARE_NAME,
+			 st_iis2iclx_mlc_fw);
+#endif /* CONFIG_IIO_ST_IIS2ICLX_MLC_BUILTIN_FIRMWARE */
+
 #include "st_iis2iclx_preload_mlc.h"
-#endif /* CONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD */
-
-#define FSM_PAGE(__addr)			((u8)(((__addr >> 8) << 4) | \
-						      0x01))
-#define FSM_PAGE_MASK(__addr)			((u8)(__addr >> 8))
-#define FSM_OFFSET(__addr)			((u8)(__addr & 0x00FF))
 
 static struct
 iio_dev *st_iis2iclx_mlc_alloc_iio_dev(struct st_iis2iclx_hw *hw,
@@ -283,14 +285,15 @@ static int st_iis2iclx_mlc_read_event_config(struct iio_dev *iio_dev,
 }
 
 /* parse and program mlc / fsm fragments */
-static int st_iis2iclx_program_mlc(const struct firmware *fw,
+static int st_iis2iclx_program_mlc(const struct mems_conf_op_list *fw,
 				   struct st_iis2iclx_hw *hw)
 {
 	u8 fsm_int[2] = { 0, 0 }, fsm_enable[2] = { 0, 0 };
 	u8 mlc_fsm_en = 0, fsm_mlc_requested_odr = 0;
 	u8 mlc_int = 0, mlc_num = 0, fsm_num = 0;
 	bool stmc_page = false, skip = false;
-	int reg, val, ret, i = 0;
+	const struct mems_conf_op *mems_conf;
+	int reg, val, op, ret, i = 0;
 	u32 uodr = 0;
 	u16 odr = 0;
 
@@ -300,16 +303,23 @@ static int st_iis2iclx_program_mlc(const struct firmware *fw,
 			return ret;
 	}
 
+	mems_conf = fw[0].list;
 	mutex_lock(&hw->page_lock);
 
-	while (i < fw->size) {
-		reg = fw->data[i++];
-		val = fw->data[i++];
+	while (i < fw[0].len) {
+		op = mems_conf[i].type;
+		reg = mems_conf[i].address;
+		val = mems_conf[i].data;
 
-		if (reg == 0x01 && val == 0x80) {
+		if (reg == ST_IIS2ICLX_REG_FUNC_CFG_ACCESS_ADDR &&
+		    val == ST_IIS2ICLX_FUNC_CFG_MASK) {
 			stmc_page = true;
-		} else if (reg == 0x01 && val == 0x00) {
+		} else if (reg == ST_IIS2ICLX_REG_FUNC_CFG_ACCESS_ADDR &&
+			   (val & ST_IIS2ICLX_FUNC_CFG_MASK) == 0) {
 			stmc_page = false;
+		} else if (op == MEMS_CONF_OP_TYPE_DELAY) {
+			msleep(val);
+			skip = true;
 		} else if (stmc_page) {
 			/* catch configuration in stmc page */
 			switch (reg) {
@@ -351,7 +361,7 @@ static int st_iis2iclx_program_mlc(const struct firmware *fw,
 			default:
 				break;
 			}
-		} else if (!stmc_page) {
+		} else {
 			/* catch configuration in page 0 */
 			switch (reg) {
 			/* skip FIFO and interrupt registers */
@@ -391,6 +401,8 @@ static int st_iis2iclx_program_mlc(const struct firmware *fw,
 		if (mlc_num >= ST_IIS2ICLX_MLC_NUMBER ||
 		    fsm_num >= ST_IIS2ICLX_FSM_NUMBER)
 			break;
+
+		i++;
 	}
 
 	/* if MLC/FSM ODR is not configured uses first available */
@@ -429,7 +441,7 @@ static int st_iis2iclx_program_mlc(const struct firmware *fw,
 	}
 
 	hw->mlc_config->mlc_fsm_en = mlc_fsm_en;
-	hw->mlc_config->bin_len = fw->size;
+	hw->mlc_config->bin_len = fw[0].len;
 	hw->mlc_config->fsm_mlc_requested_odr = odr;
 	hw->mlc_config->fsm_mlc_requested_uodr = uodr;
 
@@ -439,7 +451,7 @@ unlock_page:
 	return (fsm_num + mlc_num) > 0 ? fsm_num + mlc_num : 0;
 }
 
-static void st_iis2iclx_mlc_update(const struct firmware *fw, void *context)
+static int st_iis2iclx_mlc_update(struct mems_conf_op_list *fw, void *context)
 {
 	bool force_mlc_enabled, force_fsm_enabled = false;
 	struct st_iis2iclx_hw *hw = context;
@@ -453,13 +465,13 @@ static void st_iis2iclx_mlc_update(const struct firmware *fw, void *context)
 	if (!fw) {
 		dev_err(hw->dev, "could not get binary firmware\n");
 
-		return;
+		return -ENOMEM;
 	}
 
 	mutex_lock(&hw->fifo_lock);
 
 	ret = st_iis2iclx_program_mlc(fw, hw);
-	if (!ret)
+	if (ret < 0)
 		goto release;
 
 	mlc_mask = hw->mlc_config->mlc_int_mask;
@@ -468,8 +480,11 @@ static void st_iis2iclx_mlc_update(const struct firmware *fw, void *context)
 			id = st_iis2iclx_mlc_sensor_list[i];
 			hw->iio_devs[id] =
 				st_iis2iclx_mlc_alloc_iio_dev(hw, id);
-			if (!hw->iio_devs[id])
+			if (!hw->iio_devs[id]) {
+				ret = -ENODEV;
+
 				goto release;
+			}
 
 			ret = iio_device_register(hw->iio_devs[id]);
 			if (ret)
@@ -484,8 +499,11 @@ static void st_iis2iclx_mlc_update(const struct firmware *fw, void *context)
 			id = st_iis2iclx_fsm_sensor_list[i];
 			hw->iio_devs[id] =
 				st_iis2iclx_mlc_alloc_iio_dev(hw, id);
-			if (!hw->iio_devs[id])
+			if (!hw->iio_devs[id]) {
+				ret = -ENODEV;
+
 				goto release;
+			}
 
 			ret = iio_device_register(hw->iio_devs[id]);
 			if (ret)
@@ -534,12 +552,40 @@ static void st_iis2iclx_mlc_update(const struct firmware *fw, void *context)
 release:
 	mutex_unlock(&hw->fifo_lock);
 
-	if (hw->preload_mlc) {
+	if (hw->preload_mlc)
 		hw->preload_mlc = 0;
 
-		return;
+	return ret;
+}
+
+static void st_iis2iclx_mlc_update_fw(const struct firmware *fw,
+				      void *context)
+{
+	struct mems_conf_op_list mems_conf_op_list_fw;
+	struct st_iis2iclx_hw *hw = context;
+	size_t fw_ops_len;
+
+	if (!fw) {
+		dev_err(hw->dev, "could not get binary firmware\n");
+
+		goto release;
 	}
 
+	if (!fw->size || fw->size % sizeof(struct mems_conf_op)) {
+		dev_err(hw->dev,
+			"invalid firmware size %zu (op size %zu)\n",
+			fw->size, sizeof(struct mems_conf_op));
+
+		goto release;
+	}
+
+	/* convert firmware struct to mems_conf_op_list */
+	fw_ops_len = fw->size / sizeof(struct mems_conf_op);
+	mems_conf_op_list_fw.len = (uint32_t)fw_ops_len;
+	mems_conf_op_list_fw.list = (const struct mems_conf_op *)fw->data;
+	st_iis2iclx_mlc_update(&mems_conf_op_list_fw, context);
+
+release:
 	release_firmware(fw);
 }
 
@@ -615,7 +661,7 @@ st_iis2iclx_mlc_upload_firmware(struct device *dev,
 				      ST_IIS2ICLX_MLC_FIRMWARE_NAME,
 				      dev, GFP_KERNEL,
 				      sensor->hw,
-				      st_iis2iclx_mlc_update);
+				      st_iis2iclx_mlc_update_fw);
 
 	return err < 0 ? err : size;
 }
@@ -959,11 +1005,13 @@ EXPORT_SYMBOL(st_iis2iclx_mlc_remove);
 
 int st_iis2iclx_mlc_init_preload(struct st_iis2iclx_hw *hw)
 {
+	int ret = 0;
 
-#if IS_ENABLED(CONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD)
-	hw->preload_mlc = 1;
-	st_iis2iclx_mlc_update(&st_iis2iclx_mlc_preload, hw);
-#endif /* CONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD */
+	if (IS_ENABLED(CONFIG_IIO_ST_IIS2ICLX_MLC_PRELOAD)) {
+		hw->preload_mlc = 1;
+		ret = st_iis2iclx_mlc_update((struct mems_conf_op_list *)
+					     &mlc_fsm_data_confs[0], hw);
+	}
 
-	return 0;
+	return ret;
 }

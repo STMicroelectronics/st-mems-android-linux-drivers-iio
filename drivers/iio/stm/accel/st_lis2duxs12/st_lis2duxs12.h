@@ -4,7 +4,7 @@
  *
  * MEMS Software Solutions Team
  *
- * Copyright 2022 STMicroelectronics Inc.
+ * Copyright 2022, 2026 STMicroelectronics Inc.
  */
 
 #ifndef ST_LIS2DUXS12_H
@@ -262,6 +262,8 @@
 
 #define ST_LIS2DUXS12_PAGE_RW_ADDR		0x17
 #define ST_LIS2DUXS12_EMB_FUNC_LIR_MASK		BIT(7)
+#define ST_LIS2DUXS12_PAGE_WRITE_MASK		BIT(6)
+#define ST_LIS2DUXS12_PAGE_READ_MASK		BIT(5)
 
 #define ST_LIS2DUXS12_EMB_FUNC_FIFO_EN_ADDR	0x18
 #define ST_LIS2DUXS12_STEP_COUNTER_FIFO_EN_MASK	BIT(0)
@@ -702,6 +704,7 @@ struct st_lis2duxs12_sensor {
 			int min_st;
 			int max_st;
 		};
+
 		/* mlc/fsm event sensors */
 		struct {
 			uint8_t status_reg;
