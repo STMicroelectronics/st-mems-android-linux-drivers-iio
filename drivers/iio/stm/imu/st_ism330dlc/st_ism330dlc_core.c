@@ -2,9 +2,9 @@
 /*
  * STMicroelectronics ism330dlc core driver
  *
- * Copyright 2016, 2026 STMicroelectronics Inc.
+ * MEMS Software Solutions Team
  *
- * Denis Ciocca <denis.ciocca@st.com>
+ * Copyright 2016, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
