@@ -30,6 +30,8 @@
 #define ST_LSM6DSV80X_DEV_NAME			"lsm6dsv80x"
 #define ST_LSM6DSV320X_DEV_NAME			"lsm6dsv320x"
 #define ST_ISM6HG256X_DEV_NAME			"ism6hg256x"
+#define ST_ISM6HGK256X_DEV_NAME			"ism6hgk256x"
+#define ST_LSM6DSK320X_DEV_NAME			"lsm6dsk320x"
 
 #define ST_LSM6DSVXHG_SAMPLE_SIZE		6
 #define ST_LSM6DSVXHG_PT_SAMPLE_SIZE		2
@@ -72,7 +74,11 @@
 #define ST_LSM6DSVXHG_INT_FIFO_TH_MASK		BIT(3)
 
 #define ST_LSM6DSVXHG_WHOAMI_ADDR		0x0f
-#define ST_LSM6DSVXHG_WHOAMI_VAL		0x73
+#define ST_LSM6DSV320X_WHOAMI_VAL		0x73
+#define ST_ISM6HG256X_WHOAMI_VAL		0x73
+#define ST_LSM6DSV80X_WHOAMI_VAL		0x73
+#define ST_LSM6DSK320X_WHOAMI_VAL		0x75
+#define ST_ISM6HGK256X_WHOAMI_VAL		0x75
 
 #define ST_LSM6DSVXHG_CTRL1_ADDR		0x10
 #define ST_LSM6DSVXHG_CTRL2_ADDR		0x11
@@ -394,8 +400,6 @@
 	},								\
 }
 
-#define ST_LSM6DSVXHG_ID		0
-
 static const struct iio_event_spec st_lsm6dsvxhg_flush_event = {
 	.type = (enum iio_event_type)STM_IIO_EV_TYPE_FIFO_FLUSH,
 	.dir = IIO_EV_DIR_EITHER,
@@ -587,7 +591,9 @@ enum st_lsm6dsvxhg_hw_id {
 	ST_LSM6DSV80X_ID,
 	ST_LSM6DSV320X_ID,
 	ST_ISM6HG256X_ID,
-	ST_LSM6DSV80X_MAX_ID,
+	ST_ISM6HGK256X_ID,
+	ST_LSM6DSK320X_ID,
+	ST_LSM6DSVXHG_MAX_ID,
 };
 
 enum st_lsm6dsvxhg_fsm_mlc_enable_id {
@@ -654,6 +660,7 @@ enum st_lsm6dsvxhg_sensor_id {
  * struct st_lsm6dsvxhg_settings - ST IMU sensor settings
  * @hw_id: Hw id supported by the driver configuration.
  * @name: Device name supported by the driver configuration.
+ * @whoami: Device whoami value.
  * @st_mlc_probe: MLC probe flag, indicate if MLC feature is supported.
  * @st_fsm_probe: FSM probe flag, indicate if FSM feature is supported.
  * @st_sflp_probe: SFLP probe flag, indicate if SFLP feature is supported.
@@ -669,7 +676,7 @@ struct st_lsm6dsvxhg_settings {
 		enum st_lsm6dsvxhg_hw_id hw_id;
 		const char *name;
 	} id;
-
+	u8  whoami;
 	bool st_mlc_probe;
 	bool st_fsm_probe;
 	bool st_sflp_probe;

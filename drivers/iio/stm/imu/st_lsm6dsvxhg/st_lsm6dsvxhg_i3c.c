@@ -5,7 +5,7 @@
  * MEMS Software Solutions Team
  *
  * Copyright 2018 Synopsys, Inc.
- * Copyright 2025 STMicroelectronics Inc.
+ * Copyright 2025, 2026 STMicroelectronics Inc.
  */
 
 #include <linux/kernel.h>
@@ -18,8 +18,11 @@
 
 static const struct i3c_device_id st_lsm6dsvxhg_i3c_ids[] = {
 	I3C_DEVICE(0x0104,
-		   ST_LSM6DSVXHG_WHOAMI_VAL,
-		   (void *)ST_LSM6DSVXHG_ID),
+		   ST_LSM6DSV80X_WHOAMI_VAL,
+		   (void *)ST_LSM6DSV80X_ID),
+	I3C_DEVICE(0x0104,
+		   ST_LSM6DSK320X_WHOAMI_VAL,
+		   (void *)ST_LSM6DSK320X_ID),
 	{},
 };
 MODULE_DEVICE_TABLE(i3c, st_lsm6dsvxhg_i3c_ids);

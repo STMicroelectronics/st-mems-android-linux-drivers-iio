@@ -55,6 +55,7 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 			.hw_id = ST_LSM6DSV80X_ID,
 			.name = ST_LSM6DSV80X_DEV_NAME,
 		},
+		.whoami = ST_LSM6DSV80X_WHOAMI_VAL,
 		.st_fsm_probe = true,
 		.st_sflp_probe = true,
 
@@ -103,6 +104,7 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 			.hw_id = ST_LSM6DSV320X_ID,
 			.name = ST_LSM6DSV320X_DEV_NAME,
 		},
+		.whoami = ST_LSM6DSV320X_WHOAMI_VAL,
 		.st_fsm_probe = true,
 		.st_sflp_probe = true,
 
@@ -153,6 +155,7 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 			.hw_id = ST_ISM6HG256X_ID,
 			.name = ST_ISM6HG256X_DEV_NAME,
 		},
+		.whoami = ST_ISM6HG256X_WHOAMI_VAL,
 		.st_fsm_probe = true,
 		.st_sflp_probe = true,
 
@@ -194,6 +197,107 @@ static const struct st_lsm6dsvxhg_settings st_lsm6dsvxhg_sensor_settings[] = {
 				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000),  0x1,  64 },
 				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000),  0x2, 128 },
 				.fs_avl[3] = { IIO_G_TO_M_S_2(10417000), 0x3, 256 },
+			},
+		},
+	},
+	{
+		.id = {
+			.hw_id = ST_ISM6HGK256X_ID,
+			.name = ST_ISM6HGK256X_DEV_NAME,
+		},
+		.whoami = ST_ISM6HGK256X_WHOAMI_VAL,
+		.st_fsm_probe = true,
+		.st_sflp_probe = true,
+
+		.fs_table = {
+			[ST_LSM6DSVXHG_ID_ACC] = {
+				.size = 4,
+				.reg = {
+					.addr = ST_LSM6DSVXHG_CTRL8_ADDR,
+					.mask = GENMASK(1, 0),
+				},
+				.fs_avl[0] = { IIO_G_TO_M_S_2(61000),  0x0,  2 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(122000), 0x1,  4 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(244000), 0x2,  8 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(488000), 0x3, 16 },
+			},
+			[ST_LSM6DSVXHG_ID_GYRO] = {
+				.size = 5,
+				.reg = {
+					.addr = ST_LSM6DSVXHG_CTRL6_ADDR,
+					.mask = GENMASK(3, 0),
+				},
+				.fs_avl[0] = { IIO_DEGREE_TO_RAD(8750000),   0x1,  250 },
+				.fs_avl[1] = { IIO_DEGREE_TO_RAD(17500000),  0x2,  500 },
+				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000),  0x3, 1000 },
+				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000),  0x4, 2000 },
+				.fs_avl[4] = { IIO_DEGREE_TO_RAD(140000000), 0x5, 4000 },
+			},
+			[ST_LSM6DSVXHG_ID_TEMP] = {
+				.size = 1,
+				.fs_avl[0] = { (1000000 / ST_LSM6DSVXHG_TEMP_GAIN), 0x0, 85 },
+			},
+			[ST_LSM6DSVXHG_ID_HG_ACC] = {
+				.size = 4,
+				.reg = {
+					.addr = ST_LSM6DSVXHG_CTRL1_XL_HG_ADDR,
+					.mask = ST_LSM6DSVXHG_FS_XL_HG_MASK,
+				},
+				.fs_avl[0] = { IIO_G_TO_M_S_2(976000),   0x0,  32 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000),  0x1,  64 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000),  0x2, 128 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(10417000), 0x3, 256 },
+			},
+		},
+	},
+	{
+		.id = {
+			.hw_id = ST_LSM6DSK320X_ID,
+			.name = ST_LSM6DSK320X_DEV_NAME,
+		},
+		.whoami = ST_LSM6DSK320X_WHOAMI_VAL,
+		.st_fsm_probe = true,
+		.st_sflp_probe = true,
+
+		.fs_table = {
+			[ST_LSM6DSVXHG_ID_ACC] = {
+				.size = 4,
+				.reg = {
+					.addr = ST_LSM6DSVXHG_CTRL8_ADDR,
+					.mask = GENMASK(1, 0),
+				},
+				.fs_avl[0] = { IIO_G_TO_M_S_2(61000),  0x0,  2 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(122000), 0x1,  4 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(244000), 0x2,  8 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(488000), 0x3, 16 },
+			},
+			[ST_LSM6DSVXHG_ID_GYRO] = {
+				.size = 5,
+				.reg = {
+					.addr = ST_LSM6DSVXHG_CTRL6_ADDR,
+					.mask = GENMASK(3, 0),
+				},
+				.fs_avl[0] = { IIO_DEGREE_TO_RAD(8750000),   0x1,  250 },
+				.fs_avl[1] = { IIO_DEGREE_TO_RAD(17500000),  0x2,  500 },
+				.fs_avl[2] = { IIO_DEGREE_TO_RAD(35000000),  0x3, 1000 },
+				.fs_avl[3] = { IIO_DEGREE_TO_RAD(70000000),  0x4, 2000 },
+				.fs_avl[4] = { IIO_DEGREE_TO_RAD(140000000), 0x5, 4000 },
+			},
+			[ST_LSM6DSVXHG_ID_TEMP] = {
+				.size = 1,
+				.fs_avl[0] = { (1000000 / ST_LSM6DSVXHG_TEMP_GAIN), 0x0, 85 },
+			},
+			[ST_LSM6DSVXHG_ID_HG_ACC] = {
+				.size = 5,
+				.reg = {
+					.addr = ST_LSM6DSVXHG_CTRL1_XL_HG_ADDR,
+					.mask = ST_LSM6DSVXHG_FS_XL_HG_MASK,
+				},
+				.fs_avl[0] = { IIO_G_TO_M_S_2(976000),   0x0,  32 },
+				.fs_avl[1] = { IIO_G_TO_M_S_2(1952000),  0x1,  64 },
+				.fs_avl[2] = { IIO_G_TO_M_S_2(3904000),  0x2, 128 },
+				.fs_avl[3] = { IIO_G_TO_M_S_2(10417000), 0x3, 256 },
+				.fs_avl[4] = { IIO_G_TO_M_S_2(10417000), 0x4, 320 },
 			},
 		},
 	},
@@ -671,7 +775,7 @@ static int st_lsm6dsvxhg_check_whoami(struct st_lsm6dsvxhg_hw *hw, int id)
 		return err;
 	}
 
-	if (data != ST_LSM6DSVXHG_WHOAMI_VAL) {
+	if (data != st_lsm6dsvxhg_sensor_settings[i].whoami) {
 		dev_err(hw->dev, "unsupported whoami [%02x]\n", data);
 
 		return -ENODEV;

@@ -5,6 +5,8 @@ Required properties for all bus drivers:
                     "st,lsm6dsv320x"
 		    "st,ism6hg256x"
                     "st,lsm6dsv80x"
+                    "st,ism6hgk256x"
+                    "st,lsm6dsk320x"
 
 Required properties for the i2c bindings:
 - reg: i2c slave address.
