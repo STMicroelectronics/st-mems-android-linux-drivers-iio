@@ -321,7 +321,12 @@ static int st_lsm6dsv16bx_program_mlc(const struct mems_conf_op_list *fw,
 			}
 		} else if (reg == ST_LSM6DSV16BX_REG_CTRL1_ADDR) {
 			/* save required xl odr and skip write to reg */
-			req_odr = max_t(u8, req_odr, (val & GENMASK(3, 0)));
+			u8 odr_idx = val & GENMASK(3, 0);
+
+			if (odr_idx < ARRAY_SIZE(mlc_odr_data)) {
+				req_odr = max_t(u8, req_odr, odr_idx);
+			}
+
 			skip = 1;
 		}
 
@@ -347,6 +352,12 @@ static int st_lsm6dsv16bx_program_mlc(const struct mems_conf_op_list *fw,
 	hw->mlc_config->bin_len = fw[0].len;
 
 	if (mlc_num) {
+		if (req_odr >= ARRAY_SIZE(mlc_odr_data)) {
+			dev_err(hw->dev, "MLC odr %d not supported\n", req_odr);
+
+			return -EINVAL;
+		}
+
 		hw->mlc_config->mlc_int_mask = mlc_int;
 		hw->mlc_config->mlc_int_addr = (hw->int_pin == 1 ?
 					 ST_LSM6DSV16BX_REG_MLC_INT1_ADDR :
@@ -358,6 +369,12 @@ static int st_lsm6dsv16bx_program_mlc(const struct mems_conf_op_list *fw,
 	}
 
 	if (fsm_num) {
+		if (req_odr >= ARRAY_SIZE(fsm_odr_data)) {
+			dev_err(hw->dev, "FSM odr %d not supported\n", req_odr);
+
+			return -EINVAL;
+		}
+
 		hw->mlc_config->fsm_int_mask = fsm_int;
 		hw->mlc_config->fsm_int_addr = (hw->int_pin == 1 ?
 					 ST_LSM6DSV16BX_REG_FSM_INT1_ADDR :
